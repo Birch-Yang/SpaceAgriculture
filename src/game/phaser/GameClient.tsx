@@ -22,6 +22,7 @@ import { actionCost, actionSlotIndex, agricultureSlots, careAction, slotAction }
 import { TutorialGuide, type TutorialProgress } from "./TutorialGuide.tsx";
 import type { BuildTool } from "./GameScene.ts";
 import styles from "./game.module.css";
+import { Onboarding } from "../../ui/integration/Onboarding";
 import { BuildingPortrait } from "../../ui/BuildingPortrait";
 
 const resourceKeys = ["power", "water", "oxygen", "food", "temperature"] as const;
@@ -208,12 +209,13 @@ export function GameClient() {
     window.localStorage.setItem(tutorialKey, "seen");
   }
 
-  if (!state) return <main className={styles.launch}>
-    <div className={styles.moon} aria-hidden="true" />
-    <div className={styles.launchContent}><p className={styles.kicker}>LUNAR SOUTH POLE / MISSION SIMULATOR</p><h1>Build food systems<br /><em>where survival comes first.</em></h1><p>Design an outpost, connect utilities, grow food, and survive the lunar environment.</p>
-      <form onSubmit={launch} className={styles.launchForm}><label>Mission callsign<input required maxLength={32} value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="Your nickname" /></label><label>Mode<select value={mode} onChange={(event) => setMode(event.target.value as GameMode)}><option value="challenge">Challenge · 10 turns</option><option value="progressive">Progressive · 3 levels</option></select></label><label>iMessage address (optional; sends Mission Control advice to you)<input maxLength={254} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="+15551234567 or Apple ID email" /></label><button className={styles.primary} type="submit">LAUNCH MISSION →</button></form><p role="status">{message}</p>
-    </div>
-  </main>;
+  if (!state) return <Onboarding form={<form onSubmit={launch} className="mission-form">
+    <label>Mission callsign<input required pattern={String.raw`.*\S.*`} maxLength={32} value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="Your nickname" aria-describedby="nickname-help" /></label>
+    <p id="nickname-help" className="help">Choose a nickname for public mission records. No account needed.</p>
+    <details><summary>Mission Control via iMessage (optional)</summary><label>iMessage address<input maxLength={254} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="+15551234567 or Apple ID email" /></label><p className="help">Sends Mission Control advice to this address when you launch.</p></details>
+    <div className="modes"><button type="submit" onClick={() => setMode("challenge")}>Challenge Mode<small>10 turns · high pressure</small></button><button type="submit" onClick={() => setMode("progressive")}>Progressive Mode<small>3 levels · learn as you grow</small></button></div>
+    <p role="status" className="help">{message}</p>
+  </form>} />;
 
   const building = state.phase === "design" || state.phase === "intermission";
   const selectedModule = state.modules.find((item) => item.id === selectedId);
