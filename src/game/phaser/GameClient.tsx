@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MODULES, MODULE_BY_ID } from "../../data/modules.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation, getBuildRemovalRefund } from "../state/reducer.ts";
-import { apRecovery, resolveTurn } from "../simulation/resolveTurn.ts";
+import { apRecovery, resolveTurn, planOperationActions } from "../simulation/resolveTurn.ts";
 import { selectBuildReadinessWarnings, selectTurnLabel } from "../state/selectors.ts";
 import { seedForLevel } from "../simulation/hazards.ts";
 import type { GameMode, GameState, PlayerAction } from "../state/types.ts";
@@ -24,11 +24,12 @@ import type { MinigameResult } from "../minigames/match3/Match3.tsx";
 import { MinigameBoundary } from "../minigames/MinigameBoundary.tsx";
 import { GameCanvas } from "./GameCanvas.tsx";
 import { AgricultureInterior, type MiniTarget } from "./AgricultureInterior.tsx";
-import { actionCost, actionSlotIndex, agricultureSlots, careAction, slotAction } from "./agricultureAdapter.ts";
+import { actionSlotIndex, agricultureSlots, careAction, slotAction } from "./agricultureAdapter.ts";
 import { TutorialGuide, type TutorialProgress } from "./TutorialGuide.tsx";
 import type { BuildTool } from "./GameScene.ts";
 import styles from "./game.module.css";
 import { Onboarding } from "../../ui/integration/Onboarding";
+import { EmergencyPanel } from "../../ui/EmergencyPanel";
 import { BuildingPortrait } from "../../ui/BuildingPortrait";
 
 const resourceKeys = ["power", "water", "oxygen", "food", "temperature"] as const;
@@ -146,19 +147,26 @@ export function GameClient() {
 
   function queue(action: PlayerAction): boolean {
     if (!state || state.phase !== "operation") { setMessage("Begin the mission before planning actions."); return false; }
-    const baseline = apRecovery(state);
     const sameTarget = (current: PlayerAction) => current.type === action.type
       && (("moduleId" in current && "moduleId" in action && current.moduleId === action.moduleId && actionSlotIndex(current) === actionSlotIndex(action))
         || ("targetId" in current && "targetId" in action && current.targetId === action.targetId));
     const next = [...pending.filter((current) => !sameTarget(current)), action];
-    if (next.reduce((sum, current) => sum + actionCost(current), 0) > baseline) {
-      setMessage(`Only ${baseline} AP will be available this turn. Clear an action first.`); return false;
-    }
+    const plan = planOperationActions(state, next);
+    if (plan.rejectedActions.length) { setMessage(plan.rejectedActions[0]); return false; }
     setPending(next);
     if (["PLANT_CROP", "SET_CROP_PARAMS", "SET_ANIMAL", "SET_LIVESTOCK_PARAMS", "HARVEST_CROP", "WATER_PLOT", "FEED_STALL"].includes(action.type))
       setTutorialProgress((progress) => ({ ...progress, queuedAction: true }));
-    setMessage(`${action.type.replaceAll("_", " ")} queued for End Turn (${actionCost(action)} AP).`);
+    setMessage(`${action.type.replaceAll("_", " ")} queued for End Turn (${plan.apUsed} AP planned in total).`);
     return true;
+  }
+
+  function cancelQueuedAction(index: number) {
+    if (!state) return;
+    const next = pending.filter((_, i) => i !== index);
+    const plan = planOperationActions(state, next);
+    // Removing a supply may make a later care action unaffordable.
+    setPending(plan.acceptedActions);
+    setMessage(plan.rejectedActions.length ? `Order cancelled. Dependent orders also removed: ${plan.rejectedActions.join("; ")}` : "Order cancelled. No supplies spent.");
   }
 
   function endTurn() {
@@ -283,7 +291,7 @@ export function GameClient() {
   const definition = selectedModule ? MODULE_BY_ID.get(selectedModule.moduleId) : undefined;
   const agriculture = selectedModule ? agricultureSlots(state, selectedModule.id) : null;
   const target = DIFFICULTY[state.mode][state.level - 1];
-  const plannedAp = pending.reduce((sum, action) => sum + actionCost(action), 0);
+  const plannedAp = state.phase === "operation" ? planOperationActions(state, pending).apUsed : 0;
   const modifierAvailable = state.crops.some((plot) => "slotIndex" in plot) || state.livestock.some((animal) => "slotIndex" in animal);
 
   return <main className={styles.shell}>
@@ -295,6 +303,7 @@ export function GameClient() {
       const fill = key === "temperature" ? Math.max(0, 100 - Math.abs(value - 20) * 5) : Math.max(0, Math.min(100, value));
       return <div key={key} className={`${styles.resource} ${critical ? styles.low : ""}`}><span>{key.toUpperCase()}</span><strong>{value.toFixed(1)} <small>{key === "temperature" ? "°C" : "units"}</small></strong><i><b style={{ width: `${fill}%` }} /></i></div>;
     })}<div className={styles.resource}><span>CROP / MEAT</span><strong>{state.production.cropCumulative.toFixed(0)} / {state.production.meatCumulative.toFixed(0)}</strong><small>Targets {target.cropTarget} / {target.meatTarget}</small></div></section>
+    {state.phase === "operation" && <EmergencyPanel state={state} pending={pending} onQueue={queue} onCancel={cancelQueuedAction} />}
     <div className={styles.workspace}>
       <aside className={styles.palette}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${apRecovery(state)} AP PLANNED`}</small></div>
         {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
@@ -308,7 +317,7 @@ export function GameClient() {
             {selectedModule.integrity < 1 && <button onClick={() => queue({ type: "REPAIR", targetId: selectedModule.id })}>Repair · 2 AP</button>}
             {selectedModule.integrity < 1 && <button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedModule.id, slotIndex: 0 })}>Repair minigame</button>}</>}
         </div> : selectedEdge ? <div className={styles.section}><p className={styles.label}>UTILITY CORRIDOR</p><h2>{selectedEdge.id}</h2><p>Length {selectedEdge.length} · Integrity {Math.round(selectedEdge.integrity * 100)}%</p>{initialBuild && <button onClick={() => build({ type: "REMOVE_CORRIDOR", edgeId: selectedEdge.id })}>Remove corridor · refund {getBuildRemovalRefund(state, selectedEdge.id)}</button>}{state.phase === "operation" && selectedEdge.integrity < 1 && <><button onClick={() => queue({ type: "REPAIR", targetId: selectedEdge.id })}>Repair · 2 AP</button><button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedEdge.id, slotIndex: 0 })}>Repair minigame</button></>}</div> : <div className={styles.section}><p className={styles.label}>INSPECT</p><p>Select a structure on the map to see its condition and actions.</p></div>}
-        {pending.length > 0 && <div className={styles.section}><p className={styles.label}>QUEUED ({pending.length}) · {plannedAp} AP</p><p>Applied on End Turn. Available AP already accounts for current food reserves.</p>{pending.map((action, i) => <p key={i}>{action.type.replaceAll("_", " ")} · {"moduleId" in action ? `${action.moduleId} / slot ${actionSlotIndex(action) + 1}` : "targetId" in action ? action.targetId : "mission"}</p>)}<button onClick={() => setPending([])}>Clear queue</button></div>}{miniResult && <div className={styles.section}><p className={styles.label}>LAST MINIGAME</p><p>{miniResult.modifier >= 0 ? "+" : ""}{Math.round(miniResult.modifier * 100)}% bonus queued with its target action</p></div>}<div className={styles.section}><p className={styles.label}>LATEST TURN</p><p>{state.lastTurn ? `Crops +${state.lastTurn.cropYield}; meat +${state.lastTurn.meatYield}. ${state.lastTurn.warnings.join(" ")}` : "Awaiting first turn."}</p></div>{state.phase === "complete" && <div className={styles.section}><p className={styles.label}>MISSION RESULT</p><h2 className={state.passed ? styles.pass : styles.fail}>{state.passed ? "PASS" : "FAIL"}</h2><p>{state.failureReason ?? "Production goals reached."}</p></div>}
+        {pending.length > 0 && <div className={styles.section}><p className={styles.label}>QUEUED ({pending.length}) · {plannedAp} AP</p><p>Applied on End Turn. Available AP already accounts for current food reserves.</p>{pending.map((action, i) => <p key={i}>{action.type.replaceAll("_", " ")} · {"moduleId" in action ? action.type === "PAUSE_MODULE" ? action.moduleId : `${action.moduleId} / slot ${actionSlotIndex(action) + 1}` : "targetId" in action ? action.targetId : action.type === "USE_EMERGENCY_SUPPLY" ? action.resource : "mission"} <button onClick={() => cancelQueuedAction(i)} aria-label={`Cancel queued action ${i + 1}`}>Cancel</button></p>)}<button onClick={() => setPending([])}>Clear queue</button></div>}{miniResult && <div className={styles.section}><p className={styles.label}>LAST MINIGAME</p><p>{miniResult.modifier >= 0 ? "+" : ""}{Math.round(miniResult.modifier * 100)}% bonus queued with its target action</p></div>}<div className={styles.section}><p className={styles.label}>LATEST TURN</p><p>{state.lastTurn ? `Crops +${state.lastTurn.cropYield}; meat +${state.lastTurn.meatYield}. ${state.lastTurn.warnings.join(" ")}` : "Awaiting first turn."}</p></div>{state.phase === "complete" && <div className={styles.section}><p className={styles.label}>MISSION RESULT</p><h2 className={state.passed ? styles.pass : styles.fail}>{state.passed ? "PASS" : "FAIL"}</h2><p>{state.failureReason ?? "Production goals reached."}</p></div>}
       </aside>
     </div>
     {building && showPreflight && <section className={styles.command} role="region" aria-label="Mission readiness check">

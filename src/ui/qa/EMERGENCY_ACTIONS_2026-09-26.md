@@ -1,0 +1,13 @@
+# Emergency actions handoff — 2026-09-26
+
+Branch: `balance/emergency-actions-2026-09-26`; base `6ab58ba`. Previous version and all earlier previews remain on Git history. New numbered design preview: `public/assets/previews/emergency-actions-v1.html`; playable integration: `src/ui/EmergencyPanel.tsx` in `GameClient`.
+
+Two actions: `PAUSE_MODULE` for a greenhouse/livestock placed ID, and `USE_EMERGENCY_SUPPLY` for power/water/oxygen/food. `GameState.emergencySuppliesRemaining` persists across levels (legacy snapshots default to 2); `pausedModuleIds` is turn scoped and cleared after settlement. Transcript validator and server replay validate both actions. The shared `planOperationActions` function validates UI queues using the exact resolver action rules. Cancel before End Turn spends nothing. No database migration or Phaser scene change.
+
+Experimental values in `src/data/emergency.ts`: 2 supplies per run; refill 25% of base resource capacity, clamped to actual storage; paused agriculture uses 25% fixed power/water demand, 25% baseline livestock feed, and no extra growth/production consumption. First accepted emergency action during crisis is free; another costs 1 AP. No new hazard or crisis deadline rule. These are trial balance values, not scientific quantities.
+
+Pausing does not erase crops, livestock, or growth progress, but prevents harvest/care on that module during that turn. The module resumes automatically next turn. The supply action is limited to once per turn, two per whole run. Full storage rejects an unnecessary supply use. Accepted actions are stored in history and transcript; incomplete/invalid actions reject without spending AP/supplies.
+
+Validation: typecheck, build, 41 tests. Browser confirmed both controls, pause cancellation, supply queue, and AP display. The paired offline harness (`src/ui/qa/emergency-paired.mjs`) completed 40 missions: same 20 cases with rescue policy off/on. Passes rose from 6 to 12 in this deliberately narrow fixture. It is not an estimated player win rate; the rescue policy uses current reserves and a simple threshold, and does not inspect future hazards. Disconnected bases mostly still fail. Review these values before merging to `dev`.
+
+Expected integration: Developer A can add a one-turn visual pause mark based on queued action and/or `GameState.pausedModuleIds` during resolution; no Phaser change is required for the buttons. Developer B should review the new action/state contract and balance before integrating with any other unpublished replay changes. Existing saved runs need no migration because the new fields are optional; refresh active clients before starting new runs.
