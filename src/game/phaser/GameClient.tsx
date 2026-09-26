@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { MODULES, MODULE_BY_ID } from "../../data/modules.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../state/reducer.ts";
@@ -14,8 +14,8 @@ import { curatedSources } from "../../content/sources";
 import { communicationsAvailable } from "../../data/systems.ts";
 import { deriveAgentEvent, toAgentPublicState } from "../../ai/publicState.ts";
 import { MissionControlPanel, type MessageView } from "../../ui/MissionControlPanel";
-import { Match3, type MinigameResult } from "../minigames/match3/Match3.tsx";
-import { RepairSnake } from "../minigames/repairSnake/RepairSnake.tsx";
+import type { MinigameResult } from "../minigames/match3/Match3.tsx";
+import { MinigameBoundary } from "../minigames/MinigameBoundary.tsx";
 import { GameCanvas } from "./GameCanvas.tsx";
 import { AgricultureInterior, type MiniTarget } from "./AgricultureInterior.tsx";
 import { actionCost, actionSlotIndex, agricultureSlots, careAction, slotAction } from "./agricultureAdapter.ts";
@@ -25,6 +25,8 @@ import styles from "./game.module.css";
 import { BuildingPortrait } from "../../ui/BuildingPortrait";
 
 const resourceKeys = ["power", "water", "oxygen", "food", "temperature"] as const;
+const Match3 = lazy(() => import("../minigames/match3/Match3.tsx").then((module) => ({ default: module.Match3 })));
+const RepairSnake = lazy(() => import("../minigames/repairSnake/RepairSnake.tsx").then((module) => ({ default: module.RepairSnake })));
 const tutorialKey = "agronaut:tutorial:v1";
 const emptyProgress: TutorialProgress = { enteredGreenhouse: false, enteredLivestock: false, queuedAction: false, resolvedTurn: false };
 type SubmittedResult = { runId: string; score: { rules: number; llm: number; total: number; usedFallback: boolean }; report: MissionReportData; saved: boolean; reason?: string };
@@ -255,7 +257,7 @@ export function GameClient() {
       {submitted && <><MissionReport report={submitted.report} nickname={state.nickname} scores={submitted.score} sources={curatedSources} />{!submitted.saved && <p role="status">{submitted.reason ?? "Result is available locally; saving can be retried."}</p>}</>}
       {savedRunId && <p><a href={`/report/${savedRunId}`}>Open saved mission report</a></p>}
     </section>}
-    {mini && <div className={styles.modalBackdrop}><div className={styles.modal}>{mini === "match3" ? <Match3 onComplete={completeMini} onCancel={() => setMini(null)} /> : <RepairSnake onComplete={completeMini} onCancel={() => setMini(null)} />}</div></div>}
+    {mini && <div className={styles.modalBackdrop}><div className={styles.modal}><MinigameBoundary key={`${mini}-${miniTarget?.moduleId}`} onFallback={() => completeMini({ completed: false, modifier: 0 })}><Suspense fallback={<p role="status">Loading minigame…</p>}>{mini === "match3" ? <Match3 onComplete={completeMini} onCancel={() => setMini(null)} /> : <RepairSnake onComplete={completeMini} onCancel={() => setMini(null)} />}</Suspense></MinigameBoundary></div></div>}
     {interiorId && <AgricultureInterior key={interiorId} state={state} moduleId={interiorId} pending={pending} feedback={message} onQueue={queue} onMini={openMini} onClose={() => setInteriorId(null)} />}
   </main>;
 }
