@@ -1,3 +1,5 @@
+> Release update (2026-09-26): this handoff is historical. The six-crop system is now committed and integrated with agriculture slots and the completed backend. All branches are being synchronized to this release; see `BRANCH_SYNC.md`. The `/supply` and `/game` resource models remain separate.
+
 # 六作物系统：合作者接口与改动指南
 
 本次底版为已上传 GitHub 的 `origin/dev`，提交 `f1ebfe4`。改动仅在本地，未提交或推送。保留原正式游戏 `/game`；容量模型在 `/supply`。两者现在共享作物 ID、周期、素材元数据，但**资源与产量算法尚未合并**。
