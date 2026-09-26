@@ -4,7 +4,7 @@ All existing branches are synchronized to the integrated demo release dated 2026
 
 Run `npm run demo` for the local app, then open `/supply`. Run `npm run demo:script` for the Python reference. The shared catalog produces 200 harvest points in 12 turns against a target of 180. The Mission page retains its separate ten-turn network model. External database and messaging services still require configuration.
 
-Validation: 15 simulation/completion tests, four crop/supply tests, TypeScript, production build, and a browser run matching Python.
+Validation: 16 simulation/completion tests, four crop/supply tests, TypeScript, production build, and a browser run matching Python.
 
 For future finalized changes: fetch all branches, merge without rewriting history, resolve compatibility differences, run affected checks, push every branch, and verify the remote heads. Do not report synchronization complete if a protected branch or concurrent change prevents it.
 
