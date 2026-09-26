@@ -16,14 +16,25 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 check(!!url && !!serviceKey, "Supabase server URL and service-role key for session storage");
 const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
 let webhookUrl;
+let deploymentOrigin;
 try {
   const appUrl = new URL(appOrigin);
   if (appUrl.protocol === "https:" && appUrl.pathname === "/" && !appUrl.search && !appUrl.hash
     && !appUrl.username && !appUrl.password && appUrl.hostname.includes(".")
-    && !/^(?:your-|example\.|localhost$)/i.test(appUrl.hostname))
+    && !/^(?:your-|example\.|localhost$)/i.test(appUrl.hostname)) {
+    deploymentOrigin = appUrl.origin;
     webhookUrl = new URL("/api/mission-control/webhook", appUrl).href;
+  }
 } catch { /* Missing or invalid deployment URL. */ }
 check(!!webhookUrl, "NEXT_PUBLIC_APP_URL is your real public HTTPS deployment origin");
+if (deploymentOrigin) {
+  try {
+    const response = await fetch(`${deploymentOrigin}/api/mission-control/status`, {
+      redirect: "manual", signal: AbortSignal.timeout(10000),
+    });
+    check(response.status === 405, `Deployed game includes the Photon advisor routes (HTTP ${response.status})`);
+  } catch { check(false, "Deployed Photon advisor route could not be reached"); }
+}
 
 if (projectId && projectSecret) {
   try {
