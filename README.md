@@ -26,4 +26,10 @@ Import this repository into Vercel as a Next.js project. Set the variables liste
 
 Run `npm test` for the small baseline: deterministic turn replay, one-turn crisis recovery, and a ten-turn Challenge run with connected power/water/oxygen plus crop and meat production. It uses Node's built-in test runner and requires Node.js 24; no external test package is needed.
 
-Before merging to `dev`, also run `npm run typecheck` and `npm run build`. In the current workspace, the baseline test passes; dependency installation, typecheck, and build are still unverified because the configured proxy at `127.0.0.1:7897` refuses connections. A public Vercel URL and Supabase credentials have not yet been provisioned.
+Before merging to `dev`, also run `npm run typecheck` and `npm run build`. On the initial Developer B branch, all three commands passed with Node.js 24. GitHub pushes worked after bypassing the unavailable local proxy. A public Vercel URL and Supabase credentials have not yet been provisioned.
+
+## Integration
+
+The renderer imports `GameState`, `PlayerAction`, and `TurnResult` from `src/game/state/types.ts`. Create a run with `createInitialState`, apply design actions with `applyBuildAction`, call `startOperation`, then call `resolveTurn(state, actions, rngSeed)` for each turn. The renderer must treat the returned state as authoritative and must not calculate resource production or hazards itself. Crop and animal modules are initialized with default occupants; operation actions change their settings. Developer A can render the current state while its Phaser integration and minigames are built.
+
+The content teammate should provide the verified scientific source registry. `src/ai/sourceAdapter.ts` is intentionally empty until that registry is ready, so reports cite no external sources yet. The Photon adapter in `src/ai/photon.ts` is also a local boundary pending a provisioned Spectrum project and provider choice. These are integration tasks, not simulated live integrations.
