@@ -1125,6 +1125,17 @@
       "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
     },
     {
+      "path": "public/assets/previews/ui-v10.html",
+      "url": "/assets/previews/ui-v10.html",
+      "width": null,
+      "height": null,
+      "bytes": 17419,
+      "recommended": true,
+      "status": "illustrative-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
       "path": "public/assets/previews/ui-v2.html",
       "url": "/assets/previews/ui-v2.html",
       "width": null,
@@ -1174,8 +1185,8 @@
       "width": null,
       "height": null,
       "bytes": 70290,
-      "recommended": true,
-      "status": "illustrative-preview",
+      "recommended": false,
+      "status": "archived-preview",
       "purpose": "Presentation only; sample values, no live simulation",
       "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
     },
@@ -1185,6 +1196,28 @@
       "width": null,
       "height": null,
       "bytes": 8485,
+      "recommended": false,
+      "status": "archived-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
+      "path": "public/assets/previews/ui-v8.html",
+      "url": "/assets/previews/ui-v8.html",
+      "width": null,
+      "height": null,
+      "bytes": 10599,
+      "recommended": false,
+      "status": "archived-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
+      "path": "public/assets/previews/ui-v9.html",
+      "url": "/assets/previews/ui-v9.html",
+      "width": null,
+      "height": null,
+      "bytes": 12693,
       "recommended": false,
       "status": "archived-preview",
       "purpose": "Presentation only; sample values, no live simulation",
@@ -1209,6 +1242,28 @@
       "bytes": 68925,
       "recommended": false,
       "status": "archived-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
+      "path": "public/assets/previews/world-camera-v1.html",
+      "url": "/assets/previews/world-camera-v1.html",
+      "width": null,
+      "height": null,
+      "bytes": 10868,
+      "recommended": false,
+      "status": "archived-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
+      "path": "public/assets/previews/world-camera-v2.html",
+      "url": "/assets/previews/world-camera-v2.html",
+      "width": null,
+      "height": null,
+      "bytes": 12203,
+      "recommended": true,
+      "status": "illustrative-preview",
       "purpose": "Presentation only; sample values, no live simulation",
       "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
     },
