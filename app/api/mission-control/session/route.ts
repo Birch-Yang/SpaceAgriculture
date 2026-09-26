@@ -35,7 +35,10 @@ export async function POST(request: Request) {
     if (!await registerMissionSession(body.runId, space.spaceId, space.phone, hashSessionToken(token), body.publicState)) throw new Error("Session store unavailable");
     await sendIMessage(space.spaceId, `Photon · Earth Mission Control linked to lunar run ${body.runId.slice(0, 8)}. Begin mission operations to open the relay. You can ask two questions per turn, shared between the game and this chat; I offer inspection hints only.`, space.phone);
     return NextResponse.json({ status: "online", token });
-  } catch {
-    return NextResponse.json({ status: "unavailable", text: "Photon could not establish the relay. Check the project's messaging line, registered recipient, and database setup before a new launch." }, { status: 503 });
+  } catch (error) {
+    const text = error instanceof Error && error.message.includes("Target not allowed for this project")
+      ? "Photon blocked this recipient. Add the phone number or email linked to your iMessage under your Photon project's Users tab, then launch a new mission."
+      : "Photon could not establish the relay. Check the project's messaging line, registered recipient, and database setup before a new launch.";
+    return NextResponse.json({ status: "unavailable", text }, { status: 503 });
   }
 }
