@@ -3,7 +3,7 @@ import { getReport } from "../../../../src/backend/runs.ts";
 import { createReplayFrames } from "../../../../src/game/state/replayFrames.ts";
 import { parseTranscript } from "../../../../src/game/state/transcript.ts";
 
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
