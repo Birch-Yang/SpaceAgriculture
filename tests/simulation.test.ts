@@ -94,6 +94,23 @@ test("slot actions isolate occupants, care is once per cycle, and rejected actio
   ], "slot-seed");
   assert.equal(rejected.rejectedActions.length, 4);
   assert.deepEqual(rejected.state, baseline.state);
+
+  let industrial = createInitialState("11111111-1111-4111-8111-111111111111", "Tester", "challenge");
+  industrial = build({ type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 0 }, industrial);
+  industrial = build({ type: "PLACE_MODULE", moduleId: "greenhouse-industrial", x: 4, y: 0, rotation: 0 }, industrial);
+  industrial = build({ type: "PLACE_MODULE", moduleId: "livestock-industrial", x: 9, y: 0, rotation: 0 }, industrial);
+  const greenhouse3 = industrial.modules.find((module) => module.moduleId === "greenhouse-industrial")!.id;
+  const stall3 = industrial.modules.find((module) => module.moduleId === "livestock-industrial")!.id;
+  const thirdSlot = resolveTurn(startOperation(industrial), [
+    { type: "PLANT_CROP", moduleId: greenhouse3, slotIndex: 2, crop: "wheat" },
+    { type: "WATER_PLOT", moduleId: greenhouse3, slotIndex: 2 },
+    { type: "SET_ANIMAL", moduleId: stall3, slotIndex: 2, animal: "cow" },
+  ], "slot-seed");
+  assert.equal(thirdSlot.rejectedActions.length, 0);
+  assert.equal(thirdSlot.state.crops.find((plot) => plot.moduleId === greenhouse3 && plot.slotIndex === 1)?.crop, null);
+  assert.equal(thirdSlot.state.crops.find((plot) => plot.moduleId === greenhouse3 && plot.slotIndex === 2)?.crop, "wheat");
+  assert.equal(thirdSlot.state.crops.find((plot) => plot.moduleId === greenhouse3 && plot.slotIndex === 2)?.wateredThisCycle, true);
+  assert.equal(thirdSlot.state.livestock.find((animal) => animal.moduleId === stall3 && animal.slotIndex === 2)?.animal, "cow");
 });
 
 test("harvest and repair modifiers are bounded and duplicate harvest is rejected", () => {
