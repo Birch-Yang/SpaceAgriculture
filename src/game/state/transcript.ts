@@ -2,6 +2,7 @@ import { MODULE_BY_ID } from "../../data/modules.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "./reducer.ts";
 import { resolveTurn } from "../simulation/resolveTurn.ts";
 import { seedForLevel } from "../simulation/hazards.ts";
+import { scoreMinigameProof, type MinigameProof } from "../minigames/proof.ts";
 import type { GameMode, GameState, PlayerAction } from "./types.ts";
 
 export type RunStep =
@@ -23,6 +24,14 @@ const oneOf = (options: Set<string>, value: unknown): boolean => typeof value ==
 const slot = (value: unknown): boolean => value === undefined || (Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 2);
 const modifier = (value: unknown): boolean => value === undefined || (typeof value === "number" && Number.isFinite(value) && value >= -0.1 && value <= 0.1);
 
+function verifiedModifier(value: Record<string, unknown>, kind: MinigameProof["kind"]): boolean {
+  if (!modifier(value.minigameModifier)) return false;
+  if (value.minigameProof === undefined) return value.minigameModifier === undefined || value.minigameModifier === 0;
+  const computed = scoreMinigameProof(value.minigameProof, kind);
+  return computed !== null && typeof value.minigameModifier === "number"
+    && Math.abs(computed - value.minigameModifier) < 1e-9;
+}
+
 function validAction(value: unknown, build: boolean): value is PlayerAction {
   if (!record(value) || typeof value.type !== "string") return false;
   if (build) {
@@ -39,7 +48,7 @@ function validAction(value: unknown, build: boolean): value is PlayerAction {
     return false;
   }
   if (value.type === "END_TURN") return true;
-  if (value.type === "REPAIR") return string(value.targetId) && modifier(value.minigameModifier);
+  if (value.type === "REPAIR") return string(value.targetId) && verifiedModifier(value, "repair");
   if (value.type === "REALLOCATE_UTILITY") {
     if (!string(value.moduleId) || !record(value.allocation)) return false;
     const a = value.allocation;
@@ -50,10 +59,10 @@ function validAction(value: unknown, build: boolean): value is PlayerAction {
   if (value.type === "SET_CROP_PARAMS") return oneOf(settings, value.water) && oneOf(settings, value.light) && oneOf(settings, value.temperature);
   if (value.type === "SET_LIVESTOCK_PARAMS") return oneOf(feeds, value.feed);
   if (value.type === "PLANT_CROP") return oneOf(crops, value.crop);
-  if (value.type === "HARVEST_CROP") return modifier(value.minigameModifier);
+  if (value.type === "HARVEST_CROP") return verifiedModifier(value, "match3");
   if (value.type === "SET_ANIMAL") return oneOf(animals, value.animal);
   if (value.type === "WATER_PLOT") return Number.isInteger(value.slotIndex);
-  if (value.type === "FEED_STALL") return Number.isInteger(value.slotIndex) && modifier(value.minigameModifier);
+  if (value.type === "FEED_STALL") return Number.isInteger(value.slotIndex) && verifiedModifier(value, "match3");
   return false;
 }
 
@@ -73,6 +82,7 @@ export function parseTranscript(value: unknown): RunTranscript {
 }
 
 export function replayTranscript(transcript: RunTranscript): GameState {
+  parseTranscript(transcript);
   let state = createInitialState(transcript.runId, transcript.nickname, transcript.mode);
   let turnCount = 0;
   for (const step of transcript.steps) {

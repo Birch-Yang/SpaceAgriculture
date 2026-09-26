@@ -1,3 +1,5 @@
+import type { MinigameProof } from "../minigames/proof.ts";
+
 export type GameMode = "challenge" | "progressive";
 export type GamePhase = "design" | "operation" | "intermission" | "complete";
 export type ResourceKey = "power" | "water" | "oxygen" | "food";
@@ -134,12 +136,12 @@ export type PlayerAction =
   | { type: "SET_CROP_PARAMS"; moduleId: string; slotIndex?: number; water: Setting; light: Setting; temperature: Setting }
   | { type: "SET_LIVESTOCK_PARAMS"; moduleId: string; slotIndex?: number; feed: "rationed" | "normal" | "high" }
   | { type: "REALLOCATE_UTILITY"; moduleId: string; allocation: UtilityAllocation }
-  | { type: "REPAIR"; targetId: string; minigameModifier?: number }
+  | { type: "REPAIR"; targetId: string; minigameModifier?: number; minigameProof?: MinigameProof }
   | { type: "PLANT_CROP"; moduleId: string; slotIndex?: number; crop: CropKind }
-  | { type: "HARVEST_CROP"; moduleId: string; slotIndex?: number; minigameModifier?: number }
+  | { type: "HARVEST_CROP"; moduleId: string; slotIndex?: number; minigameModifier?: number; minigameProof?: MinigameProof }
   | { type: "SET_ANIMAL"; moduleId: string; slotIndex?: number; animal: AnimalKind }
   | { type: "WATER_PLOT"; moduleId: string; slotIndex: number }
-  | { type: "FEED_STALL"; moduleId: string; slotIndex: number; minigameModifier?: number }
+  | { type: "FEED_STALL"; moduleId: string; slotIndex: number; minigameModifier?: number; minigameProof?: MinigameProof }
   | { type: "END_TURN" };
 
 export type TurnResult = { state: GameState; summary: TurnSummary; acceptedActions: PlayerAction[]; rejectedActions: string[] };

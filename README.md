@@ -15,7 +15,7 @@ agronaut is a lunar agriculture design-space explorer. Players build an outpost,
 
 Use Node.js 24. Run `npm ci`, copy `.env.example` to `.env.local`, then run `npm run dev`. The game and fallback report work without service credentials. `npm test`, `npm run typecheck`, and `npm run build` are the local checks.
 
-The server accepts only an action transcript for `/api/runs`. It replays construction and every turn before computing scores or saving a result. Accepted actions and per-turn records are retained in `summary_json.replay` for future replay tooling. This prevents a client from submitting an arbitrary final score or resource state. Minigame modifiers are bounded to ±10%; a browser client cannot prove that a human completed a minigame, so competitive anti-cheat would need an authoritative minigame service.
+The server accepts only an action transcript for `/api/runs`. It replays construction and every turn before computing scores or saving a result. Accepted actions and per-turn records are retained in `summary_json.replay` for future replay tooling. This prevents a client from submitting an arbitrary final score or resource state. Minigame modifiers are bounded to ±10% and require a move-by-move proof that the server replays to calculate the claimed bonus. This verifies that a score is achievable under the game rules; a browser client cannot prove that a human performed those moves, so competitive anti-cheat would still need an authoritative challenge service.
 
 ## Database and deployment
 
