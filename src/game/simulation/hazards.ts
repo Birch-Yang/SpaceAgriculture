@@ -31,3 +31,7 @@ export function hazardForTurn(state: GameState, rngSeed: string): HazardInstance
 export function isCommunicationsOutage(state: GameState): boolean {
   return !communicationsAvailable(state);
 }
+
+export function seedForLevel(state: Pick<GameState, "runId" | "level">): string {
+  return `${state.runId}:${state.level}`;
+}

@@ -1,6 +1,7 @@
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "./reducer.ts";
 import { resolveTurn } from "../simulation/resolveTurn.ts";
+import { seedForLevel } from "../simulation/hazards.ts";
 import type { GameMode, GameState, PlayerAction } from "./types.ts";
 
 export type RunStep =
@@ -85,7 +86,7 @@ export function replayTranscript(transcript: RunTranscript): GameState {
       state = advanceLevel(state);
     } else {
       if (++turnCount > 30) throw new Error("Too many turns");
-      const result = resolveTurn(state, step.actions, `${state.runId}:${state.level}:${state.turn}`);
+      const result = resolveTurn(state, step.actions, seedForLevel(state));
       if (result.rejectedActions.length) throw new Error(`Rejected action: ${result.rejectedActions[0]}`);
       state = result.state;
     }

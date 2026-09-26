@@ -5,6 +5,7 @@ import { MODULES, MODULE_BY_ID } from "../../data/modules.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../state/reducer.ts";
 import { maxActionPoints, resolveTurn } from "../simulation/resolveTurn.ts";
+import { seedForLevel } from "../simulation/hazards.ts";
 import type { GameMode, GameState, PlayerAction } from "../state/types.ts";
 import type { RunTranscript } from "../state/transcript.ts";
 import type { MissionReport as MissionReportData } from "../../ai/report.ts";
@@ -118,7 +119,7 @@ export function GameClient() {
   function endTurn() {
     if (!state) return;
     try {
-      const result = resolveTurn(state, [...pending, { type: "END_TURN" }], `${state.runId}:${state.level}:${state.turn}`);
+      const result = resolveTurn(state, [...pending, { type: "END_TURN" }], seedForLevel(state));
       const betweenLevels = result.state.phase === "intermission";
       const nextTranscript = transcript ? { ...transcript, steps: [...transcript.steps, { kind: "turn" as const, actions: result.acceptedActions }, ...(betweenLevels ? [{ kind: "advance" as const }] : [])] } : null;
       if (nextTranscript) setTranscript(nextTranscript);

@@ -6,10 +6,13 @@ import { fallbackReport } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
 import { communicationsAvailable, resourceCapacity } from "../src/data/systems.ts";
+import { DIFFICULTY } from "../src/data/difficulty.ts";
+import { HAZARDS } from "../src/data/hazards.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
 import { harvestCrop } from "../src/game/simulation/crops.ts";
 import { growLivestock } from "../src/game/simulation/livestock.ts";
+import { hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
 import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
@@ -44,7 +47,7 @@ test("a complete transcript replays to the same authoritative state and rejects 
     const greenhouse = state.modules.find((module) => module.moduleId === "greenhouse-standard")!;
     const actions: PlayerAction[] = state.crops.find((crop) => crop.moduleId === greenhouse.id && crop.ready)
       ? [{ type: "HARVEST_CROP", moduleId: greenhouse.id, slotIndex: 0 }] : [];
-    const result = resolveTurn(state, [...actions, { type: "END_TURN" }], `${state.runId}:${state.level}:${state.turn}`);
+    const result = resolveTurn(state, [...actions, { type: "END_TURN" }], seedForLevel(state));
     steps.push({ kind: "turn", actions: result.acceptedActions });
     state = result.state;
   }
@@ -148,6 +151,17 @@ test("Spectrum webhook signature accepts current raw content and rejects tamperi
   assert.equal(verifySpectrumWebhook(body, headers, secret, now + 301_000), false);
 });
 
+test("each level keeps a fixed hazard schedule near its pressure budget", () => {
+  const state = base("progressive");
+  for (const level of [1, 2, 3] as const) {
+    const context = { ...state, level };
+    const schedule = hazardSchedule(context, seedForLevel(context));
+    assert.deepEqual(schedule, hazardSchedule(context, seedForLevel(context)));
+    const pressure = schedule.reduce((sum, hazard) => sum + HAZARDS[hazard.type].pressure * hazard.severity, 0);
+    assert.ok(Math.abs(pressure - DIFFICULTY.progressive[level - 1].hazardPressure) < 1, `Level ${level}: ${pressure}`);
+  }
+});
+
 test("progressive mode carries one base through three ten-turn levels", () => {
   let state = startOperation(base("progressive"));
   const steps: RunTranscript["steps"] = [...moduleActions.map((action) => ({ kind: "build" as const, action })), { kind: "start" }];
@@ -163,7 +177,7 @@ test("progressive mode carries one base through three ten-turn levels", () => {
     const actions: PlayerAction[] = state.crops.filter((crop) => crop.ready)
       .map((crop) => ({ type: "HARVEST_CROP", moduleId: crop.moduleId, slotIndex: crop.slotIndex }));
     if (resolved === 0) actions.push({ type: "PLANT_CROP", moduleId: greenhouse.id, slotIndex: 1, crop: "lettuce" });
-    const result = resolveTurn(state, actions, `${state.runId}:${state.level}:${state.turn}`);
+    const result = resolveTurn(state, actions, seedForLevel(state));
     state = result.state;
     steps.push({ kind: "turn", actions: result.acceptedActions });
     resolved++;
@@ -177,12 +191,12 @@ test("progressive mode carries one base through three ten-turn levels", () => {
         addBuild({ type: "PLACE_CORRIDOR", cells: [{ x: 3, y: 4 }] });
         addBuild({ type: "PLACE_MODULE", moduleId: "water-recycler", x: 0, y: 7, rotation: 0 });
         addBuild({ type: "PLACE_CORRIDOR", cells: [{ x: 0, y: 5 }, { x: 0, y: 6 }] });
+        addBuild({ type: "PLACE_MODULE", moduleId: "solar-array", x: 1, y: 2, rotation: 0 });
+        addBuild({ type: "PLACE_CORRIDOR", cells: [{ x: 2, y: 1 }] });
       }
       if (state.level === 3) {
         addBuild({ type: "PLACE_MODULE", moduleId: "solar-array", x: 6, y: 5, rotation: 0 });
         addBuild({ type: "PLACE_CORRIDOR", cells: [{ x: 5, y: 5 }] });
-        addBuild({ type: "PLACE_MODULE", moduleId: "solar-array", x: 1, y: 2, rotation: 0 });
-        addBuild({ type: "PLACE_CORRIDOR", cells: [{ x: 2, y: 1 }] });
       }
       state = startOperation(state);
       steps.push({ kind: "start" });
