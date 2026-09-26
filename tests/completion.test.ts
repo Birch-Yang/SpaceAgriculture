@@ -11,11 +11,13 @@ import { CROP_IDS } from "../src/data/cropCatalog.ts";
 import { HAZARDS } from "../src/data/hazards.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
+import { competitionRanks } from "../src/backend/ranking.ts";
 import { greenhouseDistance } from "../src/backend/analytics.ts";
+import { summarizeDecisions, summarizePressure } from "../src/backend/strategyHistory.ts";
 import { advanceMatch3, initialMatch3State, match3Modifier, scoreMatch3Proof, scoreRepairProof, type Match3Proof, type RepairProof } from "../src/game/minigames/proof.ts";
 import { harvestCrop } from "../src/game/simulation/crops.ts";
 import { growLivestock } from "../src/game/simulation/livestock.ts";
-import { hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
+import { forecastForTurn, hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
 import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
 import { scoreRules } from "../src/game/simulation/scoring.ts";
 import { reportRadarAxes } from "../src/game/simulation/reportRadar.ts";
@@ -45,6 +47,11 @@ function base(mode: "challenge" | "progressive" = "challenge"): GameState {
   }
   return state;
 }
+
+test("records use stable competition ranks for tied scores", () => {
+  assert.deepEqual(competitionRanks([100, 92, 92, 80, 80, 70]), [1, 2, 2, 4, 4, 6]);
+  assert.deepEqual(competitionRanks([]), []);
+});
 
 test("a complete transcript replays to the same authoritative state and rejects forged actions", () => {
   let state = startOperation(base());
@@ -284,7 +291,48 @@ test("each level keeps a fixed hazard schedule near its pressure budget", () => 
     assert.deepEqual(schedule, hazardSchedule(context, seedForLevel(context)));
     const pressure = schedule.reduce((sum, hazard) => sum + HAZARDS[hazard.type].pressure * hazard.severity, 0);
     assert.ok(Math.abs(pressure - DIFFICULTY.progressive[level - 1].hazardPressure) < 1, `Level ${level}: ${pressure}`);
+    for (let turn = 1; turn <= 10; turn++) {
+      const forecast = forecastForTurn({ ...context, turn });
+      const window = schedule.filter((event) => event.turn >= turn && event.turn < turn + 3);
+      for (const [key, types] of Object.entries({ solar: ["radiation"], thermal: ["temperature"], impact: ["micrometeoroid"], systems: ["power", "communications"] }) as Array<["solar" | "thermal" | "impact" | "systems", string[]]>)
+        assert.equal(forecast[key] !== "Low", window.some((event) => types.includes(event.type)), `${level}/${turn}/${key}`);
+    }
   }
+});
+
+test("process analytics reconstruct crop switches and harvests from accepted mission actions", () => {
+  let state = startOperation(base());
+  const steps: RunTranscript["steps"] = [...moduleActions.map((action) => ({ kind: "build" as const, action })), { kind: "start" }];
+  const greenhouse = state.modules.find((module) => module.moduleId === "greenhouse-standard")!;
+  let switchedBack = false;
+  while (state.phase === "operation") {
+    const plot = state.crops.find((crop) => crop.moduleId === greenhouse.id && crop.slotIndex === 0)!;
+    const actions: PlayerAction[] = [];
+    if (state.turn === 1) actions.push({ type: "PLANT_CROP", moduleId: greenhouse.id, slotIndex: 0, crop: "radish" },
+      { type: "SET_CROP_PARAMS", moduleId: greenhouse.id, slotIndex: 0, water: "low", light: "high", temperature: "medium" });
+    else if (plot.ready) {
+      actions.push({ type: "HARVEST_CROP", moduleId: greenhouse.id, slotIndex: 0 });
+      if (!switchedBack && plot.crop === "radish") {
+        actions.push({ type: "PLANT_CROP", moduleId: greenhouse.id, slotIndex: 0, crop: "lettuce" });
+        switchedBack = true;
+      }
+    }
+    const result = resolveTurn(state, [...actions, { type: "END_TURN" }], seedForLevel(state));
+    assert.deepEqual(result.rejectedActions, []);
+    steps.push({ kind: "turn", actions: result.acceptedActions });
+    state = result.state;
+  }
+  const transcript: RunTranscript = { version: 1, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
+  const observed = summarizeDecisions(transcript);
+  assert.equal(observed.plantedByCrop.radish, 1);
+  assert.equal(observed.plantedByCrop.lettuce, 1);
+  assert.equal(observed.cropSwitches, 2);
+  assert.ok(observed.harvestedByCrop.radish >= 1);
+  assert.equal(observed.parameterChanges, 1);
+  assert.equal(observed.highLightSelections, 1);
+  assert.equal(observed.lowWaterSelections, 1);
+  const pressure = summarizePressure(state.turnRecords);
+  assert.equal(pressure.pressureTurns + pressure.ordinaryTurns, state.turnRecords.length);
 });
 
 test("progressive mode carries one base through three ten-turn levels", () => {

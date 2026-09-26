@@ -1,6 +1,7 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { SYSTEMS } from "../../data/systems.ts";
+import { forecastForTurn } from "../simulation/hazards.ts";
 import type { Cell, GameMode, GameState, PlacedModule, PlayerAction } from "./types.ts";
 
 export const MAP_SIZE = { width: 14, height: 14 } as const;
@@ -14,7 +15,7 @@ export function createInitialState(runId: string, nickname: string, mode: GameMo
     budget: difficulty.budget, ap: 0, resources: { ...difficulty.starting },
     production: { cropCumulative: 0, meatCumulative: 0 }, modules: [], utilityEdges: [],
     crops: [], livestock: [],
-    forecast: { solar: "Variable", thermal: "Elevated", impact: "Low–moderate" },
+    forecast: forecastForTurn({ runId, mode, level: 1, turn: 1 }),
     history: [], turnRecords: [], nextId: 1,
   };
 }
@@ -121,5 +122,5 @@ export function advanceLevel(state: GameState): GameState {
   if (state.mode !== "progressive" || state.phase !== "intermission" || state.level >= 3) throw new Error("No next level available");
   const nextLevel = (state.level + 1) as 2 | 3;
   return { ...state, level: nextLevel, turn: 1, budget: state.budget + DIFFICULTY.progressive[nextLevel - 1].buildBudget,
-    forecast: { solar: nextLevel === 3 ? "Elevated" : "Moderate", thermal: "Elevated", impact: "Moderate" }, activeHazard: undefined, lastTurn: undefined };
+    forecast: forecastForTurn({ runId: state.runId, mode: state.mode, level: nextLevel, turn: 1 }), activeHazard: undefined, lastTurn: undefined };
 }

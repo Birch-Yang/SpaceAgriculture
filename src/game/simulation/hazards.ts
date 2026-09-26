@@ -1,7 +1,7 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { HAZARDS } from "../../data/hazards.ts";
 import { communicationsAvailable } from "../../data/systems.ts";
-import type { GameState, HazardInstance, HazardType } from "../state/types.ts";
+import type { ForecastState, GameState, HazardInstance, HazardType } from "../state/types.ts";
 
 function hash(input: string): number {
   let result = 2166136261;
@@ -34,4 +34,16 @@ export function isCommunicationsOutage(state: GameState): boolean {
 
 export function seedForLevel(state: Pick<GameState, "runId" | "level">): string {
   return `${state.runId}:${state.level}`;
+}
+
+/** Fuzzy risk bands derived from the same hidden schedule used by resolveTurn. */
+export function forecastForTurn(state: Pick<GameState, "runId" | "mode" | "level" | "turn">): ForecastState {
+  const upcoming = hazardSchedule(state, seedForLevel(state))
+    .filter((event) => event.turn >= state.turn && event.turn < state.turn + 3);
+  const band = (types: HazardType[]) => {
+    const severity = Math.max(0, ...upcoming.filter((event) => types.includes(event.type)).map((event) => event.severity));
+    return severity >= 1.2 ? "Elevated" : severity > 0 ? "Moderate" : "Low";
+  };
+  return { solar: band(["radiation"]), thermal: band(["temperature"]), impact: band(["micrometeoroid"]),
+    systems: band(["power", "communications"]), window: `Turns ${state.turn}–${Math.min(10, state.turn + 2)}` };
 }

@@ -6,6 +6,7 @@ agronaut is a lunar agriculture design-space explorer. Players build an outpost,
 
 - **Challenge:** build from an empty map and survive ten turns under high hazard pressure.
 - **Progressive:** operate one inherited base through three ten-turn levels, with construction intermissions between levels.
+- The official mission at `/game` supports lettuce, radish, chili pepper, potato, soybean, and research-only Arabidopsis. The old `/supply` URL redirects to this mission; the separate Supply Lab was removed.
 - Agriculture has independent crop plots and livestock stalls. Parameters, care actions, and the two minigames affect production. A connected water recycler near a greenhouse improves water efficiency; nearby active livestock provides a small gameified recycling bonus.
 - Integrated utility corridors carry power, water, and oxygen. Route length, integrity, capacity, demand, storage, thermal distance, shelters, multifunction utility allocations, and communication-tower backup affect survival.
 - Modules retain the shared `rotation` field but have a fixed orientation in play. In a build phase, players can drag a disconnected module to move it, remove corridors, and reroute them. Operation locks the layout.
@@ -21,9 +22,9 @@ Saved runs with a transcript expose ordered state snapshots at `GET /api/replay/
 
 ## Database and deployment
 
-Apply the files in `supabase/migrations` in numeric order to the target Supabase project. The service-role key stays on the server. `runs` is publicly readable for leaderboards and reports, while submission claims and Mission Control sessions use service-role-only operations. Submission claims permit five new runs per requester per day, plus a global ceiling of 100. A run ID is bound to its transcript hash. The same transcript reuses a cached result when saving fails; if the cache and run write both fail, one additional evaluation attempt is permitted after a two-minute lease expires. Claims remain to prevent an unlimited retry cycle.
+Apply the files in `supabase/migrations` in numeric order to the target Supabase project. The secret key stays on the server. `runs` is publicly readable for leaderboards and reports, while submission claims and Mission Control sessions use server-only operations. Submission claims permit five new runs per requester per day, plus a global ceiling of 100. A run ID is bound to its transcript hash. The same transcript reuses a cached result when saving fails; if the cache and run write both fail, one additional evaluation attempt is permitted after a two-minute lease expires. Claims remain to prevent an unlimited retry cycle. Follow [Records and Supabase setup](docs/SUPABASE_RECORDS_SETUP.md) to activate persistence and Player Rank.
 
-Deploy through Vercel using the variables in `.env.example`. The existing Vercel project is **agronaut**. Set `NEXT_PUBLIC_SUPABASE_URL` to the HTTPS project URL, not a Postgres connection string. Keep `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and messaging secrets out of `NEXT_PUBLIC_*`. The [owner-shared deployment](https://agronaut-litigubqm-birch-yangs-projects.vercel.app/) has required Vercel Authentication; inspect the latest branch deployment in Vercel for external QA.
+Deploy through Vercel using the variables in `.env.example`. The existing Vercel project is **agronaut**. Set `NEXT_PUBLIC_SUPABASE_URL` to the HTTPS project URL, not a Postgres connection string. Use `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and keep `SUPABASE_SECRET_KEY`, `OPENAI_API_KEY`, and messaging secrets out of `NEXT_PUBLIC_*`. Legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` remain supported. The [owner-shared deployment](https://agronaut-litigubqm-birch-yangs-projects.vercel.app/) has required Vercel Authentication; inspect the latest branch deployment in Vercel for external QA.
 
 ## Optional Mission Control iMessage
 
@@ -39,6 +40,6 @@ Mission reports cite only IDs from the curated NASA/ESA source registry in `src/
 
 The Photon project credential supplied during development established an SDK connection locally, without being written to this repository. The project still needs its SQL migrations applied and deployment variables configured before live persistence, OpenAI, or iMessage send/receive can be verified. A production URL also needs access settings reviewed for public play. No branch is merged by this worktree.
 
-## Current supply demo
+## Acceptance scope
 
-Run `npm run demo` and open `/supply`. Run `npm run demo:script` for the matching Python simulation. Six crops share `src/data/crop-catalog.json`; the reference run produces 200 harvest points against a target of 180. Supply Lab and the ten-turn Mission page retain distinct resource models. See `docs/DEMO_SCRIPT.md` for the walkthrough.
+The [current six-crop acceptance standard](docs/ACCEPTANCE_SIX_CROPS.md) defines the one ranked design–operation–settlement loop. `/supply` redirects to `/game`; former 12-turn Supply Lab metrics are not part of mission scoring or records.

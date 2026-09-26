@@ -1,4 +1,4 @@
-> Release update (2026-09-26): this handoff is historical. The six-crop system is now committed and integrated with agriculture slots and the completed backend. All branches are being synchronized to this release; see `BRANCH_SYNC.md`. The `/supply` and `/game` resource models remain separate.
+> Historical handoff only. The separate Supply Lab and its files were removed at the user's request. Current gameplay and acceptance are defined in [ACCEPTANCE_SIX_CROPS.md](ACCEPTANCE_SIX_CROPS.md). References below to `/supply`, `supplyUnits.ts`, and the Python script describe removed code.
 
 # 六作物系统：合作者接口与改动指南
 

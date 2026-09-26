@@ -5,7 +5,7 @@ import { communicationsAvailable, connectedToHabitat, resourceCapacity, shelterP
 import type { CropPlotState, GameEvent, GameState, LivestockState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
 import { criticalCondition } from "./crisis.ts";
 import { growCrops, harvestCrop } from "./crops.ts";
-import { hazardForTurn } from "./hazards.ts";
+import { forecastForTurn, hazardForTurn } from "./hazards.ts";
 import { growLivestock } from "./livestock.ts";
 import { resolveTemperature } from "./temperature.ts";
 import { resolveUtilityGraph } from "./utilityGraph.ts";
@@ -230,6 +230,6 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
     ...(next.activeHazard ? { hazard: next.activeHazard } : {}),
   }];
   next.lastTurn = summary;
-  if (next.phase === "operation") next.turn = turn + 1;
+  if (next.phase === "operation") { next.turn = turn + 1; next.forecast = forecastForTurn(next); }
   return { state: next, summary, acceptedActions, rejectedActions };
 }

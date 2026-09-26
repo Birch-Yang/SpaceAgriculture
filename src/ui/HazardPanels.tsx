@@ -3,7 +3,7 @@ import { hazardDescriptions, tutorialHints, type TutorialHintId } from '../conte
 import { Panel, PixelAsset } from './primitives';
 import s from './ui.module.css';
 export function ForecastPanel({ forecast }: { forecast: ForecastState }) {
-  return <Panel title="Regional forecast" eyebrow="Outlook / timing uncertain"><dl className={s.stats}><div><dt>Solar Activity</dt><dd>{forecast.solar}</dd></div><div><dt>Thermal Volatility</dt><dd>{forecast.thermal}</dd></div><div><dt>Impact Risk</dt><dd>{forecast.impact}</dd></div></dl><p className={s.muted}>An uncertain outlook, not an event schedule.</p></Panel>;
+  return <Panel title="Regional forecast" eyebrow={forecast.window ?? "Outlook / timing uncertain"}><dl className={s.stats}><div><dt>Solar Activity</dt><dd>{forecast.solar}</dd></div><div><dt>Thermal Volatility</dt><dd>{forecast.thermal}</dd></div><div><dt>Impact Risk</dt><dd>{forecast.impact}</dd></div>{forecast.systems && <div><dt>System Disruption</dt><dd>{forecast.systems}</dd></div>}</dl><p className={s.muted}>Risk bands follow the mission hazard plan. Event timing remains uncertain.</p></Panel>;
 }
 export function HazardAlert({ type, detail }: { type: HazardType; detail?: string }) {
   const hazard = hazardDescriptions[type];

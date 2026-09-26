@@ -8,7 +8,7 @@ export type CachedResult = { evaluation?: EvaluationResult; report: MissionRepor
 
 export function requesterHash(request: Request): string {
   const address = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const secret = process.env.SUBMISSION_HASH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "local-only";
+  const secret = process.env.SUBMISSION_HASH_SECRET || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "local-only";
   return createHmac("sha256", secret).update(address).digest("hex");
 }
 

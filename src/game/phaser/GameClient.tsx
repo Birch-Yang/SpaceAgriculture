@@ -14,6 +14,7 @@ import { fallbackReport } from "../../ai/report.ts";
 import { buildRunSummary } from "../../ai/schemas.ts";
 import { scoreRules, scoreWithFallback } from "../simulation/scoring.ts";
 import { readReportSnapshot, writeReportSnapshot } from "../state/reportSnapshot.ts";
+import { writeLastSavedRun } from "../state/lastRun.ts";
 import { curatedSources } from "../../content/sources";
 import { communicationsAvailable } from "../../data/systems.ts";
 import { deriveAgentEvent, toAgentPublicState } from "../../ai/publicState.ts";
@@ -214,7 +215,7 @@ export function GameClient() {
       if (response.status === 409 && data.code === "already_saved" && data.runId) {
         const previous = readReportSnapshot(run.runId);
         if (previous) writeReportSnapshot({ ...previous, saved: true, pending: false });
-        setSavedRunId(data.runId); setSubmissionStatus("done"); return;
+        writeLastSavedRun(data.runId); setSavedRunId(data.runId); setSubmissionStatus("done"); return;
       }
       if (!response.ok || !data.report || !data.score) throw new Error(data.error ?? "Run submission unavailable");
       const previous = readReportSnapshot(run.runId);
@@ -222,7 +223,7 @@ export function GameClient() {
         score: { ...data.score, breakdown: previous.score.breakdown }, saved: data.saved,
         pending: false, retryable: data.retryable, reason: data.reason });
       setSubmitted(data); setSubmissionStatus("done");
-      if (data.saved) setSavedRunId(data.runId);
+      if (data.saved) { writeLastSavedRun(data.runId); setSavedRunId(data.runId); }
     } catch (error) {
       const previous = readReportSnapshot(run.runId);
       if (previous) writeReportSnapshot({ ...previous, pending: false,
@@ -293,7 +294,7 @@ export function GameClient() {
         {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
       </aside>
       <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Before turn 1: select + Backspace to remove, drag disconnected buildings to move" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={!communicationsAvailable(state) ? styles.offline : styles.online}>{!communicationsAvailable(state) ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
-      <aside className={styles.details}><div className={styles.panelHeading}><strong>MISSION STATUS</strong><small>{state.phase === "complete" ? "FINAL" : "LIVE"}</small></div><div className={styles.section}><p className={styles.label}>HAZARD FORECAST</p><p>Solar {state.forecast.solar} · Thermal {state.forecast.thermal} · Impact {state.forecast.impact}</p></div>
+      <aside className={styles.details}><div className={styles.panelHeading}><strong>MISSION STATUS</strong><small>{state.phase === "complete" ? "FINAL" : "LIVE"}</small></div><div className={styles.section}><p className={styles.label}>HAZARD FORECAST</p><p>{state.forecast.window}: Solar {state.forecast.solar} · Thermal {state.forecast.thermal} · Impact {state.forecast.impact} · Systems {state.forecast.systems}</p></div>
         {definition && selectedModule ? <div className={styles.section}><p className={styles.label}>SELECTED MODULE</p><h2>{definition.label}</h2><p>Integrity {Math.round(selectedModule.integrity * 100)}% · Grid {selectedModule.x},{selectedModule.y}</p>
           {agriculture && <><p>{agriculture.kind === "greenhouse" ? "Crop plots" : "Livestock stalls"}: {agriculture.slots.length}</p><button onClick={() => openInterior(selectedModule.id)}>Enter {agriculture.kind === "greenhouse" ? "Greenhouse" : "Livestock Module"}</button></>}
           {initialBuild && <button onClick={() => build({ type: "REMOVE_MODULE", placedModuleId: selectedModule.id })}>Remove (Backspace) · refund {definition.cost}</button>}

@@ -5,3 +5,4 @@
 @media(max-width:850px){.agronaut-onboarding .art-window{height:auto}.agronaut-onboarding .brief-art{max-width:380px}}
 
 .agronaut-onboarding .mission-form label{display:block}.agronaut-onboarding .mission-form details{margin:20px 0}.agronaut-onboarding .mission-form summary{cursor:pointer}.agronaut-onboarding .mission-form input{margin-top:8px}
+.agronaut-onboarding .record-links{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:22px;font:700 13px ui-monospace,monospace;letter-spacing:.04em}.agronaut-onboarding .record-links a{color:#f0dcad;text-decoration:none;border-bottom:1px solid #c9a86f;padding:3px 0}.agronaut-onboarding .record-links a:hover{color:#fff2d1}

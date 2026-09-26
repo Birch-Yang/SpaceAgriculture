@@ -79,7 +79,7 @@ export type LivestockState = {
 };
 export type HazardType = "temperature" | "radiation" | "micrometeoroid" | "communications" | "power";
 export type HazardInstance = { id: string; type: HazardType; severity: number; turn: number };
-export type ForecastState = { solar: string; thermal: string; impact: string };
+export type ForecastState = { solar: string; thermal: string; impact: string; systems?: string; window?: string };
 export type CrisisState = { trigger: string; recoveryTurn: number };
 export type GameEvent = { turn: number; type: string; message: string; amount?: number };
 export type TurnSummary = {
