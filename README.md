@@ -38,7 +38,7 @@ Mission reports cite only IDs from the curated NASA/ESA source registry in `src/
 
 ## Current external verification limits
 
-The Photon project credential supplied during development established an SDK connection locally, without being written to this repository. The project still needs its SQL migrations applied and deployment variables configured before live persistence, OpenAI, or iMessage send/receive can be verified. A production URL also needs access settings reviewed for public play. No branch is merged by this worktree.
+On 2026-09-26, the owner applied SQL migrations 002–004 to the Supabase project. A local production build using ignored `.env.local` credentials submitted one replayable ten-turn QA run and verified all five leaderboard ranks, the saved report, analytics and replay frames. That QA run and its submission claim were removed afterward. The hosted Vercel project still needs matching environment variables and a redeployment after this branch is accepted. The Photon project credential supplied during development established an SDK connection locally, without being written to this repository; live OpenAI and iMessage send/receive are not verified. A production URL also needs access settings reviewed for public play.
 
 ## Acceptance scope
 

@@ -24,4 +24,4 @@ This document supersedes the earlier three-crop balance proposal and the former 
 2. Tests cover all six crop IDs in the official mission engine, research-only output, deterministic hazard forecast against its schedule, and action-history metrics.
 3. With Supabase configured and migrations applied, finish a mission, confirm `/api/runs` returns `saved: true`, open Records from the landing page, and confirm the saved run's category rank and report.
 4. Without Supabase configuration, Records show a configuration error; no local-only result is presented as a public rank.
-5. Live database and AI behavior remain externally unverified until deployment credentials and schema are supplied.
+5. As of 2026-09-26, local production with the real Supabase project passed one save/read/rank/report/analytics/replay smoke test; the synthetic run was then removed. Hosted deployment and live AI behavior still require separate verification.

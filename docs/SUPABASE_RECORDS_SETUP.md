@@ -1,5 +1,7 @@
 # Activate Records and Player Rank with Supabase
 
+> Project check on 2026-09-26: the owner ran migrations 002–004, and one local production smoke run was saved, ranked, reported, replayed and then removed. The steps below remain useful for another environment or the hosted Vercel deployment.
+
 The app can play and generate a local fallback report without credentials. Public Records and Player Rank require a saved mission in Supabase. No database keys should be committed to Git or pasted into a public chat.
 
 ## 1. Create the project and schema
