@@ -1,0 +1,5207 @@
+{
+  "commit": "029917a plus balance/qa-fixes-2026-09-26 working changes",
+  "method": "Ten offline missions using production reducer and turn resolver; authoritative recoverable AP used for planning; no state mutation, API calls, or leaderboard writes.",
+  "runs": [
+    {
+      "case": 1,
+      "name": "Connected lettuce, active care",
+      "id": "00000000-0000-4000-8000-000000000001",
+      "mode": "challenge",
+      "startingBudget": 27,
+      "phase": "complete",
+      "passed": true,
+      "level": 1,
+      "turn": 10,
+      "totalTurns": 10,
+      "production": {
+        "cropCumulative": 32,
+        "meatCumulative": 20,
+        "researchCumulative": 0
+      },
+      "score": {
+        "production": 28,
+        "stability": 24,
+        "efficiency": 7.1,
+        "resilience": 1.8,
+        "budget": 0.7,
+        "total": 61.6
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "lettuce"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "lettuce"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 22.8,
+            "water": 36.8,
+            "oxygen": 45.7,
+            "food": 23,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 21.6,
+            "water": 33.5,
+            "oxygen": 47.7,
+            "food": 23,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "radiation",
+            "severity": 0.94,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 20.4,
+            "water": 31.2,
+            "oxygen": 53.4,
+            "food": 31,
+            "temperature": 18.1
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 4,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 19.2,
+            "water": 26.9,
+            "oxygen": 59.1,
+            "food": 32,
+            "temperature": 11
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "temperature",
+            "severity": 0.84,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18,
+            "water": 24.6,
+            "oxygen": 64.8,
+            "food": 28,
+            "temperature": 12.2
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 6.7,
+            "water": 22.3,
+            "oxygen": 65,
+            "food": 38,
+            "temperature": 13.1
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-2",
+            "type": "power",
+            "severity": 1.26,
+            "turn": 6
+          }
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5.5,
+            "water": 18,
+            "oxygen": 65,
+            "food": 34,
+            "temperature": 13.8
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 4.3,
+            "water": 15.7,
+            "oxygen": 65,
+            "food": 35,
+            "temperature": 14.4
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Mission Control communication is unavailable this turn",
+            "Hazard: communications"
+          ],
+          "hazard": {
+            "id": "hazard-1-3",
+            "type": "communications",
+            "severity": 1.15,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 3.1,
+            "water": 13.4,
+            "oxygen": 65,
+            "food": 42,
+            "temperature": 14.9
+          },
+          "production": {
+            "cropCumulative": 32,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 1.9,
+            "water": 9.1,
+            "oxygen": 65,
+            "food": 43,
+            "temperature": 15.2
+          },
+          "production": {
+            "cropCumulative": 32,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-4",
+            "type": "radiation",
+            "severity": 0.94,
+            "turn": 10
+          }
+        }
+      ]
+    },
+    {
+      "case": 2,
+      "name": "Connected potato, active care",
+      "id": "00000000-0000-4000-8000-000000000002",
+      "mode": "challenge",
+      "startingBudget": 27,
+      "phase": "complete",
+      "passed": true,
+      "level": 1,
+      "turn": 10,
+      "totalTurns": 10,
+      "production": {
+        "cropCumulative": 19,
+        "meatCumulative": 20,
+        "researchCumulative": 0
+      },
+      "score": {
+        "production": 28,
+        "stability": 24,
+        "efficiency": 5.3,
+        "resilience": 1.8,
+        "budget": 0.7,
+        "total": 59.8
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "potato"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "potato"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 22.6,
+            "water": 36.8,
+            "oxygen": 45.7,
+            "food": 23,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 21.1,
+            "water": 33.5,
+            "oxygen": 48,
+            "food": 23,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "radiation",
+            "severity": 0.85,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 19.6,
+            "water": 31.2,
+            "oxygen": 53.7,
+            "food": 26,
+            "temperature": 18.1
+          },
+          "production": {
+            "cropCumulative": 7,
+            "meatCumulative": 4,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 27.9,
+            "oxygen": 59.4,
+            "food": 27,
+            "temperature": 17.7
+          },
+          "production": {
+            "cropCumulative": 7,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: micrometeoroid"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "micrometeoroid",
+            "severity": 0.94,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18,
+            "water": 27,
+            "oxygen": 65,
+            "food": 28,
+            "temperature": 17.4
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.8,
+            "water": 25.1,
+            "oxygen": 65,
+            "food": 29,
+            "temperature": 17.1
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-2",
+            "type": "power",
+            "severity": 1.13,
+            "turn": 6
+          }
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.7,
+            "water": 24.2,
+            "oxygen": 65,
+            "food": 25,
+            "temperature": 16.9
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.6,
+            "water": 23.3,
+            "oxygen": 65,
+            "food": 30,
+            "temperature": 10.7
+          },
+          "production": {
+            "cropCumulative": 16,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-3",
+            "type": "temperature",
+            "severity": 0.75,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.5,
+            "water": 21.4,
+            "oxygen": 65,
+            "food": 30,
+            "temperature": 11.9
+          },
+          "production": {
+            "cropCumulative": 19,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.4,
+            "water": 19.5,
+            "oxygen": 65,
+            "food": 31,
+            "temperature": 12.8
+          },
+          "production": {
+            "cropCumulative": 19,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: micrometeoroid"
+          ],
+          "hazard": {
+            "id": "hazard-1-4",
+            "type": "micrometeoroid",
+            "severity": 0.94,
+            "turn": 10
+          }
+        }
+      ]
+    },
+    {
+      "case": 3,
+      "name": "Connected radish, active care",
+      "id": "00000000-0000-4000-8000-000000000003",
+      "mode": "challenge",
+      "startingBudget": 27,
+      "phase": "complete",
+      "passed": false,
+      "level": 1,
+      "turn": 11,
+      "totalTurns": 11,
+      "production": {
+        "cropCumulative": 32,
+        "meatCumulative": 20,
+        "researchCumulative": 0
+      },
+      "reason": "Crisis not recovered: power depleted",
+      "score": {
+        "production": 28,
+        "stability": 21.8,
+        "efficiency": 7.1,
+        "resilience": 1.4,
+        "budget": 0.7,
+        "total": 59
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "radish"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "radish"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 22.8,
+            "water": 36.8,
+            "oxygen": 45.7,
+            "food": 23,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 21.6,
+            "water": 33.5,
+            "oxygen": 51.4,
+            "food": 23,
+            "temperature": 12.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": [
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "temperature",
+            "severity": 0.8,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 20.4,
+            "water": 31.2,
+            "oxygen": 57.1,
+            "food": 19,
+            "temperature": 13.1
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 9.5,
+            "water": 28.9,
+            "oxygen": 62.8,
+            "food": 30,
+            "temperature": 13.8
+          },
+          "production": {
+            "cropCumulative": 10,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "power",
+            "severity": 1.21,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.3,
+            "water": 24.6,
+            "oxygen": 65,
+            "food": 26,
+            "temperature": 14.4
+          },
+          "production": {
+            "cropCumulative": 10,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 7.1,
+            "water": 22.3,
+            "oxygen": 65,
+            "food": 27,
+            "temperature": 14.9
+          },
+          "production": {
+            "cropCumulative": 10,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: micrometeoroid"
+          ],
+          "hazard": {
+            "id": "hazard-1-2",
+            "type": "micrometeoroid",
+            "severity": 1.01,
+            "turn": 6
+          }
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 6.4,
+            "water": 20.3,
+            "oxygen": 65,
+            "food": 34,
+            "temperature": 15.2
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5.7,
+            "water": 16.3,
+            "oxygen": 65,
+            "food": 35,
+            "temperature": 15.4
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-3",
+            "type": "radiation",
+            "severity": 0.9,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5,
+            "water": 14.3,
+            "oxygen": 65,
+            "food": 31,
+            "temperature": 15.6
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 12.3,
+            "oxygen": 65,
+            "food": 43,
+            "temperature": 15.8
+          },
+          "production": {
+            "cropCumulative": 32,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power",
+            "Crisis: power depleted; one turn to recover"
+          ],
+          "hazard": {
+            "id": "hazard-1-4",
+            "type": "power",
+            "severity": 1.21,
+            "turn": 10
+          },
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 11
+          }
+        },
+        {
+          "level": 1,
+          "turn": 11,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 8.3,
+            "oxygen": 65,
+            "food": 39,
+            "temperature": 15.9
+          },
+          "production": {
+            "cropCumulative": 32,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": [],
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 11
+          }
+        }
+      ]
+    },
+    {
+      "case": 4,
+      "name": "Connected chili, active care",
+      "id": "00000000-0000-4000-8000-000000000004",
+      "mode": "challenge",
+      "startingBudget": 27,
+      "phase": "complete",
+      "passed": false,
+      "level": 1,
+      "turn": 11,
+      "totalTurns": 11,
+      "production": {
+        "cropCumulative": 21,
+        "meatCumulative": 20,
+        "researchCumulative": 0
+      },
+      "reason": "Crisis not recovered: power depleted",
+      "score": {
+        "production": 28,
+        "stability": 21.8,
+        "efficiency": 5.6,
+        "resilience": 1.4,
+        "budget": 0.7,
+        "total": 57.5
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "chili-pepper"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "chili-pepper"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 22.6,
+            "water": 36.8,
+            "oxygen": 45.7,
+            "food": 23,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 21.1,
+            "water": 33.5,
+            "oxygen": 51.4,
+            "food": 23,
+            "temperature": 11.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": [
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "temperature",
+            "severity": 0.88,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 19.6,
+            "water": 31.2,
+            "oxygen": 57.1,
+            "food": 19,
+            "temperature": 12.7
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 28.9,
+            "oxygen": 58.9,
+            "food": 24,
+            "temperature": 13.5
+          },
+          "production": {
+            "cropCumulative": 4,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "radiation",
+            "severity": 0.99,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 16.6,
+            "water": 25.6,
+            "oxygen": 64.6,
+            "food": 20,
+            "temperature": 14.2
+          },
+          "production": {
+            "cropCumulative": 4,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 15.1,
+            "water": 23.3,
+            "oxygen": 65,
+            "food": 21,
+            "temperature": 14.7
+          },
+          "production": {
+            "cropCumulative": 4,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Mission Control communication is unavailable this turn",
+            "Hazard: communications"
+          ],
+          "hazard": {
+            "id": "hazard-1-2",
+            "type": "communications",
+            "severity": 1.21,
+            "turn": 6
+          }
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 13.6,
+            "water": 21,
+            "oxygen": 65,
+            "food": 23,
+            "temperature": 15.1
+          },
+          "production": {
+            "cropCumulative": 10,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 1.6,
+            "water": 17.7,
+            "oxygen": 65,
+            "food": 29,
+            "temperature": 15.4
+          },
+          "production": {
+            "cropCumulative": 15,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-3",
+            "type": "power",
+            "severity": 1.32,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0.1,
+            "water": 14.4,
+            "oxygen": 65,
+            "food": 25,
+            "temperature": 15.6
+          },
+          "production": {
+            "cropCumulative": 15,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 12.1,
+            "oxygen": 65,
+            "food": 32,
+            "temperature": 15.8
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power",
+            "Crisis: power depleted; one turn to recover"
+          ],
+          "hazard": {
+            "id": "hazard-1-4",
+            "type": "power",
+            "severity": 1.32,
+            "turn": 10
+          },
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 11
+          }
+        },
+        {
+          "level": 1,
+          "turn": 11,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 8.8,
+            "oxygen": 65,
+            "food": 28,
+            "temperature": 15.9
+          },
+          "production": {
+            "cropCumulative": 21,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": [],
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 11
+          }
+        }
+      ]
+    },
+    {
+      "case": 5,
+      "name": "Connected soybean, active care",
+      "id": "00000000-0000-4000-8000-000000000005",
+      "mode": "challenge",
+      "startingBudget": 27,
+      "phase": "complete",
+      "passed": true,
+      "level": 1,
+      "turn": 10,
+      "totalTurns": 10,
+      "production": {
+        "cropCumulative": 18,
+        "meatCumulative": 20,
+        "researchCumulative": 0
+      },
+      "score": {
+        "production": 28,
+        "stability": 24,
+        "efficiency": 5.2,
+        "resilience": 1.8,
+        "budget": 0.7,
+        "total": 59.7
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "soybean"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "soybean"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 22.6,
+            "water": 36.8,
+            "oxygen": 45.7,
+            "food": 23,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 21.1,
+            "water": 33.5,
+            "oxygen": 51.4,
+            "food": 23,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": [
+            "Mission Control communication is unavailable this turn",
+            "Hazard: communications"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "communications",
+            "severity": 1.12,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 19.6,
+            "water": 31.2,
+            "oxygen": 57.1,
+            "food": 26,
+            "temperature": 18.1
+          },
+          "production": {
+            "cropCumulative": 7,
+            "meatCumulative": 4,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 27.9,
+            "oxygen": 62.8,
+            "food": 27,
+            "temperature": 17.7
+          },
+          "production": {
+            "cropCumulative": 7,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: micrometeoroid"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "micrometeoroid",
+            "severity": 1.02,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 27.1,
+            "oxygen": 65,
+            "food": 28,
+            "temperature": 17.4
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 25.3,
+            "oxygen": 65,
+            "food": 29,
+            "temperature": 17.1
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-2",
+            "type": "radiation",
+            "severity": 0.92,
+            "turn": 6
+          }
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 24.5,
+            "oxygen": 65,
+            "food": 25,
+            "temperature": 16.9
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 23.7,
+            "oxygen": 65,
+            "food": 29,
+            "temperature": 10.2
+          },
+          "production": {
+            "cropCumulative": 15,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-3",
+            "type": "temperature",
+            "severity": 0.82,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.1,
+            "water": 21.9,
+            "oxygen": 65,
+            "food": 29,
+            "temperature": 11.5
+          },
+          "production": {
+            "cropCumulative": 18,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.3,
+            "water": 20.1,
+            "oxygen": 65,
+            "food": 30,
+            "temperature": 12.5
+          },
+          "production": {
+            "cropCumulative": 18,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-4",
+            "type": "power",
+            "severity": 1.22,
+            "turn": 10
+          }
+        }
+      ]
+    },
+    {
+      "case": 6,
+      "name": "Research crop with default lettuce",
+      "id": "00000000-0000-4000-8000-000000000006",
+      "mode": "challenge",
+      "startingBudget": 27,
+      "phase": "complete",
+      "passed": true,
+      "level": 1,
+      "turn": 10,
+      "totalTurns": 10,
+      "production": {
+        "cropCumulative": 17,
+        "meatCumulative": 20,
+        "researchCumulative": 2
+      },
+      "score": {
+        "production": 28,
+        "stability": 24,
+        "efficiency": 5,
+        "resilience": 1.8,
+        "budget": 0.7,
+        "total": 59.5
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "arabidopsis"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "arabidopsis"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 23,
+            "water": 36.8,
+            "oxygen": 45.7,
+            "food": 23,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 12.2,
+            "water": 33.5,
+            "oxygen": 51.4,
+            "food": 23,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "power",
+            "severity": 1.22,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 11.1,
+            "water": 31.2,
+            "oxygen": 57.1,
+            "food": 26,
+            "temperature": 18.1
+          },
+          "production": {
+            "cropCumulative": 7,
+            "meatCumulative": 4,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 10,
+            "water": 27.9,
+            "oxygen": 62.8,
+            "food": 27,
+            "temperature": 11.2
+          },
+          "production": {
+            "cropCumulative": 7,
+            "meatCumulative": 8,
+            "researchCumulative": 1
+          },
+          "warnings": [
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "temperature",
+            "severity": 0.82,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.9,
+            "water": 24.6,
+            "oxygen": 65,
+            "food": 23,
+            "temperature": 12.4
+          },
+          "production": {
+            "cropCumulative": 7,
+            "meatCumulative": 8,
+            "researchCumulative": 1
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 7.8,
+            "water": 22.3,
+            "oxygen": 65,
+            "food": 28,
+            "temperature": 13.3
+          },
+          "production": {
+            "cropCumulative": 11,
+            "meatCumulative": 12,
+            "researchCumulative": 1
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-2",
+            "type": "radiation",
+            "severity": 0.92,
+            "turn": 6
+          }
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 6.7,
+            "water": 19,
+            "oxygen": 65,
+            "food": 24,
+            "temperature": 14
+          },
+          "production": {
+            "cropCumulative": 11,
+            "meatCumulative": 12,
+            "researchCumulative": 1
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5.6,
+            "water": 16.7,
+            "oxygen": 65,
+            "food": 25,
+            "temperature": 14.5
+          },
+          "production": {
+            "cropCumulative": 11,
+            "meatCumulative": 16,
+            "researchCumulative": 2
+          },
+          "warnings": [
+            "Hazard: micrometeoroid"
+          ],
+          "hazard": {
+            "id": "hazard-1-3",
+            "type": "micrometeoroid",
+            "severity": 1.02,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5.4,
+            "water": 13.4,
+            "oxygen": 65,
+            "food": 27,
+            "temperature": 14.9
+          },
+          "production": {
+            "cropCumulative": 17,
+            "meatCumulative": 16,
+            "researchCumulative": 2
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5.2,
+            "water": 10.1,
+            "oxygen": 65,
+            "food": 28,
+            "temperature": 15.2
+          },
+          "production": {
+            "cropCumulative": 17,
+            "meatCumulative": 20,
+            "researchCumulative": 2
+          },
+          "warnings": [
+            "Mission Control communication is unavailable this turn",
+            "Hazard: communications"
+          ],
+          "hazard": {
+            "id": "hazard-1-4",
+            "type": "communications",
+            "severity": 1.12,
+            "turn": 10
+          }
+        }
+      ]
+    },
+    {
+      "case": 7,
+      "name": "Disconnected outpost",
+      "id": "00000000-0000-4000-8000-000000000007",
+      "mode": "challenge",
+      "startingBudget": 33,
+      "phase": "complete",
+      "passed": false,
+      "level": 1,
+      "turn": 7,
+      "totalTurns": 7,
+      "production": {
+        "cropCumulative": 0,
+        "meatCumulative": 0
+      },
+      "reason": "Crisis not recovered: power depleted",
+      "score": {
+        "production": 0,
+        "stability": 20.5,
+        "efficiency": 0,
+        "resilience": 1.2,
+        "budget": 0.9,
+        "total": 22.6
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "lettuce"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "lettuce"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 19.5,
+            "water": 35.3,
+            "oxygen": 37,
+            "food": 23,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-2: power supply cannot reach habitat",
+            "module-3: power 0% delivered",
+            "module-4: power 0% delivered",
+            "module-5: power 0% delivered",
+            "module-6: power 0% delivered",
+            "module-5: water 0% delivered",
+            "module-6: water 0% delivered"
+          ]
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 15,
+            "water": 30.6,
+            "oxygen": 30.6,
+            "food": 19,
+            "temperature": 17.5
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-2: power supply cannot reach habitat",
+            "module-3: power 0% delivered",
+            "module-4: power 0% delivered",
+            "module-5: power 0% delivered",
+            "module-6: power 0% delivered",
+            "module-5: water 0% delivered",
+            "module-6: water 0% delivered",
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "radiation",
+            "severity": 0.86,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 10.5,
+            "water": 26.9,
+            "oxygen": 27.6,
+            "food": 16,
+            "temperature": 16.7
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-2: power supply cannot reach habitat",
+            "module-3: power 0% delivered",
+            "module-4: power 0% delivered",
+            "module-5: power 0% delivered",
+            "module-6: power 0% delivered",
+            "module-5: water 0% delivered",
+            "module-6: water 0% delivered"
+          ]
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 6,
+            "water": 23.2,
+            "oxygen": 24.6,
+            "food": 13,
+            "temperature": 10
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-2: power supply cannot reach habitat",
+            "module-3: power 0% delivered",
+            "module-4: power 0% delivered",
+            "module-5: power 0% delivered",
+            "module-6: power 0% delivered",
+            "module-5: water 0% delivered",
+            "module-6: water 0% delivered",
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "temperature",
+            "severity": 0.76,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 1.5,
+            "water": 19.5,
+            "oxygen": 21.6,
+            "food": 10,
+            "temperature": 10.8
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-2: power supply cannot reach habitat",
+            "module-3: power 0% delivered",
+            "module-4: power 0% delivered",
+            "module-5: power 0% delivered",
+            "module-6: power 0% delivered",
+            "module-5: water 0% delivered",
+            "module-6: water 0% delivered"
+          ]
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 2,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 15.8,
+            "oxygen": 18.6,
+            "food": 7,
+            "temperature": 11.4
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-2: power supply cannot reach habitat",
+            "module-1: power 75% delivered",
+            "module-3: power 0% delivered",
+            "module-4: power 0% delivered",
+            "module-5: power 0% delivered",
+            "module-6: power 0% delivered",
+            "module-5: water 0% delivered",
+            "module-6: water 0% delivered",
+            "Mission Control communication is unavailable this turn",
+            "Hazard: communications",
+            "Crisis: power depleted; one turn to recover"
+          ],
+          "hazard": {
+            "id": "hazard-1-2",
+            "type": "communications",
+            "severity": 1.05,
+            "turn": 6
+          },
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 7
+          }
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 2,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 12.1,
+            "oxygen": 15.6,
+            "food": 4,
+            "temperature": 11.8
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-2: power supply cannot reach habitat",
+            "module-1: power 0% delivered",
+            "module-3: power 0% delivered",
+            "module-4: power 0% delivered",
+            "module-5: power 0% delivered",
+            "module-6: power 0% delivered",
+            "module-5: water 0% delivered",
+            "module-6: water 0% delivered"
+          ],
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 7
+          }
+        }
+      ]
+    },
+    {
+      "case": 8,
+      "name": "Habitat-only novice start",
+      "id": "00000000-0000-4000-8000-000000000008",
+      "mode": "challenge",
+      "startingBudget": 125,
+      "phase": "complete",
+      "passed": false,
+      "level": 1,
+      "turn": 5,
+      "totalTurns": 5,
+      "production": {
+        "cropCumulative": 0,
+        "meatCumulative": 0
+      },
+      "reason": "Crisis not recovered: power depleted",
+      "score": {
+        "production": 0,
+        "stability": 17.9,
+        "efficiency": 0,
+        "resilience": 0.9,
+        "budget": 3.4,
+        "total": 22.2
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 20,
+            "water": 37,
+            "oxygen": 37,
+            "food": 24,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5.5,
+            "water": 34,
+            "oxygen": 34,
+            "food": 22,
+            "temperature": 17.5
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "power",
+            "severity": 1.31,
+            "turn": 2
+          }
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 1.5,
+            "water": 31,
+            "oxygen": 31,
+            "food": 20,
+            "temperature": 16.7
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 28,
+            "oxygen": 28,
+            "food": 18,
+            "temperature": 9.1
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-1: power 75% delivered",
+            "Hazard: temperature",
+            "Crisis: power depleted; one turn to recover"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "temperature",
+            "severity": 0.87,
+            "turn": 4
+          },
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 5
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 3,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 0,
+            "water": 25,
+            "oxygen": 25,
+            "food": 16,
+            "temperature": 10
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": [
+            "module-1: power 0% delivered"
+          ],
+          "crisis": {
+            "trigger": "power depleted",
+            "recoveryTurn": 5
+          }
+        }
+      ]
+    },
+    {
+      "case": 9,
+      "name": "Progressive active care",
+      "id": "00000000-0000-4000-8000-000000000009",
+      "mode": "progressive",
+      "startingBudget": 57,
+      "phase": "complete",
+      "passed": false,
+      "level": 2,
+      "turn": 9,
+      "totalTurns": 19,
+      "production": {
+        "cropCumulative": 96,
+        "meatCumulative": 36,
+        "researchCumulative": 0
+      },
+      "reason": "Crisis not recovered: water depleted",
+      "score": {
+        "production": 28,
+        "stability": 22.7,
+        "efficiency": 8,
+        "resilience": 1.4,
+        "budget": 1.8,
+        "total": 61.9
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "lettuce"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "PLANT_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "crop": "lettuce"
+            },
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 0,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 32.8,
+            "water": 51.8,
+            "oxygen": 60.7,
+            "food": 32,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "SET_CROP_PARAMS",
+              "moduleId": "module-5",
+              "slotIndex": 1,
+              "water": "high",
+              "light": "high",
+              "temperature": "medium"
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 31.6,
+            "water": 48.5,
+            "oxygen": 65,
+            "food": 33,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 30.4,
+            "water": 46.2,
+            "oxygen": 65,
+            "food": 41,
+            "temperature": 18.1
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 4,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 19.4,
+            "water": 41.9,
+            "oxygen": 65,
+            "food": 42,
+            "temperature": 17.7
+          },
+          "production": {
+            "cropCumulative": 12,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "power",
+            "severity": 1.22,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.2,
+            "water": 39.6,
+            "oxygen": 65,
+            "food": 49,
+            "temperature": 17.4
+          },
+          "production": {
+            "cropCumulative": 23,
+            "meatCumulative": 8,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 5,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 17,
+            "water": 35.3,
+            "oxygen": 65,
+            "food": 50,
+            "temperature": 17.2
+          },
+          "production": {
+            "cropCumulative": 23,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 5,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 15.8,
+            "water": 33,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 17
+          },
+          "production": {
+            "cropCumulative": 34,
+            "meatCumulative": 12,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 5,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 14.6,
+            "water": 28.7,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.9
+          },
+          "production": {
+            "cropCumulative": 34,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Mission Control communication is unavailable this turn",
+            "Hazard: communications"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "communications",
+            "severity": 1.12,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 5,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 13.4,
+            "water": 26.4,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.8
+          },
+          "production": {
+            "cropCumulative": 45,
+            "meatCumulative": 16,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 5,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 12.2,
+            "water": 22.1,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.7
+          },
+          "production": {
+            "cropCumulative": 45,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 2,
+          "turn": 1,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 11,
+            "water": 19.8,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.6
+          },
+          "production": {
+            "cropCumulative": 56,
+            "meatCumulative": 20,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 2,
+          "turn": 2,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 9.8,
+            "water": 15.5,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.6
+          },
+          "production": {
+            "cropCumulative": 56,
+            "meatCumulative": 24,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 2,
+          "turn": 3,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 8.6,
+            "water": 13.2,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.6
+          },
+          "production": {
+            "cropCumulative": 67,
+            "meatCumulative": 24,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Mission Control communication is unavailable this turn",
+            "Hazard: communications"
+          ],
+          "hazard": {
+            "id": "hazard-2-0",
+            "type": "communications",
+            "severity": 1.12,
+            "turn": 3
+          }
+        },
+        {
+          "level": 2,
+          "turn": 4,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 7.4,
+            "water": 8.9,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.6
+          },
+          "production": {
+            "cropCumulative": 67,
+            "meatCumulative": 28,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 2,
+          "turn": 5,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 6.2,
+            "water": 6.6,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.6
+          },
+          "production": {
+            "cropCumulative": 78,
+            "meatCumulative": 28,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 2,
+          "turn": 6,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 5,
+            "water": 2.3,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.6
+          },
+          "production": {
+            "cropCumulative": 78,
+            "meatCumulative": 32,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: micrometeoroid"
+          ],
+          "hazard": {
+            "id": "hazard-2-1",
+            "type": "micrometeoroid",
+            "severity": 1.02,
+            "turn": 6
+          }
+        },
+        {
+          "level": 2,
+          "turn": 7,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 4.3,
+            "water": 0.3,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.5
+          },
+          "production": {
+            "cropCumulative": 89,
+            "meatCumulative": 32,
+            "researchCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 2,
+          "turn": 8,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "WATER_PLOT",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            }
+          ],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [
+            "WATER_PLOT (module-5 slot 0): Insufficient water",
+            "WATER_PLOT (module-5 slot 1): Insufficient water"
+          ],
+          "resources": {
+            "power": 3.6,
+            "water": 0,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.5
+          },
+          "production": {
+            "cropCumulative": 89,
+            "meatCumulative": 36,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Crisis: water depleted; one turn to recover"
+          ],
+          "crisis": {
+            "trigger": "water depleted",
+            "recoveryTurn": 9
+          }
+        },
+        {
+          "level": 2,
+          "turn": 9,
+          "uiAdvertisedAP": 4,
+          "planned": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            }
+          ],
+          "accepted": [
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 0
+            },
+            {
+              "type": "HARVEST_CROP",
+              "moduleId": "module-5",
+              "slotIndex": 1
+            },
+            {
+              "type": "FEED_STALL",
+              "moduleId": "module-6",
+              "slotIndex": 0
+            },
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 2.9,
+            "water": 0,
+            "oxygen": 65,
+            "food": 55,
+            "temperature": 16.5
+          },
+          "production": {
+            "cropCumulative": 96,
+            "meatCumulative": 36,
+            "researchCumulative": 0
+          },
+          "warnings": [
+            "Hazard: radiation"
+          ],
+          "hazard": {
+            "id": "hazard-2-2",
+            "type": "radiation",
+            "severity": 0.91,
+            "turn": 9
+          },
+          "crisis": {
+            "trigger": "water depleted",
+            "recoveryTurn": 9
+          }
+        }
+      ]
+    },
+    {
+      "case": 10,
+      "name": "Progressive passive farming",
+      "id": "00000000-0000-4000-8000-000000000010",
+      "mode": "progressive",
+      "startingBudget": 57,
+      "phase": "complete",
+      "passed": false,
+      "level": 1,
+      "turn": 10,
+      "totalTurns": 10,
+      "production": {
+        "cropCumulative": 0,
+        "meatCumulative": 20
+      },
+      "reason": "Production threshold missed (12 crop, 7 meat)",
+      "score": {
+        "production": 14,
+        "stability": 24,
+        "efficiency": 2.7,
+        "resilience": 1.8,
+        "budget": 1.3,
+        "total": 43.8
+      },
+      "turns": [
+        {
+          "level": 1,
+          "turn": 1,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 33.1,
+            "water": 53,
+            "oxygen": 60.7,
+            "food": 33,
+            "temperature": 19.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 0
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 2,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 32.2,
+            "water": 51,
+            "oxygen": 65,
+            "food": 34,
+            "temperature": 18.6
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 3,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 31.3,
+            "water": 49,
+            "oxygen": 65,
+            "food": 31,
+            "temperature": 18.1
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 4
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 4,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 30.7,
+            "water": 47.3,
+            "oxygen": 65,
+            "food": 32,
+            "temperature": 11.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 8
+          },
+          "warnings": [
+            "Hazard: temperature"
+          ],
+          "hazard": {
+            "id": "hazard-1-0",
+            "type": "temperature",
+            "severity": 0.82,
+            "turn": 4
+          }
+        },
+        {
+          "level": 1,
+          "turn": 5,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 30.1,
+            "water": 45.6,
+            "oxygen": 65,
+            "food": 29,
+            "temperature": 12.4
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 8
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 6,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 29.5,
+            "water": 43.9,
+            "oxygen": 65,
+            "food": 30,
+            "temperature": 13.3
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 12
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 7,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 28.9,
+            "water": 42.2,
+            "oxygen": 65,
+            "food": 27,
+            "temperature": 14
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 12
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 8,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 18.3,
+            "water": 40.5,
+            "oxygen": 65,
+            "food": 28,
+            "temperature": 14.5
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 16
+          },
+          "warnings": [
+            "Hazard: power"
+          ],
+          "hazard": {
+            "id": "hazard-1-1",
+            "type": "power",
+            "severity": 1.24,
+            "turn": 8
+          }
+        },
+        {
+          "level": 1,
+          "turn": 9,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 17.7,
+            "water": 38.8,
+            "oxygen": 65,
+            "food": 25,
+            "temperature": 14.9
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 16
+          },
+          "warnings": []
+        },
+        {
+          "level": 1,
+          "turn": 10,
+          "uiAdvertisedAP": 4,
+          "planned": [],
+          "accepted": [
+            {
+              "type": "END_TURN"
+            }
+          ],
+          "rejected": [],
+          "resources": {
+            "power": 17.1,
+            "water": 37.1,
+            "oxygen": 65,
+            "food": 26,
+            "temperature": 15.2
+          },
+          "production": {
+            "cropCumulative": 0,
+            "meatCumulative": 20
+          },
+          "warnings": []
+        }
+      ]
+    }
+  ],
+  "extra": {
+    "attachedRemoval": {
+      "budgetBefore": 27,
+      "budgetAfter": 57,
+      "removedCorridors": 2,
+      "removedCorridorCells": 2,
+      "materialLoss": 0
+    }
+  }
+}
