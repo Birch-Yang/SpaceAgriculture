@@ -11,7 +11,7 @@ export type RunStep =
   | { kind: "start" }
   | { kind: "turn"; actions: PlayerAction[] }
   | { kind: "advance" };
-export type RunTranscript = { version: 1; runId: string; nickname: string; mode: GameMode; steps: RunStep[] };
+export type RunTranscript = { version: 1 | 2; runId: string; nickname: string; mode: GameMode; steps: RunStep[] };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const settings = new Set(["low", "medium", "high"]);
@@ -67,7 +67,7 @@ function validAction(value: unknown, build: boolean): value is PlayerAction {
 }
 
 export function parseTranscript(value: unknown): RunTranscript {
-  if (!record(value) || value.version !== 1 || !string(value.runId, 36) || !uuid.test(value.runId)
+  if (!record(value) || (value.version !== 1 && value.version !== 2) || !string(value.runId, 36) || !uuid.test(value.runId)
     || !string(value.nickname, 32) || !value.nickname.trim() || !["challenge", "progressive"].includes(String(value.mode))
     || !Array.isArray(value.steps) || value.steps.length < 2 || value.steps.length > 500) throw new Error("Invalid run transcript");
   for (const step of value.steps) {
@@ -84,7 +84,7 @@ export function parseTranscript(value: unknown): RunTranscript {
 
 export function replayTranscript(transcript: RunTranscript, onStep?: (state: GameState, index: number, step?: RunStep) => void): GameState {
   parseTranscript(transcript);
-  let state = createInitialState(transcript.runId, transcript.nickname, transcript.mode);
+  let state = createInitialState(transcript.runId, transcript.nickname, transcript.mode, transcript.version);
   let turnCount = 0;
   onStep?.(state, -1);
   for (const [index, step] of transcript.steps.entries()) {

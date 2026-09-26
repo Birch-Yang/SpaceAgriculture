@@ -9,19 +9,19 @@ import type { JournalEntry, TimelineEntry } from '../../game/state/runHistory';
 import { ReplayBaseMap } from './ReplayBaseMap';
 import s from './archive.module.css';
 
-export function RecordExperience({ runId, nickname, mode, passed, score, frames, journal, timeline, layoutAssessment, layoutMetrics }: {
-  runId: string; nickname: string; mode: GameMode; passed: boolean; score: number;
+export function RecordExperience({ runId, nickname, mode, rulesetVersion, passed, score, frames, journal, timeline, layoutAssessment, layoutMetrics }: {
+  runId: string; nickname: string; mode: GameMode; rulesetVersion: 1 | 2; passed: boolean; score: number;
   frames: ReplayFrame[]; journal: JournalEntry[]; timeline: TimelineEntry[];
   layoutAssessment: string; layoutMetrics: Record<string, number>;
 }) {
   const [frameIndex, setFrameIndex] = useState(frames.length - 1);
   const frame = frames[frameIndex];
-  const state = useMemo((): GameState => ({ ...createInitialState(runId, nickname, mode),
+  const state = useMemo((): GameState => ({ ...createInitialState(runId, nickname, mode, rulesetVersion),
     phase: frame.phase, level: frame.level, turn: frame.turn, budget: frame.budget,
     resources: frame.resources, production: frame.production, modules: frame.modules,
     utilityEdges: frame.utilityEdges, crops: frame.crops, livestock: frame.livestock,
     activeHazard: frame.hazard, crisis: frame.crisis,
-  }), [runId, nickname, mode, frame]);
+  }), [runId, nickname, mode, rulesetVersion, frame]);
   const selectedStep = journal.find(item => item.frameIndex === frameIndex);
   return <div className={s.page}>
     <header className={s.hero}><div className={s.heroInner}><p className={s.eyebrow}>Mission archive / player record</p>

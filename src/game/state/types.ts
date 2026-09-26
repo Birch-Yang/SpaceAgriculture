@@ -105,6 +105,7 @@ export type GameState = {
   runId: string;
   nickname: string;
   mode: GameMode;
+  rulesetVersion: 1 | 2;
   phase: GamePhase;
   level: 1 | 2 | 3;
   turn: number;

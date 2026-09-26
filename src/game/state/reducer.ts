@@ -1,4 +1,4 @@
-import { DIFFICULTY } from "../../data/difficulty.ts";
+import { DIFFICULTY, LEGACY_INITIAL_BUDGET } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { SYSTEMS } from "../../data/systems.ts";
 import { forecastForTurn } from "../simulation/hazards.ts";
@@ -7,12 +7,13 @@ import type { Cell, GameMode, GameState, PlacedModule, PlayerAction } from "./ty
 export const MAP_SIZE = { width: 14, height: 14 } as const;
 const corridorCellCost = 1;
 
-export function createInitialState(runId: string, nickname: string, mode: GameMode): GameState {
+export function createInitialState(runId: string, nickname: string, mode: GameMode, rulesetVersion: 1 | 2 = 2): GameState {
   if (!runId.trim() || !nickname.trim()) throw new Error("Run ID and nickname are required");
   const difficulty = DIFFICULTY[mode][0];
   return {
-    runId, nickname: nickname.trim().slice(0, 32), mode, phase: "design", level: 1, turn: 1,
-    budget: difficulty.budget, ap: 0, resources: { ...difficulty.starting },
+    runId, nickname: nickname.trim().slice(0, 32), mode, rulesetVersion, phase: "design", level: 1, turn: 1,
+    budget: rulesetVersion === 1 ? LEGACY_INITIAL_BUDGET[mode] : difficulty.budget,
+    ap: 0, resources: { ...difficulty.starting },
     production: { cropCumulative: 0, meatCumulative: 0 }, modules: [], utilityEdges: [],
     crops: [], livestock: [],
     forecast: forecastForTurn({ runId, mode, level: 1, turn: 1 }),

@@ -36,7 +36,7 @@ export default async function RecordPage({ params }: { params: Promise<{ runId: 
     const savedAnalysis = archived.report?.layoutAssessment;
     const layoutAssessment = typeof savedAnalysis === 'string' && reportWordCount(savedAnalysis) >= MIN_LAYOUT_ASSESSMENT_WORDS
       ? savedAnalysis : fallbackLayoutAssessment(runSummary);
-    return <AppFrame wide><RecordExperience runId={runId} nickname={row.nickname} mode={transcript.mode}
+    return <AppFrame wide><RecordExperience runId={runId} nickname={row.nickname} mode={transcript.mode} rulesetVersion={transcript.version}
       passed={!!row.passed} score={Number(row.score_total)} frames={frames} {...history}
       layoutAssessment={layoutAssessment} layoutMetrics={runSummary.layoutMetrics} /></AppFrame>;
   } catch {

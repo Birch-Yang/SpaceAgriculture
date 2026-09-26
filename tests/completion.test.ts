@@ -54,6 +54,17 @@ test("records use stable competition ranks for tied scores", () => {
   assert.deepEqual(competitionRanks([]), []);
 });
 
+test("new missions start with 220 material while archived transcripts keep their original budgets", () => {
+  for (const mode of ["challenge", "progressive"] as const) {
+    const current = createInitialState("budget-check", "Tester", mode);
+    const archived = createInitialState("budget-check", "Tester", mode, 1);
+    assert.equal(current.budget, 220);
+    assert.equal(current.rulesetVersion, 2);
+    assert.equal(archived.budget, mode === "challenge" ? 145 : 175);
+    assert.equal(archived.rulesetVersion, 1);
+  }
+});
+
 test("a complete transcript replays to the same authoritative state and rejects forged actions", () => {
   let state = startOperation(base());
   const steps: RunTranscript["steps"] = [...moduleActions.map((action) => ({ kind: "build" as const, action })), { kind: "start" }];
@@ -65,9 +76,13 @@ test("a complete transcript replays to the same authoritative state and rejects 
     steps.push({ kind: "turn", actions: result.acceptedActions });
     state = result.state;
   }
-  const transcript: RunTranscript = { version: 1, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
+  const transcript: RunTranscript = { version: 2, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
   assert.equal(state.phase, "complete");
   assert.deepEqual(replayTranscript(parseTranscript(transcript)), state);
+  const legacy = replayTranscript(parseTranscript({ ...transcript, version: 1 }));
+  assert.equal(legacy.rulesetVersion, 1);
+  assert.equal(legacy.budget, state.budget - 75);
+  assert.notEqual(scoreRules(legacy).budget, scoreRules(state).budget);
   const frames = createReplayFrames(transcript);
   const runHistory = createRunHistory(transcript, frames, state.turnRecords);
   assert.equal(runHistory.journal.length, transcript.steps.length);
@@ -393,5 +408,8 @@ test("progressive mode carries one base through three ten-turn levels", () => {
   assert.equal(state.phase, "complete");
   assert.equal(state.passed, true, `${state.failureReason}; production=${JSON.stringify(state.production)}`);
   assert.equal(state.turnRecords.length, 30);
-  assert.deepEqual(replayTranscript(parseTranscript({ version: 1, runId: state.runId, nickname: state.nickname, mode: "progressive", steps })), state);
+  assert.deepEqual(replayTranscript(parseTranscript({ version: 2, runId: state.runId, nickname: state.nickname, mode: "progressive", steps })), state);
+  const legacy = replayTranscript(parseTranscript({ version: 1, runId: state.runId, nickname: state.nickname, mode: "progressive", steps }));
+  assert.equal(legacy.rulesetVersion, 1);
+  assert.equal(legacy.budget, state.budget - 45);
 });

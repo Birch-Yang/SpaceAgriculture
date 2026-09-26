@@ -82,7 +82,7 @@ export function GameClient() {
       const runId = crypto.randomUUID();
       const initial = createInitialState(runId, nickname.trim(), mode);
       setState(initial);
-      setTranscript({ version: 1, runId, nickname: nickname.trim().slice(0, 32), mode, steps: [] });
+      setTranscript({ version: 2, runId, nickname: nickname.trim().slice(0, 32), mode, steps: [] });
       setSubmitted(null); setSubmissionStatus("idle"); setSavedRunId(null);
       advisorToken.current = null;
       advisorRun.current = runId;
