@@ -1,0 +1,125 @@
+export type GameMode = "challenge" | "progressive";
+export type GamePhase = "design" | "operation" | "intermission" | "complete";
+export type ResourceKey = "power" | "water" | "oxygen" | "food";
+export type ResourceState = Record<ResourceKey, number> & { temperature: number };
+export type Rotation = 0 | 90 | 180 | 270;
+export type Cell = { x: number; y: number };
+
+export type ModuleCategory =
+  | "habitat" | "greenhouse" | "livestock" | "oxygen" | "water"
+  | "solar" | "battery" | "utility" | "communications" | "shelter"
+  | "storage" | "recreation";
+
+export type ModuleFlowProfile = {
+  powerDemand?: number;
+  powerSupply?: number;
+  waterDemand?: number;
+  waterSupply?: number;
+  oxygenDemand?: number;
+  oxygenSupply?: number;
+  storage?: Partial<Record<ResourceKey, number>>;
+};
+
+export type ModuleDefinition = {
+  id: string;
+  label: string;
+  category: ModuleCategory;
+  cost: number;
+  footprint: { w: number; h: number };
+  flow: ModuleFlowProfile;
+  heatOutput: number;
+  baseYield: number;
+  capacity: number;
+  resilience: number;
+};
+
+export type UtilityAllocation = { thermal: number; backupPower: number; commsBackup: number };
+export type PlacedModule = {
+  id: string;
+  moduleId: string;
+  x: number;
+  y: number;
+  rotation: Rotation;
+  integrity: number;
+  allocation?: UtilityAllocation;
+};
+export type UtilityEdge = {
+  id: string;
+  from: string;
+  to: string;
+  length: number;
+  capacity: number;
+  integrity: number;
+  cells: Cell[];
+};
+export type CropKind = "lettuce" | "potato" | "wheat";
+export type AnimalKind = "chicken" | "pig" | "cow";
+export type Setting = "low" | "medium" | "high";
+export type CropPlotState = {
+  moduleId: string;
+  crop: CropKind;
+  growth: number;
+  ready: boolean;
+  water: Setting;
+  light: Setting;
+  temperature: Setting;
+};
+export type LivestockState = {
+  moduleId: string;
+  animal: AnimalKind;
+  growth: number;
+  feed: "rationed" | "normal" | "high";
+};
+export type HazardType = "temperature" | "radiation" | "micrometeoroid" | "communications" | "power";
+export type HazardInstance = { id: string; type: HazardType; severity: number; turn: number };
+export type ForecastState = { solar: string; thermal: string; impact: string };
+export type CrisisState = { trigger: string; recoveryTurn: number };
+export type GameEvent = { turn: number; type: string; message: string; amount?: number };
+export type TurnSummary = {
+  turn: number;
+  hazard?: HazardInstance;
+  resourceDelta: ResourceState;
+  cropYield: number;
+  meatYield: number;
+  warnings: string[];
+};
+
+export type GameState = {
+  runId: string;
+  nickname: string;
+  mode: GameMode;
+  phase: GamePhase;
+  level: 1 | 2 | 3;
+  turn: number;
+  budget: number;
+  ap: number;
+  resources: ResourceState;
+  production: { cropCumulative: number; meatCumulative: number };
+  modules: PlacedModule[];
+  utilityEdges: UtilityEdge[];
+  crops: CropPlotState[];
+  livestock: LivestockState[];
+  forecast: ForecastState;
+  activeHazard?: HazardInstance;
+  crisis?: CrisisState;
+  history: GameEvent[];
+  lastTurn?: TurnSummary;
+  passed?: boolean;
+  failureReason?: string;
+  nextId: number;
+};
+
+export type PlayerAction =
+  | { type: "PLACE_MODULE"; moduleId: string; x: number; y: number; rotation: Rotation }
+  | { type: "REMOVE_MODULE"; placedModuleId: string }
+  | { type: "PLACE_CORRIDOR"; cells: Cell[] }
+  | { type: "SET_CROP_PARAMS"; moduleId: string; water: Setting; light: Setting; temperature: Setting }
+  | { type: "SET_LIVESTOCK_PARAMS"; moduleId: string; feed: "rationed" | "normal" | "high" }
+  | { type: "REALLOCATE_UTILITY"; moduleId: string; allocation: UtilityAllocation }
+  | { type: "REPAIR"; targetId: string }
+  | { type: "PLANT_CROP"; moduleId: string; crop: CropKind }
+  | { type: "HARVEST_CROP"; moduleId: string }
+  | { type: "SET_ANIMAL"; moduleId: string; animal: AnimalKind }
+  | { type: "END_TURN" };
+
+export type TurnResult = { state: GameState; summary: TurnSummary; acceptedActions: PlayerAction[]; rejectedActions: string[] };
