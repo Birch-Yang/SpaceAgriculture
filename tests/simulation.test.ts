@@ -102,13 +102,13 @@ test("slot actions isolate occupants, care is once per cycle, and rejected actio
   const greenhouse3 = industrial.modules.find((module) => module.moduleId === "greenhouse-industrial")!.id;
   const stall3 = industrial.modules.find((module) => module.moduleId === "livestock-industrial")!.id;
   const thirdSlot = resolveTurn(startOperation(industrial), [
-    { type: "PLANT_CROP", moduleId: greenhouse3, slotIndex: 2, crop: "wheat" },
+    { type: "PLANT_CROP", moduleId: greenhouse3, slotIndex: 2, crop: "soybean" },
     { type: "WATER_PLOT", moduleId: greenhouse3, slotIndex: 2 },
     { type: "SET_ANIMAL", moduleId: stall3, slotIndex: 2, animal: "cow" },
   ], "slot-seed");
   assert.equal(thirdSlot.rejectedActions.length, 0);
   assert.equal(thirdSlot.state.crops.find((plot) => plot.moduleId === greenhouse3 && plot.slotIndex === 1)?.crop, null);
-  assert.equal(thirdSlot.state.crops.find((plot) => plot.moduleId === greenhouse3 && plot.slotIndex === 2)?.crop, "wheat");
+  assert.equal(thirdSlot.state.crops.find((plot) => plot.moduleId === greenhouse3 && plot.slotIndex === 2)?.crop, "soybean");
   assert.equal(thirdSlot.state.crops.find((plot) => plot.moduleId === greenhouse3 && plot.slotIndex === 2)?.wateredThisCycle, true);
   assert.equal(thirdSlot.state.livestock.find((animal) => animal.moduleId === stall3 && animal.slotIndex === 2)?.animal, "cow");
 });

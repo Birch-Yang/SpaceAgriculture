@@ -1,3 +1,4 @@
+import { CROP_CATALOG } from '../../data/cropCatalog.ts';
 import { CROPS } from "../../data/crops.ts";
 import { AGRICULTURE, slotBaseYield } from "../../data/agriculture.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
@@ -30,12 +31,15 @@ export function growCrops(state: GameState, network: NetworkResult): { crops: Cr
   return { crops, waterUsed, powerUsed };
 }
 
-export function harvestCrop(state: GameState, plot: CropPlotState, network: NetworkResult, minigameModifier = 0): { yield: number; food: number } {
+export function harvestCrop(state: GameState, plotOrId: CropPlotState | string, network: NetworkResult, minigameModifier = 0): { yield: number; food: number; research: number } {
+  const plot = typeof plotOrId === "string" ? state.crops.find(item => item.moduleId === plotOrId) : plotOrId;
+  if (!plot) return { yield: 0, food: 0, research: 0 };
   const module = state.modules.find((item) => item.id === plot.moduleId);
-  if (!plot.ready || !plot.crop || !module) return { yield: 0, food: 0 };
+  if (!plot.ready || !plot.crop || !module) return { yield: 0, food: 0, research: 0 };
   const def = MODULE_BY_ID.get(module.moduleId)!;
   const water = network.delivery[module.id]?.water ?? 0;
   const power = network.delivery[module.id]?.power ?? 0;
+  if (CROP_CATALOG[plot.crop].role === 'research') return { yield: 0, food: 0, research: water > 0 && power > 0 && module.integrity > 0 ? CROP_CATALOG[plot.crop].researchYield : 0 };
   const temperature = Math.max(0.4, 1 - Math.abs(state.resources.temperature - temperatureSetpoint[plot.temperature]) / 30);
   const hazard = state.activeHazard?.type === "radiation" ? Math.max(0.5, 1 - state.activeHazard.severity * 0.3) : 1;
   const baseYield = slotBaseYield(def.baseYield, def.capacity, plot.slotIndex);
@@ -43,5 +47,5 @@ export function harvestCrop(state: GameState, plot: CropPlotState, network: Netw
   const layout = greenhouseWaterBonus(state, module) ? SYSTEMS.greenhouseWaterYieldFactor : 1;
   const recycling = greenhouseRecyclingBonus(state, module) ? SYSTEMS.greenhouseRecycleYieldFactor : 1;
   const yieldAmount = Math.max(0, Math.round(baseYield * settingFactor[plot.water] * settingFactor[plot.light] * temperature * Math.min(water, power) * module.integrity * hazard * care * layout * recycling * (1 + minigameModifier)));
-  return { yield: yieldAmount, food: Math.round(yieldAmount * CROPS[plot.crop].foodValue) };
+  return { yield: yieldAmount, food: Math.round(yieldAmount * CROPS[plot.crop].foodValue), research: 0 };
 }

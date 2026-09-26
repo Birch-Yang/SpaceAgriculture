@@ -126,7 +126,7 @@ test("all three crops and livestock species produce through the connected base",
   const state = startOperation(base());
   const network = resolveUtilityGraph(state);
   const plot = { ...state.crops[0], ready: true };
-  for (const crop of ["lettuce", "potato", "wheat"] as const)
+  for (const crop of ["lettuce", "potato", "soybean"] as const)
     assert.ok(harvestCrop(state, { ...plot, crop }, network).yield > 0, crop);
   const low = harvestCrop(state, { ...plot, crop: "lettuce", water: "low", light: "low" }, network).yield;
   const high = harvestCrop(state, { ...plot, crop: "lettuce", water: "high", light: "high" }, network).yield;

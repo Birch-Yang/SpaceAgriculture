@@ -36,3 +36,7 @@ Mission reports cite only IDs from the curated NASA/ESA source registry in `src/
 ## Current external verification limits
 
 The Photon project credential supplied during development established an SDK connection locally, without being written to this repository. The project still needs its SQL migrations applied and deployment variables configured before live persistence, OpenAI, or iMessage send/receive can be verified. A production URL also needs access settings reviewed for public play. No branch is merged by this worktree.
+
+## Current supply demo
+
+Run `npm run demo` and open `/supply`. Run `npm run demo:script` for the matching Python simulation. Six crops share `src/data/crop-catalog.json`; the reference run produces 200 harvest points against a target of 180. Supply Lab and the ten-turn Mission page retain distinct resource models. See `docs/DEMO_SCRIPT.md` for the walkthrough.

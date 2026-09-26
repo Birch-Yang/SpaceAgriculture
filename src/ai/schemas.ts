@@ -29,7 +29,7 @@ export function buildRunSummary(state: GameState): RunSummary {
     mode: state.mode,
     finalScoreInputs: { production: rules.production, stability: rules.stability, efficiency: rules.efficiency, resilience: rules.resilience, budget: rules.budget },
     layoutMetrics: { moduleCount: state.modules.length, corridorLength: state.utilityEdges.reduce((sum, edge) => sum + edge.length, 0), greenhouseCount: greenhouses.length, livestockModuleCount: livestock.length, remainingBudget: state.budget },
-    productionMetrics: { cropYield: state.production.cropCumulative, meatYield: state.production.meatCumulative },
+    productionMetrics: { cropYield: state.production.cropCumulative, meatYield: state.production.meatCumulative, researchSamples: state.production.researchCumulative ?? 0 },
     stabilityMetrics: { finalPower: state.resources.power, finalWater: state.resources.water, finalOxygen: state.resources.oxygen, finalFood: state.resources.food, finalTemperature: state.resources.temperature, crisisCount: state.history.filter((event) => event.type === "CRISIS").length },
     hazardHistory: state.history.filter((event) => event.type === "HAZARD"),
     majorPlayerDecisions: [...new Set([...greenhouses.map((module) => module.moduleId), ...livestock.map((module) => module.moduleId)])],

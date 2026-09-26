@@ -4,6 +4,7 @@ import type { EvaluationResult } from "../ai/schemas.ts";
 import type { MissionReport } from "../ai/report.ts";
 import type { RunTranscript } from "../game/state/transcript.ts";
 import { publicSupabase, serverSupabase } from "./supabase.ts";
+import { CROP_BALANCE_VERSION, CROP_SCHEMA_VERSION } from '../data/cropCatalog.ts';
 
 export type LeaderboardCategory = "overall" | "production" | "stability" | "efficiency" | "resilience";
 const scoreColumns: Record<LeaderboardCategory, string> = {
@@ -25,9 +26,9 @@ export async function saveCompletedRun(state: GameState, evaluation: EvaluationR
     crop_yield: state.production.cropCumulative, meat_yield: state.production.meatCumulative,
     passed: state.passed ?? false,
     layout_json: { modules: state.modules, utilityEdges: state.utilityEdges },
-    strategy_json: { crops: state.crops, livestock: state.livestock },
+    strategy_json: { cropSchemaVersion: CROP_SCHEMA_VERSION, cropBalanceVersion: CROP_BALANCE_VERSION, crops: state.crops, livestock: state.livestock },
     hazard_json: state.history.filter((event) => event.type === "HAZARD"),
-    summary_json: { state: { level: state.level, turn: state.turn, resources: state.resources }, evaluation, report, usedFallback: score.usedFallback,
+    summary_json: { state: { level: state.level, turn: state.turn, resources: state.resources, researchSamples: state.production.researchCumulative ?? 0 }, evaluation, report, usedFallback: score.usedFallback,
       replay: { transcript, turnRecords: state.turnRecords } },
   };
   const { error } = await client.from("runs").insert(row);

@@ -9,6 +9,7 @@ import { hazardForTurn } from "./hazards.ts";
 import { growLivestock } from "./livestock.ts";
 import { resolveTemperature } from "./temperature.ts";
 import { resolveUtilityGraph } from "./utilityGraph.ts";
+import { isCropId } from '../../data/cropCatalog.ts';
 
 export function maxActionPoints(state: GameState): number {
   const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
@@ -77,6 +78,7 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
     if (invalidModifier(action.minigameModifier)) return "Invalid minigame modifier";
     target.integrity = Math.min(1, target.integrity + AGRICULTURE.repairIntegrityGain * (1 + boundedModifier(action.minigameModifier)));
   } else if (action.type === "PLANT_CROP") {
+    if (!isCropId(action.crop)) return "Unknown or retired crop ID";
     const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!plot) return "Crop plot not found";
     plot.crop = action.crop; plot.growth = 0; plot.ready = false; plot.wateredThisCycle = false;
@@ -135,6 +137,7 @@ function applyHazard(state: GameState, warnings: string[]): void {
 }
 
 export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: string): TurnResult {
+  if (state.crops.some(plot => plot.crop !== null && !isCropId(plot.crop))) throw new Error('This run contains a retired crop ID. Start a new run or explicitly migrate it.');
   if (state.phase !== "operation") throw new Error("Turn resolution requires operation phase");
   if (!rngSeed) throw new Error("A deterministic RNG seed is required");
   const next: GameState = structuredClone(state);
@@ -167,6 +170,8 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
     const harvest = harvestCrop(next, pending.plot, network, pending.modifier);
     cropYield += harvest.yield;
     cropFood += harvest.food;
+    next.production.researchCumulative = (next.production.researchCumulative ?? 0) + harvest.research;
+    if (harvest.research) next.history.push({ turn, type: "RESEARCH", message: `Collected ${harvest.research} research sample(s)`, amount: harvest.research });
     cropOutputs.push({ moduleId: pending.plot.moduleId, slotIndex: pending.plot.slotIndex, yield: harvest.yield });
   }
   const crops = growCrops(next, network);
