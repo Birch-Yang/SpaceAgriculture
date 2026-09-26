@@ -34,7 +34,7 @@ PR #1 was merged into `main` at `af188a6` although the planned target was `dev`;
 
 ### Developer B agriculture slot handoff (2026-09-26)
 
-Feature branch `feat/agriculture-slots` is pushed for review; implementation commit `69b58e1`, baseline and handoff commit `1065504`. Target the PR at `dev` and keep `main` unchanged while the A-owned build blocker is fixed.
+Feature branch `feat/agriculture-slots` is pushed for review in [draft PR #3](https://github.com/Birch-Yang/SpaceAgriculture/pull/3), targeting `dev`; implementation commit `69b58e1`, baseline and handoff commit `1065504`. The exact shared contract and A-owned build blocker were posted in the PR discussion for both teammates. Keep `main` unchanged while the build blocker is fixed.
 
 The `feat/agriculture-slots` workstream adds independent crop plots and livestock stalls to the existing resolver. Greenhouse and livestock capacities 1/2/3 now create exactly that many records, indexed from 0. Slot 0 starts with lettuce or chicken; other slots start empty. `CropPlotState.crop` and `LivestockState.animal` can be `null`; new fields are `slotIndex`, `wateredThisCycle`, `fedThisCycle`, and `feedMinigameModifier`. Existing agricultural actions accept optional `slotIndex` (default 0). New actions are `WATER_PLOT` and `FEED_STALL`; `HARVEST_CROP`, `FEED_STALL`, and `REPAIR` accept optional `minigameModifier`. `PLACE_MODULE.rotation` remains in the type for compatibility; the game controls use rotation 0.
 
