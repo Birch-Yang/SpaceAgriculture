@@ -1,6 +1,6 @@
-# SpaceAgriculture
+# agronaut
 
-Lunar Agriculture Design-Space Explorer is a desktop web project built with Next.js, TypeScript, Phaser 3, Supabase, and Photon Spectrum. Its central gameplay loop is design → operate → survive → produce → score → analyze.
+agronaut is a lunar agriculture design-space explorer. The current app uses Next.js, TypeScript, and Supabase; the Phaser 3 renderer and Photon Spectrum integration are separate workstreams. Its central gameplay loop is design → operate → survive → produce → score → analyze.
 
 ## Local setup
 
@@ -12,7 +12,7 @@ The landing page and fallback mission report work without credentials. Supabase 
 
 ## Deployment
 
-Import this repository into Vercel as a Next.js project. Apply `supabase/migrations` to the Supabase project and set the required variables from `.env.example` in Vercel. Keep `main` as the production branch and use `dev` for integration previews. Set `NEXT_PUBLIC_APP_URL` to the deployed site's origin when its URL is known. Verify the landing page and database read/write after provisioning. Keep server keys only in server environment variables, never in `NEXT_PUBLIC_*` variables.
+Vercel project: **agronaut**. The owner-shared [deployment URL](https://agronaut-litigubqm-birch-yangs-projects.vercel.app/) currently requires Vercel Authentication; use Vercel Deployments to find the latest build for each branch. Keep `main` as the production branch and use `dev` for integration previews. Set the variables in `.env.example` in Vercel, with `NEXT_PUBLIC_SUPABASE_URL` set to the HTTPS Project URL (`https://<project-ref>.supabase.co`), not a Postgres connection string. Apply `supabase/migrations` to the Supabase project and verify database read/write. Set `NEXT_PUBLIC_APP_URL` to the chosen deployment origin when needed. Keep server keys only in server environment variables, never in `NEXT_PUBLIC_*` variables.
 
 ## Team boundaries
 
@@ -26,17 +26,17 @@ Import this repository into Vercel as a Next.js project. Apply `supabase/migrati
 
 | Workstream | Branch / status | Integration note |
 | --- | --- | --- |
-| Project setup + Developer B | PR #1 merged into `main`; the same commit was synchronized to `dev` | Next.js shell, typed state/actions, deterministic simulation, Supabase migration/APIs, AI fallbacks, and CI are available on the integration branch. |
+| Project setup + Developer B | Baseline on `dev`; official `agronaut` naming on `chore/agronaut-branding` for merge to `dev` | Next.js shell, typed state/actions, deterministic simulation, Supabase migration/APIs, AI fallbacks, and CI are available on the integration branch. |
 | Developer A | Separate branch; this branch does not touch Phaser or minigames | Mount the renderer in `/game`; consume `src/game/state/types.ts` and `src/game/state/reducer.ts`. |
 | Designer/content | Separate branch; this branch does not add art or source claims | Provide verified sources for `src/ai/sourceAdapter.ts` and final copy/assets. |
 
-PR #1 was merged into `main` at `af188a6` although the planned target was `dev`. `dev` was fast-forwarded to that exact commit so teammates can base new work on `dev`. Future feature PRs should target `dev`; release PRs can then move tested changes from `dev` to `main`. Before editing the shared state/action contract, coordinate the exact change with the other workstreams. Next integration tasks: provision Supabase and apply the migration, deploy a `dev` preview, then connect the renderer and verified source registry. OpenAI and Photon can remain unconfigured while the baseline is tested.
+PR #1 was merged into `main` at `af188a6` although the planned target was `dev`; `dev` was then synchronized. Future feature PRs should target `dev`; release PRs can move tested changes from `dev` to `main`. Before editing the shared state/action contract, coordinate the exact change with the other workstreams. Next integration tasks: apply and verify the `runs` migration, connect the renderer and verified source registry, then complete the Photon adapter. A local read of `public.runs` returned `PGRST205` on 2026-09-25, so database setup still needs verification. Public OpenAI-backed run submission needs rate limiting and server-side validation before an unrestricted release.
 
 ## Checks
 
 Run `npm test` for the small baseline: deterministic turn replay, one-turn crisis recovery, and a ten-turn Challenge run with connected power/water/oxygen plus crop and meat production. It uses Node's built-in test runner and requires Node.js 24; no external test package is needed.
 
-Before merging to `dev`, also run `npm run typecheck` and `npm run build`. On the initial Developer B branch, all three commands passed with Node.js 24. GitHub pushes worked after bypassing the unavailable local proxy. A public Vercel URL and Supabase credentials have not yet been provisioned.
+Before merging to `dev`, also run `npm run typecheck` and `npm run build`. On the initial Developer B branch, all three commands passed with Node.js 24. The owner-shared deployment URL requires Vercel login; share access through Vercel when an external reviewer needs it. Vercel environment variables cannot be verified from this repository.
 
 ## Integration
 
