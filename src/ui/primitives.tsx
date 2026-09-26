@@ -7,7 +7,8 @@ export function Panel({ title, eyebrow, children, className = '' }: { title: str
 }
 export function PixelAsset({ name, folder = 'modules', label, size = 48 }: { name: string; folder?: 'modules' | 'crops' | 'animals' | 'ui'; label?: string; size?: number }) {
   const [failed, setFailed] = useState(false);
-  return failed ? <span className={s.assetFallback} role={label ? 'img' : undefined} aria-label={label} aria-hidden={!label} style={{ width: size, height: size }}>◇</span> : <img className={s.pixel} src={`/assets/${folder}/${name}.svg`} width={size} height={size} alt={label ?? ''} onError={() => setFailed(true)} />;
+  const assetName = folder === "crops" && ["lettuce", "radish", "chili-pepper", "potato", "soybean", "arabidopsis"].includes(name) ? `${name}-ready` : name;
+  return failed ? <span className={s.assetFallback} role={label ? 'img' : undefined} aria-label={label} aria-hidden={!label} style={{ width: size, height: size }}>◇</span> : <img className={s.pixel} src={`/assets/${name === "wheat" ? "" : "cozy-v1/"}${folder}/${assetName}.svg`} width={size} height={size} alt={label ?? ''} onError={() => setFailed(true)} />;
 }
 export function Status({ severity, children }: { severity?: Severity; children?: ReactNode }) {
   return <span className={`${s.badge} ${severity ? s[severity] : ''}`}>{children ?? severity ?? 'Status unavailable'}</span>;
