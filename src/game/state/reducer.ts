@@ -62,7 +62,7 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
     if (!placed) return { state, error: "Unknown placed module" };
     const def = MODULE_BY_ID.get(placed.moduleId)!;
     return { state: {
-      ...state, budget: state.budget + Math.floor(def.cost / 2),
+      ...state, budget: state.budget + (state.phase === "design" && state.level === 1 && state.turn === 1 ? def.cost : Math.floor(def.cost / 2)),
       modules: state.modules.filter((item) => item.id !== placed.id),
       utilityEdges: state.utilityEdges.filter((edge) => edge.from !== placed.id && edge.to !== placed.id),
       crops: state.crops.filter((crop) => crop.moduleId !== placed.id),

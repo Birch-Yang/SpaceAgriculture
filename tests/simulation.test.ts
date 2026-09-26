@@ -148,3 +148,26 @@ test("a connected sample base can finish ten challenge turns with active farming
   assert.equal(state.lastTurn?.turn, 10);
   assert.equal(state.passed, true, `Production: ${JSON.stringify(state.production)}; failure: ${state.failureReason}`);
 });
+
+
+test("pre-mission removal restores full module cost without duplicate refunds", () => {
+  for (const moduleId of ["habitat-core", "greenhouse-standard", "communication-tower"]) {
+    const initial = createInitialState("refund-test", "Tester", "challenge");
+    const placed = build({ type: "PLACE_MODULE", moduleId, x: 3, y: 3, rotation: 0 }, initial);
+    const placedModuleId = placed.modules[0].id;
+    assert.ok(placed.budget < initial.budget);
+    const removed = build({ type: "REMOVE_MODULE", placedModuleId }, placed);
+    assert.equal(removed.budget, initial.budget);
+    assert.equal(removed.modules.length, 0);
+    assert.equal(removed.crops.length, 0);
+    const repeated = applyBuildAction(removed, { type: "REMOVE_MODULE", placedModuleId });
+    assert.ok(repeated.error);
+    assert.equal(repeated.state.budget, initial.budget);
+    if (moduleId === "habitat-core") {
+      const active = startOperation(placed);
+      const locked = applyBuildAction(active, { type: "REMOVE_MODULE", placedModuleId });
+      assert.ok(locked.error);
+      assert.equal(locked.state.budget, active.budget);
+    }
+  }
+});
