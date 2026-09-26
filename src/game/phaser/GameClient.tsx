@@ -93,13 +93,43 @@ export function GameClient() {
 
   function build(action: PlayerAction) {
     if (!state) return;
+    if (["REMOVE_MODULE", "REMOVE_CORRIDOR", "MOVE_MODULE"].includes(action.type)
+      && !(state.phase === "design" && state.level === 1 && state.turn === 1)) {
+      setMessage("Moving and removing structures is only available before the first turn begins.");
+      return;
+    }
     const result = applyBuildAction(state, action);
     setState(result.state);
     if (!result.error) setTranscript((current) => current ? { ...current, steps: [...current.steps, { kind: "build", action }] } : current);
     setMessage(result.error ?? "Base layout updated.");
+    if (!result.error && action.type === "PLACE_MODULE") {
+      setTool({ kind: "select" });
+      setSelectedId(result.state.modules.at(-1)?.id ?? null);
+    }
     if (!result.error && action.type === "REMOVE_MODULE") { setSelectedId(null); setInteriorId(null); }
     if (!result.error && action.type === "REMOVE_CORRIDOR") setSelectedId(null);
   }
+
+  useEffect(() => {
+    function removeSelection(event: KeyboardEvent) {
+      if (event.key !== "Backspace" || event.repeat || event.defaultPrevented
+        || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable
+        || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'))) return;
+      if (!state || state.phase !== "design" || state.level !== 1 || state.turn !== 1
+        || !selectedId || mini || interiorId) return;
+      if (state.modules.some(item => item.id === selectedId)) {
+        event.preventDefault();
+        build({ type: "REMOVE_MODULE", placedModuleId: selectedId });
+      } else if (state.utilityEdges.some(item => item.id === selectedId)) {
+        event.preventDefault();
+        build({ type: "REMOVE_CORRIDOR", edgeId: selectedId });
+      }
+    }
+    window.addEventListener("keydown", removeSelection);
+    return () => window.removeEventListener("keydown", removeSelection);
+  }, [state, selectedId, mini, interiorId]);
 
   function begin() {
     if (!state) return;
@@ -239,6 +269,7 @@ export function GameClient() {
     <p role="status" className="help">{message}</p>
   </form>} />;
 
+  const initialBuild = state.phase === "design" && state.level === 1 && state.turn === 1;
   const building = state.phase === "design" || state.phase === "intermission";
   const selectedModule = state.modules.find((item) => item.id === selectedId);
   const selectedEdge = state.utilityEdges.find((item) => item.id === selectedId);
@@ -261,15 +292,15 @@ export function GameClient() {
       <aside className={styles.palette}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${maxActionPoints(state)} AP PLANNED (MAX)`}</small></div>
         {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
       </aside>
-      <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Select or drag to move a disconnected module" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={!communicationsAvailable(state) ? styles.offline : styles.online}>{!communicationsAvailable(state) ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
+      <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Before turn 1: select + Backspace to remove, drag disconnected buildings to move" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={!communicationsAvailable(state) ? styles.offline : styles.online}>{!communicationsAvailable(state) ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
       <aside className={styles.details}><div className={styles.panelHeading}><strong>MISSION STATUS</strong><small>{state.phase === "complete" ? "FINAL" : "LIVE"}</small></div><div className={styles.section}><p className={styles.label}>HAZARD FORECAST</p><p>Solar {state.forecast.solar} · Thermal {state.forecast.thermal} · Impact {state.forecast.impact}</p></div>
         {definition && selectedModule ? <div className={styles.section}><p className={styles.label}>SELECTED MODULE</p><h2>{definition.label}</h2><p>Integrity {Math.round(selectedModule.integrity * 100)}% · Grid {selectedModule.x},{selectedModule.y}</p>
           {agriculture && <><p>{agriculture.kind === "greenhouse" ? "Crop plots" : "Livestock stalls"}: {agriculture.slots.length}</p><button onClick={() => openInterior(selectedModule.id)}>Enter {agriculture.kind === "greenhouse" ? "Greenhouse" : "Livestock Module"}</button></>}
-          {building && <button onClick={() => build({ type: "REMOVE_MODULE", placedModuleId: selectedModule.id })}>Remove · refund {Math.floor(definition.cost / 2)}</button>}
+          {initialBuild && <button onClick={() => build({ type: "REMOVE_MODULE", placedModuleId: selectedModule.id })}>Remove (Backspace) · refund {Math.floor(definition.cost / 2)}</button>}
           {state.phase === "operation" && <>{definition.category === "utility" && <button onClick={() => queue({ type: "REALLOCATE_UTILITY", moduleId: selectedModule.id, allocation: { thermal: 0.6, backupPower: 0.2, commsBackup: 0.2 } })}>Queue thermal boost · 1 AP</button>}
             {selectedModule.integrity < 1 && <button onClick={() => queue({ type: "REPAIR", targetId: selectedModule.id })}>Repair · 2 AP</button>}
             {selectedModule.integrity < 1 && <button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedModule.id, slotIndex: 0 })}>Repair minigame</button>}</>}
-        </div> : selectedEdge ? <div className={styles.section}><p className={styles.label}>UTILITY CORRIDOR</p><h2>{selectedEdge.id}</h2><p>Length {selectedEdge.length} · Integrity {Math.round(selectedEdge.integrity * 100)}%</p>{building && <button onClick={() => build({ type: "REMOVE_CORRIDOR", edgeId: selectedEdge.id })}>Remove corridor · 1 material</button>}{state.phase === "operation" && selectedEdge.integrity < 1 && <><button onClick={() => queue({ type: "REPAIR", targetId: selectedEdge.id })}>Repair · 2 AP</button><button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedEdge.id, slotIndex: 0 })}>Repair minigame</button></>}</div> : <div className={styles.section}><p className={styles.label}>INSPECT</p><p>Select a structure on the map to see its condition and actions.</p></div>}
+        </div> : selectedEdge ? <div className={styles.section}><p className={styles.label}>UTILITY CORRIDOR</p><h2>{selectedEdge.id}</h2><p>Length {selectedEdge.length} · Integrity {Math.round(selectedEdge.integrity * 100)}%</p>{initialBuild && <button onClick={() => build({ type: "REMOVE_CORRIDOR", edgeId: selectedEdge.id })}>Remove corridor · 1 material</button>}{state.phase === "operation" && selectedEdge.integrity < 1 && <><button onClick={() => queue({ type: "REPAIR", targetId: selectedEdge.id })}>Repair · 2 AP</button><button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedEdge.id, slotIndex: 0 })}>Repair minigame</button></>}</div> : <div className={styles.section}><p className={styles.label}>INSPECT</p><p>Select a structure on the map to see its condition and actions.</p></div>}
         {pending.length > 0 && <div className={styles.section}><p className={styles.label}>QUEUED ({pending.length}) · {plannedAp} AP</p><p>Applied on End Turn. Food shortages can reduce available AP.</p>{pending.map((action, i) => <p key={i}>{action.type.replaceAll("_", " ")} · {"moduleId" in action ? `${action.moduleId} / slot ${actionSlotIndex(action) + 1}` : "targetId" in action ? action.targetId : "mission"}</p>)}<button onClick={() => setPending([])}>Clear queue</button></div>}{miniResult && <div className={styles.section}><p className={styles.label}>LAST MINIGAME</p><p>{miniResult.modifier >= 0 ? "+" : ""}{Math.round(miniResult.modifier * 100)}% bonus queued with its target action</p></div>}<div className={styles.section}><p className={styles.label}>LATEST TURN</p><p>{state.lastTurn ? `Crops +${state.lastTurn.cropYield}; meat +${state.lastTurn.meatYield}. ${state.lastTurn.warnings.join(" ")}` : "Awaiting first turn."}</p></div>{state.phase === "complete" && <div className={styles.section}><p className={styles.label}>MISSION RESULT</p><h2 className={state.passed ? styles.pass : styles.fail}>{state.passed ? "PASS" : "FAIL"}</h2><p>{state.failureReason ?? "Production goals reached."}</p></div>}
       </aside>
     </div>

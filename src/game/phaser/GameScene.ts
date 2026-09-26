@@ -136,8 +136,11 @@ export class GameScene extends Phaser.Scene {
     } else if (this.tool.kind === "corridor" && this.buildEnabled()) {
       this.extendPath(cell);
       if (this.corridorPath.length > 0) this.callbacks.onAction({ type: "PLACE_CORRIDOR", cells: [...this.corridorPath] });
-    } else if (this.tool.kind === "select" && this.buildEnabled() && down && (down.x !== cell.x || down.y !== cell.y) && this.moduleAt(down, state)) {
-      this.callbacks.onAction({ type: "MOVE_MODULE", placedModuleId: this.moduleAt(down, state)!.id, x: cell.x, y: cell.y });
+    } else if (this.tool.kind === "select" && state.phase === "design" && state.level === 1 && state.turn === 1 && down && (down.x !== cell.x || down.y !== cell.y) && this.moduleAt(down, state)) {
+      const module = this.moduleAt(down, state)!;
+      // Preserve the grabbed cell's offset within a multi-cell building.
+      this.callbacks.onAction({ type: "MOVE_MODULE", placedModuleId: module.id,
+        x: module.x + cell.x - down.x, y: module.y + cell.y - down.y });
     } else {
       const module = this.moduleAt(cell, state);
       const edge = state.utilityEdges.find((item) => item.cells.some((part) => part.x === cell.x && part.y === cell.y));
