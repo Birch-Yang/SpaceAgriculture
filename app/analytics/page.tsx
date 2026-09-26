@@ -1,3 +1,8 @@
-export default function AnalyticsPage() {
-  return <main><p className="eyebrow">Crowdsourced design-space exploration</p><h1>Observed player patterns</h1><p>Aggregates will be shown when enough anonymous runs have been recorded. These patterns do not prove an optimal lunar base design.</p></main>;
+import { AppFrame } from '../../src/ui/integration/AppFrame';
+import { AnalyticsPanel } from '../../src/ui/AnalyticsPanel';
+import { getAggregateAnalytics } from '../../src/backend/analytics';
+export const dynamic = 'force-dynamic';
+export default async function AnalyticsPage() {
+  try { const data = await getAggregateAnalytics(); return <AppFrame><AnalyticsPanel data={data} /></AppFrame>; }
+  catch { return <AppFrame><AnalyticsPanel error="Player observations are temporarily unavailable. Please reload to retry." /></AppFrame>; }
 }

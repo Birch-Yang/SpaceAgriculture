@@ -5,6 +5,7 @@ import { MODULE_BY_ID } from "../../data/modules.ts";
 import type { AnimalKind, CropKind, GameState, PlayerAction, Setting } from "../state/types.ts";
 import { actionSlotIndex, agricultureSlots, careAction, slotAction } from "./agricultureAdapter.ts";
 import styles from "./game.module.css";
+import { AgricultureSprite } from "../../ui/AgricultureSprite";
 
 type MiniTarget = { kind: "crop" | "animal" | "repair"; moduleId: string; slotIndex: number };
 type Props = { state: GameState; moduleId: string; pending: PlayerAction[]; feedback: string; onQueue: (action: PlayerAction) => void; onMini: (target: MiniTarget) => void; onClose: () => void };
@@ -34,7 +35,7 @@ export function AgricultureInterior({ state, moduleId, pending, feedback, onQueu
         const canUse = operating && slot.supported;
         const settingsChanged = value.water !== slot.water || value.light !== slot.light || value.temperature !== slot.temperature;
         return <section className={styles.slotCard} key={slot.index} aria-label={`Crop plot ${slot.index + 1}`}>
-          <h2>Plot {slot.index + 1}</h2><p>{slot.crop ? `${slot.crop} · ${slot.ready ? "Ready to harvest" : `${slot.progress}% grown`}` : "Empty plot"}</p>
+          <h2>Plot {slot.index + 1}</h2><AgricultureSprite crop={slot.crop} ready={slot.ready} /><p>{slot.crop ? `${slot.crop} · ${slot.ready ? "Ready to harvest" : `${slot.progress}% grown`}` : "Empty plot"}</p>
           {!canUse && <p>{lockedReason}</p>}
           <div className={styles.buttonGroup}>{crops.map((crop) => <button key={crop} disabled={!canUse} title={!canUse ? lockedReason : undefined} onClick={() => onQueue(slotAction({ type: "PLANT_CROP", moduleId, crop }, slot.index, agriculture.fullContract))}>{crop}</button>)}</div>
           <div className={styles.settingRow}>{(["water", "light", "temperature"] as const).map((key) => <label key={key}>{key}<select disabled={!canUse} value={value[key]} onChange={(event) => setCropSettings({ ...cropSettings, [slot.index]: { ...value, [key]: event.target.value as Setting } })}>{settings.map((setting) => <option key={setting}>{setting}</option>)}</select></label>)}</div>
@@ -46,7 +47,7 @@ export function AgricultureInterior({ state, moduleId, pending, feedback, onQueu
       }) : agriculture.slots.map((slot) => {
         const canUse = operating && slot.supported;
         return <section className={styles.slotCard} key={slot.index} aria-label={`Livestock stall ${slot.index + 1}`}>
-          <h2>Stall {slot.index + 1}</h2><p>{slot.animal ? `${slot.animal} · ${slot.progress}% cycle` : "Empty stall"}</p>
+          <h2>Stall {slot.index + 1}</h2><AgricultureSprite animal={slot.animal} /><p>{slot.animal ? `${slot.animal} · ${slot.progress}% cycle` : "Empty stall"}</p>
           {!canUse && <p>{lockedReason}</p>}
           <div className={styles.buttonGroup}>{animals.map((animal) => <button key={animal} disabled={!canUse} onClick={() => onQueue(slotAction({ type: "SET_ANIMAL", moduleId, animal }, slot.index, agriculture.fullContract))}>{animal}</button>)}</div>
           <p>Feed level · current: {slot.feed}</p><div className={styles.buttonGroup}>{(["rationed", "normal", "high"] as const).map((feed) => <button key={feed} disabled={!canUse || feed === slot.feed} title={feed === slot.feed ? "Already active." : undefined} onClick={() => onQueue(slotAction({ type: "SET_LIVESTOCK_PARAMS", moduleId, feed }, slot.index, agriculture.fullContract))}>{feed}</button>)}</div>

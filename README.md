@@ -42,7 +42,13 @@ Vercel project: **agronaut**. The owner-shared [deployment URL](https://agronaut
 
 PR #1 was merged into `main` at `af188a6` although the planned target was `dev`; `dev` was then synchronized. The `agronaut` naming branch was pushed separately and merged into `dev` at `7b9d7af`. Future feature PRs should target `dev`; release PRs can move tested changes from `dev` to `main`. Before editing the shared state/action contract, coordinate the exact change with the other workstreams. Next integration tasks: apply and verify the `runs` migration, connect the renderer and verified source registry, then complete the Photon adapter. A local read of `public.runs` returned `PGRST205` on 2026-09-25, so database setup still needs verification. Public OpenAI-backed run submission needs rate limiting and server-side validation before an unrestricted release.
 
+### UI integration handoff (2026-09-26)
+
+[PR #5](https://github.com/Birch-Yang/SpaceAgriculture/pull/5) brings the UI, pixel art, content, and live game presentation into `dev`. Its head was synchronized with `dev` at `d451fc3` through merge commit `fb30dd1`; Git resolved the criss-cross history without any file-level conflict or shared interface change. On that resolved tree, the lightweight `npm test` baseline (3 tests), `npm run typecheck`, and `npm run build` all passed with dependencies installed inside the worktree. Developer A and the designer can continue from `dev` after PR #5 merges. Developer B's agriculture slots remain on separate [PR #3](https://github.com/Birch-Yang/SpaceAgriculture/pull/3) until that contract is integrated; UI work should not assume those fields exist on `dev` yet.
+
 ## Checks
+
+Keep testing lightweight: one small, runnable test covering the changed behavior is enough. Do not repeat or expand tests unless a concrete failure or an integration gate requires it.
 
 Run `npm test` for the small baseline: deterministic turn replay, one-turn crisis recovery, and a ten-turn Challenge run with connected power/water/oxygen plus crop and meat production. It uses Node's built-in test runner and requires Node.js 24; no external test package is needed.
 
