@@ -6,7 +6,10 @@ import { fallbackReport } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
 import { resourceCapacity } from "../src/data/systems.ts";
+import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
+import { harvestCrop } from "../src/game/simulation/crops.ts";
+import { growLivestock } from "../src/game/simulation/livestock.ts";
 import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
@@ -100,6 +103,23 @@ test("a connected recreation module improves AP recovery while food scarcity sti
   assert.equal(resolveTurn(extra, [], "recreation").state.ap, resolveTurn(ordinary, [], "recreation").state.ap + 1);
   extra.resources.food = 0;
   assert.ok(resolveTurn(extra, [], "recreation").state.ap < maxActionPoints(extra));
+});
+
+test("all three crops and livestock species produce through the connected base", () => {
+  const state = startOperation(base());
+  const network = resolveUtilityGraph(state);
+  const plot = { ...state.crops[0], ready: true };
+  for (const crop of ["lettuce", "potato", "wheat"] as const)
+    assert.ok(harvestCrop(state, { ...plot, crop }, network).yield > 0, crop);
+  const low = harvestCrop(state, { ...plot, crop: "lettuce", water: "low", light: "low" }, network).yield;
+  const high = harvestCrop(state, { ...plot, crop: "lettuce", water: "high", light: "high" }, network).yield;
+  assert.ok(high > low);
+  for (const animal of ["chicken", "pig", "cow"] as const) {
+    const candidate = structuredClone(state);
+    candidate.livestock[0].animal = animal;
+    candidate.livestock[0].growth = LIVESTOCK[animal].cycle;
+    assert.ok(growLivestock(candidate, network).meatYield > 0, animal);
+  }
 });
 
 test("Spectrum webhook signature accepts current raw content and rejects tampering or replay", () => {
