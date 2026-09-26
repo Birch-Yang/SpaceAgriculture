@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eventAdvice } from "../../../../src/ai/advisor.ts";
 import { validAgentPublicState, type AgentEvent } from "../../../../src/ai/publicState.ts";
 import { sendIMessage } from "../../../../src/ai/spectrum.ts";
-import { appendMissionAdvice, missionSessionByRun, updateMissionSession, validSessionToken } from "../../../../src/backend/missionSessions.ts";
+import { appendMissionAdvice, claimMissionMessageSlot, missionSessionByRun, updateMissionSession, validSessionToken } from "../../../../src/backend/missionSessions.ts";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: "no-event" });
     if (body.outage) return NextResponse.json({ status: "offline", text: "Mission Control communication lost" });
     if (!event) return NextResponse.json({ status: "no-event" });
+    if (!await claimMissionMessageSlot(body.runId)) return NextResponse.json({ status: "unavailable", text: "Mission Control message limit reached" }, { status: 429 });
     const text = await eventAdvice(event);
     await sendIMessage(session.spaceId, text, session.phone);
     await appendMissionAdvice(body.runId, text);

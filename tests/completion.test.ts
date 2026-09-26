@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import test from "node:test";
 import { verifySpectrumWebhook } from "../src/ai/webhookSignature.ts";
+import { fallbackReport } from "../src/ai/report.ts";
+import { buildRunSummary } from "../src/ai/schemas.ts";
+import { verifiedSources } from "../src/ai/sourceAdapter.ts";
 import { resourceCapacity } from "../src/data/systems.ts";
-import { resolveTurn } from "../src/game/simulation/resolveTurn.ts";
+import { transcriptHash } from "../src/backend/submissions.ts";
+import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
@@ -44,9 +48,13 @@ test("a complete transcript replays to the same authoritative state and rejects 
   const transcript: RunTranscript = { version: 1, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
   assert.equal(state.phase, "complete");
   assert.deepEqual(replayTranscript(parseTranscript(transcript)), state);
+  assert.notEqual(transcriptHash(transcript), transcriptHash({ ...transcript, steps: transcript.steps.slice(0, -1) }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "REPAIR", targetId: "fake", minigameModifier: 99 }] }] }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "build", action: { type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 90 } }] }));
   assert.throws(() => replayTranscript({ ...transcript, steps: [...steps, { kind: "turn", actions: [] }] }));
+  const report = fallbackReport(buildRunSummary(state), !!state.passed, verifiedSources);
+  assert.ok(report.sourceIds.length > 0);
+  assert.ok(report.sourceIds.every((id) => verifiedSources.some((source) => source.id === id)));
 });
 
 test("corridor isolation and capacity change actual delivery; connected storage caps reserves", () => {
@@ -81,6 +89,17 @@ test("intermission can remove and reroute corridors before moving a disconnected
   const path = applyBuildAction(state, { type: "PLACE_CORRIDOR", cells: Array.from({ length: 6 }, (_, i) => ({ x: 0, y: i + 2 })) });
   assert.equal(path.error, undefined);
   assert.ok(path.state.utilityEdges.some((item) => item.from === water.id || item.to === water.id));
+});
+
+test("a connected recreation module improves AP recovery while food scarcity still matters", () => {
+  const ordinary = startOperation(base());
+  const extra = structuredClone(ordinary);
+  extra.modules.push({ id: "module-recreation", moduleId: "recreation", x: 11, y: 10, rotation: 0, integrity: 1 });
+  extra.utilityEdges.push({ id: "edge-recreation", from: extra.modules[0].id, to: "module-recreation", cells: [{ x: 10, y: 10 }], length: 1, capacity: 20, integrity: 1 });
+  assert.equal(maxActionPoints(extra), maxActionPoints(ordinary) + 1);
+  assert.equal(resolveTurn(extra, [], "recreation").state.ap, resolveTurn(ordinary, [], "recreation").state.ap + 1);
+  extra.resources.food = 0;
+  assert.ok(resolveTurn(extra, [], "recreation").state.ap < maxActionPoints(extra));
 });
 
 test("Spectrum webhook signature accepts current raw content and rejects tampering or replay", () => {

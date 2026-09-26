@@ -94,20 +94,24 @@ export async function missionSessionBySpace(spaceId: string): Promise<MissionSes
 export async function updateMissionSession(runId: string, publicState: AgentPublicState, turn: number, outage: boolean, advice?: string): Promise<boolean> {
   const client = serverSupabase();
   const session = await missionSessionByRun(runId);
-  if (!client || !session || turn <= session.lastTurn || session.messageCount >= 25) return false;
+  if (!client || !session || turn <= session.lastTurn) return false;
   const history = advice ? [...session.adviceHistory, advice].slice(-25) : session.adviceHistory;
   const { data, error } = await client.from("mission_control_sessions").update({ public_state: publicState, outage, last_turn: turn,
-    advice_history: history, message_count: session.messageCount + (advice ? 1 : 0) })
+    advice_history: history })
     .eq("run_id", runId).eq("last_turn", session.lastTurn).select("run_id").maybeSingle();
   return !error && !!data;
 }
 
 export async function appendMissionAdvice(runId: string, advice: string): Promise<void> {
   const client = serverSupabase();
-  const session = await missionSessionByRun(runId);
-  if (!client || !session || session.messageCount >= 25) return;
-  await client.from("mission_control_sessions").update({ advice_history: [...session.adviceHistory, advice].slice(-25),
-    message_count: session.messageCount + 1 }).eq("run_id", runId);
+  if (client) await client.rpc("append_mission_advice", { p_run_id: runId, p_advice: advice });
+}
+
+export async function claimMissionMessageSlot(runId: string): Promise<boolean> {
+  const client = serverSupabase();
+  if (!client) return false;
+  const { data, error } = await client.rpc("claim_mission_message", { p_run_id: runId });
+  return !error && data === true;
 }
 
 export async function missionAdviceHistory(runId: string): Promise<string[]> {

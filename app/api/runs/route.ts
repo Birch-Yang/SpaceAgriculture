@@ -48,7 +48,8 @@ export async function POST(request: Request) {
   try {
     if (await getReport(state.runId)) return NextResponse.json({ error: "Run already submitted", runId: state.runId }, { status: 409 });
   } catch { /* The submission gate below handles database outages. */ }
-  const claim = await claimSubmission(state.runId, request);
+  const claim = await claimSubmission(state.runId, transcript, request);
+  if (claim === "conflict") return NextResponse.json({ error: "Run ID belongs to a different action transcript" }, { status: 409 });
   if (claim === "duplicate") {
     const cached = await getSubmission(state.runId);
     if (cached?.saved) return NextResponse.json({ error: "Run already submitted", runId: state.runId }, { status: 409 });

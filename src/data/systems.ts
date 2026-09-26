@@ -12,6 +12,7 @@ export const SYSTEMS = {
   communicationsBackupThreshold: 0.4,
   thermalDistanceFalloff: 0.15,
   moduleMoveCost: 2,
+  recreationApBonus: 1,
 } as const;
 
 function footprint(module: PlacedModule): { w: number; h: number } {

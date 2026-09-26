@@ -52,6 +52,31 @@ $$;
 revoke all on function public.claim_mission_enrollment(uuid, text) from public, anon, authenticated;
 grant execute on function public.claim_mission_enrollment(uuid, text) to service_role;
 
+create or replace function public.claim_mission_message(p_run_id uuid)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare updated_count integer;
+begin
+  update public.mission_control_sessions
+    set message_count = message_count + 1
+    where run_id = p_run_id and expires_at > now() and message_count < 25;
+  get diagnostics updated_count = row_count;
+  return updated_count = 1;
+end;
+$$;
+revoke all on function public.claim_mission_message(uuid) from public, anon, authenticated;
+grant execute on function public.claim_mission_message(uuid) to service_role;
+
+create or replace function public.append_mission_advice(p_run_id uuid, p_advice text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.mission_control_sessions
+    set advice_history = advice_history || jsonb_build_array(left(p_advice, 600))
+    where run_id = p_run_id and expires_at > now();
+end;
+$$;
+revoke all on function public.append_mission_advice(uuid, text) from public, anon, authenticated;
+grant execute on function public.append_mission_advice(uuid, text) to service_role;
+
 create or replace function public.cleanup_mission_control()
 returns void language plpgsql security definer set search_path = public as $$
 begin

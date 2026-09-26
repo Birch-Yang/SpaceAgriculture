@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { replyAdvice } from "../../../../src/ai/advisor.ts";
 import { sendIMessage } from "../../../../src/ai/spectrum.ts";
 import { verifySpectrumWebhook } from "../../../../src/ai/webhookSignature.ts";
-import { appendMissionAdvice, claimWebhookMessage, missionSessionBySpace, releaseWebhookMessage } from "../../../../src/backend/missionSessions.ts";
+import { appendMissionAdvice, claimMissionMessageSlot, claimWebhookMessage, missionSessionBySpace, releaseWebhookMessage } from "../../../../src/backend/missionSessions.ts";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     if (!session || session.outage || session.messageCount >= 25) return NextResponse.json({ ok: true });
     if (!await claimWebhookMessage(payload.message.id)) return NextResponse.json({ ok: true });
     try {
+      if (!await claimMissionMessageSlot(session.runId)) return NextResponse.json({ ok: true });
       const advice = await replyAdvice(payload.message.content.text, session.publicState);
       await sendIMessage(session.spaceId, advice, session.phone);
       await appendMissionAdvice(session.runId, advice);

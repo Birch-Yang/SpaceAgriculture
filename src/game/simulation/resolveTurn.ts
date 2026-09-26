@@ -1,7 +1,7 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { AGRICULTURE, boundedModifier } from "../../data/agriculture.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
-import { communicationsAvailable, resourceCapacity } from "../../data/systems.ts";
+import { communicationsAvailable, connectedToHabitat, resourceCapacity, SYSTEMS } from "../../data/systems.ts";
 import type { CropPlotState, GameEvent, GameState, LivestockState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
 import { criticalCondition } from "./crisis.ts";
 import { growCrops, harvestCrop } from "./crops.ts";
@@ -10,11 +10,18 @@ import { growLivestock } from "./livestock.ts";
 import { resolveTemperature } from "./temperature.ts";
 import { resolveUtilityGraph } from "./utilityGraph.ts";
 
+export function maxActionPoints(state: GameState): number {
+  const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
+  const recreation = state.resources.power > 0 && state.modules.some((module) => MODULE_BY_ID.get(module.moduleId)?.category === "recreation"
+    && module.integrity > 0.5 && connectedToHabitat(state, module.id));
+  return baseline + (recreation ? SYSTEMS.recreationApBonus : 0);
+}
+
 function apRecovery(state: GameState): number {
   const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
   const reserve = state.resources.food / 60;
   const factor = reserve > 0.7 ? 1 : reserve > 0.4 ? 0.9 : reserve > 0.2 ? 0.75 : 0.6;
-  return Math.max(1, Math.floor(baseline * factor));
+  return Math.max(1, Math.floor(baseline * factor)) + maxActionPoints(state) - baseline;
 }
 
 function actionCost(action: PlayerAction): number {

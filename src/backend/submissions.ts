@@ -1,6 +1,7 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import type { EvaluationResult } from "../ai/schemas.ts";
 import type { MissionReport } from "../ai/report.ts";
+import type { RunTranscript } from "../game/state/transcript.ts";
 import { serverSupabase } from "./supabase.ts";
 
 export type CachedResult = { evaluation?: EvaluationResult; report: MissionReport };
@@ -11,12 +12,16 @@ export function requesterHash(request: Request): string {
   return createHmac("sha256", secret).update(address).digest("hex");
 }
 
-export async function claimSubmission(runId: string, request: Request): Promise<"claimed" | "duplicate" | "rate_limited" | "unavailable"> {
+export function transcriptHash(transcript: RunTranscript): string {
+  return createHash("sha256").update(JSON.stringify(transcript)).digest("hex");
+}
+
+export async function claimSubmission(runId: string, transcript: RunTranscript, request: Request): Promise<"claimed" | "duplicate" | "conflict" | "rate_limited" | "unavailable"> {
   const client = serverSupabase();
   if (!client) return "unavailable";
-  const { data, error } = await client.rpc("claim_run_submission", { p_run_id: runId, p_requester_hash: requesterHash(request) });
+  const { data, error } = await client.rpc("claim_run_submission", { p_run_id: runId, p_requester_hash: requesterHash(request), p_transcript_hash: transcriptHash(transcript) });
   if (error) return "unavailable";
-  return data === "claimed" || data === "duplicate" || data === "rate_limited" ? data : "unavailable";
+  return data === "claimed" || data === "duplicate" || data === "conflict" || data === "rate_limited" ? data : "unavailable";
 }
 
 export async function getSubmission(runId: string): Promise<{ result?: CachedResult; saved: boolean } | undefined> {

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MODULES, MODULE_BY_ID } from "../../data/modules.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../state/reducer.ts";
-import { resolveTurn } from "../simulation/resolveTurn.ts";
+import { maxActionPoints, resolveTurn } from "../simulation/resolveTurn.ts";
 import type { GameMode, GameState, PlayerAction } from "../state/types.ts";
 import type { RunTranscript } from "../state/transcript.ts";
 import type { MissionReport as MissionReportData } from "../../ai/report.ts";
@@ -100,7 +100,7 @@ export function GameClient() {
 
   function queue(action: PlayerAction): boolean {
     if (!state || state.phase !== "operation") { setMessage("Begin the mission before planning actions."); return false; }
-    const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
+    const baseline = maxActionPoints(state);
     const sameTarget = (current: PlayerAction) => current.type === action.type
       && (("moduleId" in current && "moduleId" in action && current.moduleId === action.moduleId && actionSlotIndex(current) === actionSlotIndex(action))
         || ("targetId" in current && "targetId" in action && current.targetId === action.targetId));
@@ -231,7 +231,7 @@ export function GameClient() {
       return <div key={key} className={`${styles.resource} ${critical ? styles.low : ""}`}><span>{key.toUpperCase()}</span><strong>{value.toFixed(1)} <small>{key === "temperature" ? "°C" : "units"}</small></strong><i><b style={{ width: `${fill}%` }} /></i></div>;
     })}<div className={styles.resource}><span>CROP / MEAT</span><strong>{state.production.cropCumulative.toFixed(0)} / {state.production.meatCumulative.toFixed(0)}</strong><small>Targets {target.cropTarget} / {target.meatTarget}</small></div></section>
     <div className={styles.workspace}>
-      <aside className={styles.palette}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${target.ap} AP PLANNED (MAX)`}</small></div>
+      <aside className={styles.palette}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${maxActionPoints(state)} AP PLANNED (MAX)`}</small></div>
         {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
       </aside>
       <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Select or drag to move a disconnected module" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={!communicationsAvailable(state) ? styles.offline : styles.online}>{!communicationsAvailable(state) ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>

@@ -19,7 +19,7 @@ The server accepts only an action transcript for `/api/runs`. It replays constru
 
 ## Database and deployment
 
-Apply the files in `supabase/migrations` in numeric order to the target Supabase project. The service-role key stays on the server. `runs` is publicly readable for leaderboards and reports, while submission claims and Mission Control sessions use service-role-only operations. Submission claims permit five new evaluations per requester per day, plus a global ceiling of 100. A run ID is evaluated only once, and its cached result can be retried if saving fails.
+Apply the files in `supabase/migrations` in numeric order to the target Supabase project. The service-role key stays on the server. `runs` is publicly readable for leaderboards and reports, while submission claims and Mission Control sessions use service-role-only operations. Submission claims permit five new evaluations per requester per day, plus a global ceiling of 100. A run ID is bound to its transcript hash and evaluated only once; the same transcript can reuse its cached result when saving fails.
 
 Deploy through Vercel using the variables in `.env.example`. The existing Vercel project is **agronaut**. Set `NEXT_PUBLIC_SUPABASE_URL` to the HTTPS project URL, not a Postgres connection string. Keep `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and messaging secrets out of `NEXT_PUBLIC_*`. The [owner-shared deployment](https://agronaut-litigubqm-birch-yangs-projects.vercel.app/) has required Vercel Authentication; inspect the latest branch deployment in Vercel for external QA.
 
