@@ -2,6 +2,7 @@ import { MODULE_BY_ID } from "../../data/modules.ts";
 import { CROPS } from "../../data/crops.ts";
 import { LIVESTOCK } from "../../data/livestock.ts";
 import type { AnimalKind, CropKind, CropPlotState, GameState, LivestockState, PlayerAction, Setting } from "../state/types.ts";
+import type { MinigameProof } from "../minigames/proof.ts";
 
 // The renderer accepts the current one-plot contract and the proposed slot contract.
 // It never simulates growth or resources; empty legacy slots stay unavailable until B's resolver exists.
@@ -39,13 +40,13 @@ export function agricultureSlots(state: GameState, placedModuleId: string): { ki
   return { kind: "livestock", slots, fullContract };
 }
 
-export function slotAction(action: PlayerAction, slotIndex: number, fullContract: boolean, modifier?: number): PlayerAction {
+export function slotAction(action: PlayerAction, slotIndex: number, fullContract: boolean, modifier?: number, proof?: MinigameProof): PlayerAction {
   if (!fullContract) return action;
-  return { ...action, slotIndex, ...(modifier === undefined ? {} : { minigameModifier: Math.max(-0.1, Math.min(0.1, modifier)) }) } as unknown as PlayerAction;
+  return { ...action, slotIndex, ...(modifier === undefined ? {} : { minigameModifier: Math.max(-0.1, Math.min(0.1, modifier)) }), ...(proof ? { minigameProof: proof } : {}) } as unknown as PlayerAction;
 }
 
-export function careAction(type: "WATER_PLOT" | "FEED_STALL", moduleId: string, slotIndex: number, modifier?: number): PlayerAction {
-  return { type, moduleId, slotIndex, ...(modifier === undefined ? {} : { minigameModifier: Math.max(-0.1, Math.min(0.1, modifier)) }) } as unknown as PlayerAction;
+export function careAction(type: "WATER_PLOT" | "FEED_STALL", moduleId: string, slotIndex: number, modifier?: number, proof?: MinigameProof): PlayerAction {
+  return { type, moduleId, slotIndex, ...(modifier === undefined ? {} : { minigameModifier: Math.max(-0.1, Math.min(0.1, modifier)) }), ...(proof ? { minigameProof: proof } : {}) } as unknown as PlayerAction;
 }
 
 export function actionSlotIndex(action: PlayerAction): number {

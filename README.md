@@ -1,61 +1,44 @@
 # agronaut
 
-agronaut is a lunar agriculture design-space explorer. The current app uses Next.js, TypeScript, and Supabase; the Phaser 3 renderer and Photon Spectrum integration are separate workstreams. Its central gameplay loop is design → operate → survive → produce → score → analyze.
+agronaut is a lunar agriculture design-space explorer. Players build an outpost, operate its shared utility network, grow food, survive hazards, and compare completed strategies. The desktop web app uses Next.js, TypeScript, Phaser 3, Supabase, and optional Photon Spectrum iMessage.
 
-## Placement controls — fixed orientation, drag only
+## Gameplay
 
-The current product decision (2026-09-26) supersedes the original specification's rotation requirement: **modules cannot be rotated; placement uses drag-and-drop only**.
+- **Challenge:** build from an empty map and survive ten turns under high hazard pressure.
+- **Progressive:** operate one inherited base through three ten-turn levels, with construction intermissions between levels.
+- Agriculture has independent crop plots and livestock stalls. Parameters, care actions, and the two minigames affect production. A connected water recycler near a greenhouse improves water efficiency; nearby active livestock provides a small gameified recycling bonus.
+- Integrated utility corridors carry power, water, and oxygen. Route length, integrity, capacity, demand, storage, thermal distance, shelters, multifunction utility allocations, and communication-tower backup affect survival.
+- Modules retain the shared `rotation` field but have a fixed orientation in play. In a build phase, players can drag a disconnected module to move it, remove corridors, and reroute them. Operation locks the layout.
+- Completed runs use a 70-point rules score plus a 30-point structured AI evaluation when available. A template report and normalized rules score keep results available when AI fails.
 
-- During design and permitted intermissions, drag modules to place or reposition them on the snap-to-grid map.
-- Each module keeps its authored 2.5D isometric orientation and footprint. Do not provide rotation buttons, rotation shortcuts, or alternate facing controls.
-- During active operation, the layout remains locked; this change does not enable dragging, building, or rerouting mid-mission.
+## Local development
 
-Developer A owns implementing these interaction rules. This documentation update does not change `GameState`, `PlayerAction`, or existing rotation fields in the shared contracts; coordinate any future contract cleanup separately.
+Use Node.js 24. Run `npm ci`, copy `.env.example` to `.env.local`, then run `npm run dev`. The game and fallback report work without service credentials. `npm test`, `npm run typecheck`, and `npm run build` are the local checks.
 
-## Local setup
+The server accepts only an action transcript for `/api/runs`. It replays construction and every turn before computing scores or saving a result. Accepted actions and per-turn records are retained in `summary_json.replay` for future replay tooling. This prevents a client from submitting an arbitrary final score or resource state. Minigame modifiers are bounded to ±10% and require a move-by-move proof that the server replays to calculate the claimed bonus. This verifies that a score is achievable under the game rules; a browser client cannot prove that a human performed those moves, so competitive anti-cheat would still need an authoritative challenge service.
 
-1. Use Node.js 20.9 or newer (Node.js 24 recommended).
-2. Run `npm install` and copy `.env.example` to `.env.local`.
-3. Run `npm run dev` and open `http://localhost:3000`.
+Saved runs with a transcript expose ordered state snapshots at `GET /api/replay/<runId>`. The first frame is the empty design state; subsequent frames follow accepted build and turn steps. Older runs without a stored transcript return 404.
 
-The landing page and fallback mission report work without credentials. Supabase reads/writes require its URL and keys. OpenAI-backed evaluation, reports, and the in-game Photon advisor require `OPENAI_API_KEY`. The advisor's per-turn request quota also requires the `202609270001_photon_advice_quota.sql` Supabase migration and server-side `SUPABASE_SERVICE_ROLE_KEY`. `PHOTON_API_KEY` and `PHOTON_PROJECT_ID` are not used by the in-game web chat; Spectrum/iMessage messaging remains a separate integration and is not claimed as verified. Never commit `.env.local` or service keys.
+## Database and deployment
 
-## Deployment
+Apply the files in `supabase/migrations` in numeric order to the target Supabase project. The service-role key stays on the server. `runs` is publicly readable for leaderboards and reports, while submission claims and Mission Control sessions use service-role-only operations. Submission claims permit five new runs per requester per day, plus a global ceiling of 100. A run ID is bound to its transcript hash. The same transcript reuses a cached result when saving fails; if the cache and run write both fail, one additional evaluation attempt is permitted after a two-minute lease expires. Claims remain to prevent an unlimited retry cycle.
 
-Vercel project: **agronaut**. The owner-shared [deployment URL](https://agronaut-litigubqm-birch-yangs-projects.vercel.app/) currently requires Vercel Authentication; use Vercel Deployments to find the latest build for each branch. Keep `main` as the production branch and use `dev` for integration previews. Set the variables in `.env.example` in Vercel, with `NEXT_PUBLIC_SUPABASE_URL` set to the HTTPS Project URL (`https://<project-ref>.supabase.co`), not a Postgres connection string. Apply `supabase/migrations` to the Supabase project and verify database read/write. Set `NEXT_PUBLIC_APP_URL` to the chosen deployment origin when needed. Keep server keys only in server environment variables, never in `NEXT_PUBLIC_*` variables.
+Deploy through Vercel using the variables in `.env.example`. The existing Vercel project is **agronaut**. Set `NEXT_PUBLIC_SUPABASE_URL` to the HTTPS project URL, not a Postgres connection string. Keep `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and messaging secrets out of `NEXT_PUBLIC_*`. The [owner-shared deployment](https://agronaut-litigubqm-birch-yangs-projects.vercel.app/) has required Vercel Authentication; inspect the latest branch deployment in Vercel for external QA.
 
-## Team boundaries
+## Photon Mission Control
 
-- Developer A owns `src/game/phaser`, `src/game/minigames`, and renderer interactions.
-- Developer B owns `src/game/state`, `src/game/simulation`, `src/backend`, `src/ai`, and backend routes.
-- Designer/content owns final copy, art, source curation, and visual polish.
+Photon uses curated contextual hints and the official Spectrum SDK. Its event messages, in-game questions, and iMessage replies never call OpenAI. Set `PHOTON_PROJECT_ID` to the Spectrum project ID and `PHOTON_API_KEY` to its project secret (`SECRET_KEY`), plus `PHOTON_WEBHOOK_SECRET`, `MISSION_SESSION_SECRET`, and the existing Supabase server credentials. Legacy `SPECTRUM_*` names remain supported.
 
-`src/game/state/types.ts` is the initial shared renderer/simulation contract. Coordinate changes before editing it. The `/game` page is currently a renderer placeholder.
+Follow [the activation guide](docs/PHOTON.md) for recipient registration, webhook setup, SQL migrations, local setup, and the live send/reply check. Run `npm run photon:check` for a read-only configuration check. Both question channels share two attempts per active turn; automatic event notices retain a separate 25-message budget. Advice history is stored with the mission session and used by the report pipeline; recipient routing identifiers are encrypted. The game remains playable if Photon is unavailable.
 
-## Team progress (2026-09-25, America/Chicago)
+## Scientific framing
 
-| Workstream | Branch / status | Integration note |
-| --- | --- | --- |
-| Project setup + Developer B | `chore/agronaut-branding` merged into `dev` at `7b9d7af` | The official project name is `agronaut` across the package, landing page, browser title, share title, and docs. The typed simulation, Supabase APIs, AI fallbacks, and CI remain available. |
-| Developer A | Separate branch; this branch does not touch Phaser or minigames | Mount the renderer in `/game`; consume `src/game/state/types.ts` and `src/game/state/reducer.ts`. |
-| Designer/content | Separate branch; this branch does not add art or source claims | Provide verified sources for `src/ai/sourceAdapter.ts` and final copy/assets. |
+Mission reports cite only IDs from the curated NASA/ESA source registry in `src/content/sources.ts`. These sources provide context for a simplified educational simulation. Large-animal lunar livestock is speculative. Aggregate player patterns describe this dataset and do not establish an optimal real lunar base or a causal effect.
 
-PR #1 was merged into `main` at `af188a6` although the planned target was `dev`; `dev` was then synchronized. The `agronaut` naming branch was pushed separately and merged into `dev` at `7b9d7af`. Future feature PRs should target `dev`; release PRs can move tested changes from `dev` to `main`. Before editing the shared state/action contract, coordinate the exact change with the other workstreams. Next integration tasks: apply and verify the `runs` migration, connect the renderer and verified source registry, then complete the Photon adapter. A local read of `public.runs` returned `PGRST205` on 2026-09-25, so database setup still needs verification. Public OpenAI-backed run submission needs rate limiting and server-side validation before an unrestricted release.
+## Current external verification limits
 
-### UI integration handoff (2026-09-26)
+Earlier team work recorded an SDK connection, but this does not prove the current branch can deliver and receive messages in deployment. Apply all migrations and configure the branch deployment before checking real Photon send/reply behavior. The separate report/evaluation integration has its own optional model configuration. Public deployment and webhook access settings must also be checked.
 
-[PR #5](https://github.com/Birch-Yang/SpaceAgriculture/pull/5) merged the UI, pixel art, content, and live game presentation into `dev` at `bb8a848`. Its head was first synchronized with `dev` at `d451fc3` through merge commit `fb30dd1`; Git resolved the criss-cross history without any file-level conflict or shared interface change. On that resolved tree, the lightweight `npm test` baseline (3 tests), `npm run typecheck`, `npm run build`, GitHub CI run 23, and Vercel all passed. Developer A and the designer should continue from the latest `dev`. Developer B's agriculture slots remain on separate [PR #3](https://github.com/Birch-Yang/SpaceAgriculture/pull/3) until that contract is integrated; UI work should not assume those fields exist on `dev` yet.
+## Current supply demo
 
-## Checks
-
-Keep testing lightweight: one small, runnable test covering the changed behavior is enough. Do not repeat or expand tests unless a concrete failure or an integration gate requires it.
-
-Run `npm test` for the small baseline: deterministic turn replay, one-turn crisis recovery, and a ten-turn Challenge run with connected power/water/oxygen plus crop and meat production. It uses Node's built-in test runner and requires Node.js 24; no external test package is needed.
-
-Before merging to `dev`, also run `npm run typecheck` and `npm run build`. All three commands passed with Node.js 24 for the `agronaut` naming branch; the built `<title>`, `<h1>`, and Open Graph title were verified. The owner-shared deployment URL requires Vercel login; share access through Vercel when an external reviewer needs it. Vercel environment variables cannot be verified from this repository.
-
-## Integration
-
-The renderer imports `GameState`, `PlayerAction`, and `TurnResult` from `src/game/state/types.ts`. Create a run with `createInitialState`, apply design actions with `applyBuildAction`, call `startOperation`, then call `resolveTurn(state, actions, rngSeed)` for each turn. The renderer must treat the returned state as authoritative and must not calculate resource production or hazards itself. Crop and animal modules are initialized with default occupants; operation actions change their settings. Developer A can render the current state while its Phaser integration and minigames are built.
-
-The content teammate should provide the verified scientific source registry. `src/ai/sourceAdapter.ts` is intentionally empty until that registry is ready, so reports cite no external sources yet. The Photon adapter in `src/ai/photon.ts` is also a local boundary pending a provisioned Spectrum project and provider choice. These are integration tasks, not simulated live integrations.
+Run `npm run demo` and open `/supply`. Run `npm run demo:script` for the matching Python simulation. Six crops share `src/data/crop-catalog.json`; the reference run produces 200 harvest points against a target of 180. Supply Lab and the ten-turn Mission page retain distinct resource models. See `docs/DEMO_SCRIPT.md` for the walkthrough.

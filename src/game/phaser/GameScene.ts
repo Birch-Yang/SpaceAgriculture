@@ -2,12 +2,12 @@ import * as Phaser from "phaser";
 import { buildingFrames, buildingFrame } from "../../content/world-art";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { MAP_SIZE } from "../state/reducer.ts";
-import type { Cell, GameState, PlacedModule, PlayerAction, Rotation } from "../state/types.ts";
+import type { Cell, GameState, PlacedModule, PlayerAction } from "../state/types.ts";
 import { occupiedModuleCells, previewModule, renderUtilityNetwork } from "./adapters.ts";
 import { agricultureSlots } from "./agricultureAdapter.ts";
 import { gridToScreen, rotatedFootprint, screenToGrid, VIEW } from "./isometric.ts";
 
-export type BuildTool = { kind: "select" } | { kind: "module"; moduleId: string; rotation: Rotation } | { kind: "corridor" };
+export type BuildTool = { kind: "select" } | { kind: "module"; moduleId: string } | { kind: "corridor" };
 export type SceneCallbacks = {
   onAction: (action: PlayerAction) => void;
   onSelect: (id: string | null) => void;
@@ -50,12 +50,20 @@ export class GameScene extends Phaser.Scene {
       for (const [name, [x,y,w,h]] of Object.entries(buildingFrames)) texture.add(name, 0, x,y,w,h);
     }
     this.hasBackdrop = this.textures.exists('lunar-ground');
-    if (this.hasBackdrop) this.add.image(VIEW.width / 2, VIEW.height / 2, 'lunar-ground').setDisplaySize(VIEW.width, VIEW.height).setDepth(-2).setScrollFactor(0);
+    if (this.hasBackdrop) {
+      const ground = this.add.image(VIEW.width / 2, VIEW.height / 2, 'lunar-ground');
+      // Terrain uses the same world camera as cells and sprites, including selection focus.
+      ground.setScale(Math.max(VIEW.width / ground.width, VIEW.height / ground.height));
+      ground.setDepth(-2).setScrollFactor(1);
+    }
+    // Keep focus zoom within the backdrop instead of revealing empty canvas at its edges.
+    this.cameras.main.setBounds(0, 0, VIEW.width, VIEW.height);
 
     this.graphics = this.add.graphics();
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => this.onMove(pointer));
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.onDown(pointer));
     this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => this.onUp(pointer));
+    this.input.on("gameout", () => { this.hover = null; this.paint(); });
     this.paint();
   }
 
@@ -116,18 +124,20 @@ export class GameScene extends Phaser.Scene {
   private onUp(pointer: Phaser.Input.Pointer): void {
     const cell = this.pointerCell(pointer);
     const state = this.snapshot;
+    const down = this.down;
     this.down = null;
     if (!state || !cell) { this.corridorPath = []; this.paint(); return; }
     if (this.tool.kind === "module" && this.buildEnabled()) {
       const definition = MODULE_BY_ID.get(this.tool.moduleId);
-      const rotation = this.tool.rotation;
-      const preview = definition && previewModule(state, definition, cell.x, cell.y, rotation);
+      const preview = definition && previewModule(state, definition, cell.x, cell.y, 0);
       if (definition && preview?.valid) {
-        this.callbacks.onAction({ type: "PLACE_MODULE", moduleId: definition.id, x: cell.x, y: cell.y, rotation });
+        this.callbacks.onAction({ type: "PLACE_MODULE", moduleId: definition.id, x: cell.x, y: cell.y, rotation: 0 });
       } else this.callbacks.onFeedback(preview?.reason ?? "This module cannot be placed here.");
     } else if (this.tool.kind === "corridor" && this.buildEnabled()) {
       this.extendPath(cell);
       if (this.corridorPath.length > 0) this.callbacks.onAction({ type: "PLACE_CORRIDOR", cells: [...this.corridorPath] });
+    } else if (this.tool.kind === "select" && this.buildEnabled() && down && (down.x !== cell.x || down.y !== cell.y) && this.moduleAt(down, state)) {
+      this.callbacks.onAction({ type: "MOVE_MODULE", placedModuleId: this.moduleAt(down, state)!.id, x: cell.x, y: cell.y });
     } else {
       const module = this.moduleAt(cell, state);
       const edge = state.utilityEdges.find((item) => item.cells.some((part) => part.x === cell.x && part.y === cell.y));
@@ -225,14 +235,7 @@ export class GameScene extends Phaser.Scene {
       g.fillCircle(x, y, i % 3 + 1);
     }
     }
-    for (let sum = 0; sum < MAP_SIZE.width + MAP_SIZE.height - 1; sum++) {
-      for (let x = 0; x < MAP_SIZE.width; x++) {
-        const y = sum - x;
-        if (y < 0 || y >= MAP_SIZE.height) continue;
-        const shade = (x * 11 + y * 17) % 7;
-        this.diamond(x, y, [0x485765, 0x4b5966, 0x4d5d69, 0x4a5866, 0x465562, 0x4c5b66, 0x4d5c69][shade], this.hasBackdrop ? (this.buildEnabled() ? 0.09 : 0.025) : 1);
-      }
-    }
+    // Keep the lunar surface clear; build targets are drawn only beneath the pointer.
     if (!state) return;
 
     const edgeColors = { normal: 0x557f98, connected: 0x46d2d7, damaged: 0xee704e, bottleneck: 0xf4b454, disconnected: 0x9c697a };
@@ -272,7 +275,7 @@ export class GameScene extends Phaser.Scene {
         const anchor = gridToScreen(module.x + (w-1)/2, module.y + (h-1)/2);
         const sprite = this.add.image(anchor.x, anchor.y + (w+h)*VIEW.tileHeight/4, 'pixel-buildings', frame).setOrigin(0.5,1);
         // Fit visual width to the projected footprint. Selection zoom improves crop readability without changing occupancy.
-        sprite.setScale(((w+h)*VIEW.tileWidth/2) / sprite.width).setRotation(Phaser.Math.DegToRad(module.rotation)).setDepth(100 + frontDepth(module));
+        sprite.setScale(((w+h)*VIEW.tileWidth/2) / sprite.width).setDepth(100 + frontDepth(module));
         if (module.integrity < 0.65) sprite.setTint(0xc49c84);
         this.sprites.push(sprite);
       }
@@ -312,12 +315,12 @@ export class GameScene extends Phaser.Scene {
     } else if (this.hover && this.tool.kind === "module" && this.buildEnabled()) {
       const definition = MODULE_BY_ID.get(this.tool.moduleId);
       if (definition) {
-        const preview = previewModule(state, definition, this.hover.x, this.hover.y, this.tool.rotation);
+        const preview = previewModule(state, definition, this.hover.x, this.hover.y, 0);
         for (const cell of preview.cells) if (this.inBounds(cell)) this.diamond(cell.x, cell.y, preview.valid ? 0x8de0be : 0xe7746d, preview.valid ? 0.65 : 0.2, 0xffffff);
         const point = gridToScreen(this.hover.x, this.hover.y);
         this.text(point.x, point.y - 30, preview.valid ? "PLACE" : preview.reason ?? "BLOCKED", preview.valid ? "#adf6cd" : "#ffc0b5", 10);
       }
-    } else if (this.hover && this.tool.kind === "select") {
+    } else if (this.hover && this.buildEnabled()) {
       this.diamond(this.hover.x, this.hover.y, 0xffffff, 0.1, 0xffffff);
     }
 

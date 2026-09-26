@@ -1,5 +1,6 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { HAZARDS } from "../../data/hazards.ts";
+import { communicationsAvailable } from "../../data/systems.ts";
 import type { GameState, HazardInstance, HazardType } from "../state/types.ts";
 
 function hash(input: string): number {
@@ -28,5 +29,9 @@ export function hazardForTurn(state: GameState, rngSeed: string): HazardInstance
 }
 
 export function isCommunicationsOutage(state: GameState): boolean {
-  return state.activeHazard?.type === "communications";
+  return !communicationsAvailable(state);
+}
+
+export function seedForLevel(state: Pick<GameState, "runId" | "level">): string {
+  return `${state.runId}:${state.level}`;
 }

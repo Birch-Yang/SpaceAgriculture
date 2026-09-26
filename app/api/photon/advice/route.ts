@@ -1,41 +1,33 @@
 import { NextResponse } from "next/server";
-import { generatePhotonAdvice } from "../../../../src/ai/photonAdvisor.ts";
-import { serverSupabase } from "../../../../src/backend/supabase.ts";
-import type { GameState } from "../../../../src/game/state/types.ts";
+import { answerPhotonQuestion } from "../../../../src/ai/photonQuestions.ts";
+import { photonConfigured, sendIMessage } from "../../../../src/ai/spectrum.ts";
+import { appendMissionAdvice, claimPlayerQuestion, missionSessionByRun, validSessionToken } from "../../../../src/backend/missionSessions.ts";
 
-function validState(value: unknown): value is GameState {
-  if (!value || typeof value !== "object") return false;
-  const state = value as Partial<GameState>;
-  return typeof state.runId === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(state.runId)
-    && Number.isInteger(state.turn) && Number(state.turn) > 0 && (state.phase === "operation")
-    && (state.mode === "challenge" || state.mode === "progressive") && !!state.resources && !!state.production
-    && [state.resources.power, state.resources.water, state.resources.oxygen, state.resources.temperature,
-      state.production.cropCumulative, state.production.meatCumulative].every((value) => Number.isFinite(value));
-}
+export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
-  let body: unknown;
-  try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
-  const payload = body as { state?: unknown; question?: unknown } | null;
-  if (!validState(payload?.state) || typeof payload?.question !== "string")
-    return NextResponse.json({ error: "Photon is available during mission operations." }, { status: 400 });
-  const question = payload.question.trim();
-  if (!question || question.length > 500) return NextResponse.json({ error: "Keep your transmission under 500 characters." }, { status: 400 });
-  if (payload.state.activeHazard?.type === "communications")
-    return NextResponse.json({ error: "MISSION CONTROL LINK LOST" }, { status: 503 });
-  if (!process.env.OPENAI_API_KEY)
-    return NextResponse.json({ error: "Mission Control is offline. Earth-side advisor credentials are not configured." }, { status: 503 });
-
-  const database = serverSupabase();
-  if (!database) return NextResponse.json({ error: "Mission Control quota service is not configured." }, { status: 503 });
-  const { data: claimed, error: quotaError } = await database.rpc("claim_photon_advice", {
-    p_run_id: payload.state.runId,
-    p_turn: payload.state.turn,
-  });
-  if (quotaError) return NextResponse.json({ error: "Mission Control quota service is unavailable." }, { status: 503 });
-  if (typeof claimed !== "number") return NextResponse.json({ error: "Earth–Moon link budget exhausted for this turn. Try again next turn." }, { status: 429 });
-
-  const advice = await generatePhotonAdvice(payload.state, question);
-  if (!advice) return NextResponse.json({ error: "Mission Control could not form a reliable hint. The transmission was used." }, { status: 503 });
-  return NextResponse.json({ advice, used: claimed, limit: 2 });
+  let body: { runId?: unknown; token?: unknown; turn?: unknown; question?: unknown };
+  try {
+    const raw = await request.text();
+    if (raw.length > 8_000) return NextResponse.json({ error: "Transmission too large" }, { status: 413 });
+    body = JSON.parse(raw);
+  } catch { return NextResponse.json({ error: "Invalid transmission" }, { status: 400 }); }
+  if (!body || typeof body.runId !== "string" || !/^[0-9a-f-]{36}$/i.test(body.runId)
+    || typeof body.question !== "string" || !Number.isInteger(body.turn) || Number(body.turn) < 1 || Number(body.turn) > 30)
+    return NextResponse.json({ error: "Invalid mission question" }, { status: 400 });
+  if (!photonConfigured()) return NextResponse.json({ error: "Mission Control relay is not configured." }, { status: 503 });
+  try {
+    const session = await missionSessionByRun(body.runId);
+    if (!session || !validSessionToken(session, body.token))
+      return NextResponse.json({ error: "Link your iMessage address when launching the mission to contact Photon." }, { status: 401 });
+    const result = await answerPhotonQuestion(session, body.question, Number(body.turn), {
+      claim: claimPlayerQuestion,
+      send: (active, text) => sendIMessage(active.spaceId, text, active.phone),
+      record: appendMissionAdvice,
+    });
+    return NextResponse.json(result.body, { status: result.status });
+  } catch {
+    return NextResponse.json({ error: "Mission Control temporarily unavailable." }, { status: 503 });
+  }
 }

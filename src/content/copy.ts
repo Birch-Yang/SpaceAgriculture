@@ -33,7 +33,7 @@ export const hazardDescriptions: Record<HazardType, { title: string; description
   power: { title: 'Power shortage', description: 'Available supply may not meet system demand.', inspect: 'Inspect delivery paths and backup power.' },
 };
 export const agricultureDescriptions = {
-  lettuce: 'Quick output; sensitive to growing conditions.', potato: 'A steady, medium-cycle food crop.', wheat: 'A slower crop with demanding light requirements.',
+  lettuce: 'Quick output; sensitive to growing conditions.', potato: 'A steady, medium-cycle food crop.', radish: 'A quick root crop.', 'chili-pepper': 'A fruiting crop requiring stable supply.', soybean: 'A longer-cycle legume.', arabidopsis: 'Research samples only; not food.',
   chicken: 'A smaller, faster production cycle.', pig: 'Moderate space, feed, and water demand.', cow: 'High output with substantial space and water demand.',
 };
 export const scientificFraming = 'Within this simulation, agriculture is a simplified systems-engineering challenge. Large-animal lunar livestock is speculative; these game outcomes are not validated lunar farming predictions.';

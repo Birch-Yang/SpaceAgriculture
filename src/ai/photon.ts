@@ -1,12 +1,14 @@
 import type { GameState } from "../game/state/types.ts";
+import { communicationsAvailable } from "../data/systems.ts";
 import { deriveAgentEvent, type AgentEvent } from "./publicState.ts";
 
 export type MissionControlMessage = { status: "sent" | "unavailable" | "no-event"; text?: string; event?: AgentEvent };
 export type PhotonAdapter = { sendEvent(event: AgentEvent): Promise<string> };
 
-// Adapter boundary: the Photon provider/credentials will be wired here when the team provisions a Spectrum project.
+// Pure adapter boundary for simulations. Live messaging uses /api/mission-control
+// with advisor.ts and spectrum.ts so provider credentials remain on the server.
 export async function missionControlForTurn(state: GameState, adapter?: PhotonAdapter): Promise<MissionControlMessage> {
-  if (state.activeHazard?.type === "communications") return { status: "unavailable", text: "Mission Control communication lost" };
+  if (!communicationsAvailable(state)) return { status: "unavailable", text: "Mission Control communication lost" };
   const event = deriveAgentEvent(state);
   if (!event) return { status: "no-event" };
   if (!adapter) return { status: "unavailable", text: "Mission Control temporarily unavailable", event };

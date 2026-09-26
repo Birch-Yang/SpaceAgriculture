@@ -1,10 +1,49 @@
 import type { AggregateAnalytics } from '../backend/analytics';
 import { EmptyState, Panel } from './primitives';
 import s from './ui.module.css';
+
 function Bars({ values, label }: { values: Record<string, number>; label: string }) {
-  const entries = Object.entries(values); const max = Math.max(1, ...entries.map(([,value]) => value));
-  return <figure className={s.bars}><figcaption>{label} · recorded selections</figcaption>{entries.length ? entries.map(([name, value]) => <div key={name} className={s.barRow}><span>{name}</span><div className={s.track}><div className={s.bar} style={{width: `${Math.max(0, value) / max * 100}%`}} /></div><strong>{value}</strong></div>) : <p>No selections recorded.</p>}</figure>;
+  const entries = Object.entries(values);
+  const max = Math.max(1, ...entries.map(([, value]) => value));
+  return <figure className={s.bars}><figcaption>{label} · recorded selections</figcaption>{entries.length
+    ? entries.map(([name, value]) => <div key={name} className={s.barRow}><span>{name}</span><div className={s.track}><div className={s.bar} style={{ width: `${Math.max(0, value) / max * 100}%` }} /></div><strong>{value}</strong></div>)
+    : <p>No selections recorded.</p>}</figure>;
 }
+
 export function AnalyticsPanel({ data, loading, error, onRetry }: { data?: AggregateAnalytics; loading?: boolean; error?: string; onRetry?: () => void }) {
-  return <section className={s.root}><p className={s.eyebrow}>Shared field notes</p><h1>What are players growing?</h1><p>Observed among completed player runs. Patterns describe this dataset; they do not establish cause and effect.</p>{loading ? <p role="status">Gathering field notes…</p> : error ? <EmptyState title="Field notes unavailable" onRetry={onRetry}>{error}</EmptyState> : !data?.sampleSize ? <EmptyState title="More missions, more perspective.">No completed runs available yet. Charts will appear when observations arrive.</EmptyState> : <><p className={s.badge}>{data.sampleSize} completed runs in this sample</p><div className={s.twoCol}><Panel title="A. Layout Intelligence"><dl className={s.stats}><div><dt>Average corridor length</dt><dd>{data.layout.averageCorridorLength} cells</dd></div><div><dt>Average greenhouse–water distance</dt><dd>{data.layout.averageGreenhouseWaterDistance} grid steps</dd></div><div><dt>Average compact greenhouse share</dt><dd>{(data.layout.compactGreenhouseShare * 100).toFixed(0)}%</dd></div></dl><p className={s.muted}>Distances reflect the recorded grid layout, not measured water delivery.</p></Panel><Panel title="B. Agricultural Patterns"><dl className={s.metrics}><div><dt>Average crop production</dt><dd>{data.agriculture.averageCropYield}</dd></div><div><dt>Average meat production</dt><dd>{data.agriculture.averageMeatYield}</dd></div></dl><Bars values={data.agriculture.cropMix} label="Crop mix" /><Bars values={data.agriculture.livestockMix} label="Livestock mix" /></Panel></div></>}</section>;
+  return <section className={s.root}>
+    <p className={s.eyebrow}>Shared field notes</p><h1>What are players growing?</h1>
+    <p>Observed among completed player runs. Patterns describe this dataset; they do not establish cause and effect.</p>
+    {loading ? <p role="status">Gathering field notes…</p>
+      : error ? <EmptyState title="Field notes unavailable" onRetry={onRetry}>{error}</EmptyState>
+        : !data?.sampleSize ? <EmptyState title="More missions, more perspective.">No completed runs available yet. Charts will appear when observations arrive.</EmptyState>
+          : <>
+            <p className={s.badge}>{data.sampleSize} completed runs in this sample</p>
+            <div className={s.twoCol}>
+              <Panel title="A. Layout Intelligence"><dl className={s.stats}>
+                <div><dt>Average corridor length</dt><dd>{data.layout.averageCorridorLength} cells</dd></div>
+                <div><dt>Average greenhouse–water distance</dt><dd>{data.layout.averageGreenhouseWaterDistance} grid steps</dd></div>
+                <div><dt>Average compact greenhouse share</dt><dd>{(data.layout.compactGreenhouseShare * 100).toFixed(0)}%</dd></div>
+                <div><dt>Average connected module share</dt><dd>{(data.layout.averageConnectedModuleShare * 100).toFixed(0)}%</dd></div>
+                <div><dt>Average resilience budget share</dt><dd>{(data.layout.averageResilienceBudgetShare * 100).toFixed(0)}%</dd></div>
+              </dl><p className={s.muted}>Distances reflect the recorded grid layout, not measured water delivery.</p></Panel>
+              <Panel title="B. Agricultural Patterns"><dl className={s.metrics}>
+                <div><dt>Average crop production</dt><dd>{data.agriculture.averageCropYield}</dd></div>
+                <div><dt>Average meat production</dt><dd>{data.agriculture.averageMeatYield}</dd></div>
+                <div><dt>Average crop yield per greenhouse</dt><dd>{data.agriculture.averageCropYieldPerGreenhouse}</dd></div>
+              </dl>
+                <Bars values={data.agriculture.cropMix} label="Crop mix" />
+                <Bars values={data.agriculture.livestockMix} label="Livestock mix" />
+                <Bars values={data.agriculture.cropWaterSettings} label="Crop water settings" />
+                <Bars values={data.agriculture.cropLightSettings} label="Crop light settings" />
+                <Bars values={data.agriculture.cropTemperatureSettings} label="Crop temperature settings" />
+              </Panel>
+            </div>
+            {data.highPerforming.sampleSize > 0 && <Panel title="Top quartile observations"><p>{data.highPerforming.sampleSize} highest-scoring runs in this sample.</p><dl className={s.stats}>
+              <div><dt>Average corridor length</dt><dd>{data.highPerforming.averageCorridorLength} cells</dd></div>
+              <div><dt>Average resilience budget share</dt><dd>{(data.highPerforming.averageResilienceBudgetShare * 100).toFixed(0)}%</dd></div>
+              <div><dt>Average crop yield per greenhouse</dt><dd>{data.highPerforming.averageCropYieldPerGreenhouse}</dd></div>
+            </dl><p className={s.muted}>These are descriptive associations; they do not show that a layout causes a higher score.</p></Panel>}
+          </>}
+  </section>;
 }

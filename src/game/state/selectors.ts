@@ -1,4 +1,5 @@
 import { MODULE_BY_ID } from "../../data/modules.ts";
+import { communicationsAvailable } from "../../data/systems.ts";
 import type { GameState } from "./types.ts";
 
 export function selectPlacedModules(state: GameState) {
@@ -6,5 +7,5 @@ export function selectPlacedModules(state: GameState) {
 }
 
 export function selectCommunicationsAvailable(state: GameState): boolean {
-  return state.activeHazard?.type !== "communications";
+  return communicationsAvailable(state);
 }
