@@ -18,7 +18,7 @@ export function scoreRules(state: GameState): RuleScore {
   const target = DIFFICULTY[state.mode][state.level - 1];
   const crop = target.cropTarget ? state.production.cropCumulative / target.cropTarget : 0;
   const meat = target.meatTarget ? state.production.meatCumulative / target.meatTarget : 0;
-  const production = clamp((crop + meat) / 2 * 28, 28);
+  const production = clamp((Math.min(1, crop) + Math.min(1, meat)) / 2 * 28, 28);
   const records = state.turnRecords.length ? state.turnRecords : [{ resources: state.resources, crisis: !!state.crisis }];
   const stabilityFactor = records.reduce((sum, record) => {
     const stable = (["power", "water", "oxygen", "food"] as const).filter((key) => record.resources[key] > 0).length / 4;
