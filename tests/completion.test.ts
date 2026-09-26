@@ -5,8 +5,9 @@ import { verifySpectrumWebhook } from "../src/ai/webhookSignature.ts";
 import { fallbackReport } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
-import { communicationsAvailable, resourceCapacity } from "../src/data/systems.ts";
+import { communicationsAvailable, resourceCapacity, shelterProtection } from "../src/data/systems.ts";
 import { DIFFICULTY } from "../src/data/difficulty.ts";
+import { CROP_IDS } from "../src/data/cropCatalog.ts";
 import { HAZARDS } from "../src/data/hazards.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
@@ -15,9 +16,11 @@ import { harvestCrop } from "../src/game/simulation/crops.ts";
 import { growLivestock } from "../src/game/simulation/livestock.ts";
 import { hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
 import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
+import { scoreRules } from "../src/game/simulation/scoring.ts";
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
+import { createReplayFrames } from "../src/game/state/replayFrames.ts";
 import type { GameState, PlayerAction } from "../src/game/state/types.ts";
 
 const moduleActions: PlayerAction[] = [
@@ -55,11 +58,22 @@ test("a complete transcript replays to the same authoritative state and rejects 
   const transcript: RunTranscript = { version: 1, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
   assert.equal(state.phase, "complete");
   assert.deepEqual(replayTranscript(parseTranscript(transcript)), state);
+  const frames = createReplayFrames(transcript);
+  assert.equal(frames.length, steps.length + 1);
+  assert.equal(frames[0].kind, "initial");
+  assert.deepEqual(frames.at(-1)?.resources, state.resources);
+  assert.deepEqual(frames.at(-1)?.production, state.production);
+  assert.equal(frames.at(-1)?.phase, "complete");
   assert.notEqual(transcriptHash(transcript), transcriptHash({ ...transcript, steps: transcript.steps.slice(0, -1) }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "REPAIR", targetId: "fake", minigameModifier: 99 }] }] }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "build", action: { type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 90 } }] }));
   assert.throws(() => replayTranscript({ ...transcript, steps: [...steps, { kind: "turn", actions: [] }] }));
-  const report = fallbackReport(buildRunSummary(state), !!state.passed, verifiedSources);
+  const summary = buildRunSummary(state, transcript);
+  assert.ok(summary.layoutMetrics.averageGreenhouseWaterDistance > 0);
+  assert.ok(summary.layoutMetrics.connectedModuleShare > 0);
+  assert.ok(summary.majorPlayerDecisions.some((decision) => decision.toLowerCase().includes("greenhouse")));
+  const report = fallbackReport(summary, !!state.passed, verifiedSources);
+  assert.match(report.layout, /connected to the habitat/);
   assert.ok(report.sourceIds.length > 0);
   assert.ok(report.sourceIds.every((id) => verifiedSources.some((source) => source.id === id)));
 });
@@ -91,6 +105,16 @@ test("minigame bonuses require replayable moves with the exact computed score", 
   assert.equal(scoreRepairProof({ kind: "repair", directions: [...repair.directions, "right"] }), null);
   assert.doesNotThrow(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: -0.05, minigameProof: repair })));
   assert.throws(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: 0.1, minigameProof: repair })));
+});
+
+test("submission transcripts accept the current crop catalog and reject retired IDs", () => {
+  const base = { version: 1, runId: "11111111-1111-4111-8111-111111111111", nickname: "Crop tester", mode: "challenge" };
+  for (const crop of CROP_IDS) {
+    const steps = [{ kind: "start" }, { kind: "turn", actions: [{ type: "PLANT_CROP", moduleId: "plot", slotIndex: 0, crop }] }];
+    assert.doesNotThrow(() => parseTranscript({ ...base, steps }), crop);
+  }
+  const steps = [{ kind: "start" }, { kind: "turn", actions: [{ type: "PLANT_CROP", moduleId: "plot", slotIndex: 0, crop: "wheat" }] }];
+  assert.throws(() => parseTranscript({ ...base, steps }));
 });
 
 test("corridor isolation and capacity change actual delivery; connected storage caps reserves", () => {
@@ -136,6 +160,21 @@ test("a connected recreation module improves AP recovery while food scarcity sti
   assert.equal(resolveTurn(extra, [], "recreation").state.ap, resolveTurn(ordinary, [], "recreation").state.ap + 1);
   extra.resources.food = 0;
   assert.ok(resolveTurn(extra, [], "recreation").state.ap < maxActionPoints(extra));
+});
+
+test("only connected and intact protective modules improve resilience score", () => {
+  const original = startOperation(base());
+  const score = scoreRules(original).resilience;
+  const isolated = structuredClone(original);
+  isolated.modules.push({ id: "isolated-shelter", moduleId: "shelter", x: 11, y: 11, rotation: 0, integrity: 1 });
+  assert.equal(scoreRules(isolated).resilience, score);
+  assert.equal(shelterProtection(isolated), 0);
+  isolated.utilityEdges.push({ id: "shelter-link", from: original.modules[0].id, to: "isolated-shelter", cells: [{ x: 10, y: 11 }], length: 1, capacity: 20, integrity: 1 });
+  assert.ok(scoreRules(isolated).resilience > score);
+  assert.ok(shelterProtection(isolated) > 0);
+  isolated.modules[isolated.modules.length - 1].integrity = 0;
+  assert.equal(scoreRules(isolated).resilience, score);
+  assert.equal(shelterProtection(isolated), 0);
 });
 
 test("a connected communications tower boosts utility backup during an outage", () => {

@@ -13,9 +13,9 @@ import type { GameState } from "../../../src/game/state/types.ts";
 
 export const maxDuration = 60;
 
-function responseFor(state: GameState, result: CachedResult, saved: boolean, reason?: string) {
+function responseFor(state: GameState, result: CachedResult, saved: boolean, reason?: string, retryable = true) {
   const score = scoreWithFallback(scoreRules(state), result.evaluation?.total);
-  return NextResponse.json({ runId: state.runId, score, report: result.report, saved, ...(reason ? { reason } : {}) },
+  return NextResponse.json({ runId: state.runId, score, report: result.report, saved, retryable, ...(reason ? { reason } : {}) },
     { status: saved ? 201 : 202 });
 }
 
@@ -43,19 +43,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid run transcript" }, { status: 400 });
   }
 
-  const summary = buildRunSummary(state);
+  const summary = buildRunSummary(state, transcript);
   try { summary.photonAdviceHistory = await missionAdviceHistory(state.runId); } catch { /* Advisor history is optional. */ }
   try {
-    if (await getReport(state.runId)) return NextResponse.json({ error: "Run already submitted", runId: state.runId }, { status: 409 });
+    if (await getReport(state.runId)) return NextResponse.json({ error: "Run already submitted", code: "already_saved", runId: state.runId }, { status: 409 });
   } catch { /* The submission gate below handles database outages. */ }
   const claim = await claimSubmission(state.runId, transcript, request);
   if (claim === "conflict") return NextResponse.json({ error: "Run ID belongs to a different action transcript" }, { status: 409 });
   if (claim === "duplicate") {
     const cached = await getSubmission(state.runId);
-    if (cached?.saved) return NextResponse.json({ error: "Run already submitted", runId: state.runId }, { status: 409 });
+    if (cached?.saved) return NextResponse.json({ error: "Run already submitted", code: "already_saved", runId: state.runId }, { status: 409 });
     if (cached?.result) return persist(state, transcript, cached.result);
-    return NextResponse.json({ error: "Run is being processed", runId: state.runId }, { status: 409 });
+    return NextResponse.json({ error: "Run is being processed; retry in two minutes", code: "processing", runId: state.runId }, { status: 409 });
   }
+  if (claim === "retry_exhausted") return responseFor(state,
+    { report: fallbackReport(summary, !!state.passed, verifiedSources) }, false,
+    "Result could not be saved after two evaluation attempts; start a new run to submit", false);
   if (claim !== "claimed") {
     const reason = claim === "rate_limited" ? "Daily submission limit reached" : "Supabase submission gate unavailable";
     return responseFor(state, { report: fallbackReport(summary, !!state.passed, verifiedSources) }, false, reason);

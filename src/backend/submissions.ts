@@ -16,12 +16,12 @@ export function transcriptHash(transcript: RunTranscript): string {
   return createHash("sha256").update(JSON.stringify(transcript)).digest("hex");
 }
 
-export async function claimSubmission(runId: string, transcript: RunTranscript, request: Request): Promise<"claimed" | "duplicate" | "conflict" | "rate_limited" | "unavailable"> {
+export async function claimSubmission(runId: string, transcript: RunTranscript, request: Request): Promise<"claimed" | "duplicate" | "conflict" | "rate_limited" | "retry_exhausted" | "unavailable"> {
   const client = serverSupabase();
   if (!client) return "unavailable";
   const { data, error } = await client.rpc("claim_run_submission", { p_run_id: runId, p_requester_hash: requesterHash(request), p_transcript_hash: transcriptHash(transcript) });
   if (error) return "unavailable";
-  return data === "claimed" || data === "duplicate" || data === "conflict" || data === "rate_limited" ? data : "unavailable";
+  return data === "claimed" || data === "duplicate" || data === "conflict" || data === "rate_limited" || data === "retry_exhausted" ? data : "unavailable";
 }
 
 export async function getSubmission(runId: string): Promise<{ result?: CachedResult; saved: boolean } | undefined> {

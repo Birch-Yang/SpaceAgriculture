@@ -45,6 +45,13 @@ export function connectedToHabitat(state: GameState, moduleId: string): boolean 
   return false;
 }
 
+export function shelterProtection(state: GameState): number {
+  const intact = state.modules.filter((module) => MODULE_BY_ID.get(module.moduleId)?.category === "shelter"
+    && connectedToHabitat(state, module.id))
+    .reduce((sum, module) => sum + Math.max(0, Math.min(1, module.integrity)), 0);
+  return Math.min(0.6, intact * 0.2);
+}
+
 export function resourceCapacity(state: GameState, resource: ResourceKey): number {
   return state.modules.reduce<number>((sum, module) => {
     if (!connectedToHabitat(state, module.id)) return sum;

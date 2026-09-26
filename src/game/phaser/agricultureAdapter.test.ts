@@ -9,14 +9,14 @@ function greenhouseState(): GameState {
   return applyBuildAction(initial, { type: "PLACE_MODULE", moduleId: "greenhouse-standard", x: 1, y: 1, rotation: 0 }).state;
 }
 
-test("legacy greenhouse exposes only its authoritative first plot", () => {
+test("new greenhouse exposes every authoritative crop plot", () => {
   const state = greenhouseState();
   const view = agricultureSlots(state, state.modules[0].id);
   assert.equal(view?.kind, "greenhouse");
   if (view?.kind !== "greenhouse") return;
-  assert.equal(view.fullContract, false);
+  assert.equal(view.fullContract, true);
   assert.equal(view.slots.length, 2);
-  assert.deepEqual(view.slots.map((slot) => [slot.crop, slot.supported]), [["lettuce", true], [null, false]]);
+  assert.deepEqual(view.slots.map((slot) => [slot.crop, slot.supported]), [["lettuce", true], [null, true]]);
 });
 
 test("slot contract projects empty plots without inventing production", () => {

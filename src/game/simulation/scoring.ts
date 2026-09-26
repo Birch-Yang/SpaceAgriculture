@@ -1,5 +1,6 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
+import { connectedToHabitat } from "../../data/systems.ts";
 import type { GameState } from "../state/types.ts";
 
 const clamp = (value: number, maximum: number) => Math.round(Math.max(0, Math.min(maximum, value)) * 10) / 10;
@@ -29,7 +30,8 @@ export function scoreRules(state: GameState): RuleScore {
     + DIFFICULTY.progressive.slice(1, state.level).reduce((sum, level) => sum + level.buildBudget, 0);
   const spentBudget = Math.max(1, totalBudget - state.budget);
   const efficiency = clamp(8 * Math.min(1, (state.production.cropCumulative + state.production.meatCumulative) / spentBudget * 2), 8);
-  const protective = state.modules.filter((module) => ["shelter", "utility", "battery"].includes(MODULE_BY_ID.get(module.moduleId)?.category ?? "")).length;
+  const protective = state.modules.reduce((sum, module) => sum + (["shelter", "utility", "battery"].includes(MODULE_BY_ID.get(module.moduleId)?.category ?? "")
+    && connectedToHabitat(state, module.id) ? Math.max(0, Math.min(1, module.integrity)) : 0), 0);
   const hazardRecords = state.turnRecords.filter((record) => record.hazard);
   const response = hazardRecords.length ? hazardRecords.filter((record) => !record.crisis).length / hazardRecords.length : 1;
   const resilience = clamp(6 * (0.7 * Math.min(1, protective / 3) + 0.3 * response), 6);
