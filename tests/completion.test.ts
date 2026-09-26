@@ -7,6 +7,7 @@ import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
 import { communicationsAvailable, resourceCapacity } from "../src/data/systems.ts";
 import { DIFFICULTY } from "../src/data/difficulty.ts";
+import { CROP_IDS } from "../src/data/cropCatalog.ts";
 import { HAZARDS } from "../src/data/hazards.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
@@ -96,6 +97,16 @@ test("minigame bonuses require replayable moves with the exact computed score", 
   assert.equal(scoreRepairProof({ kind: "repair", directions: [...repair.directions, "right"] }), null);
   assert.doesNotThrow(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: -0.05, minigameProof: repair })));
   assert.throws(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: 0.1, minigameProof: repair })));
+});
+
+test("submission transcripts accept the current crop catalog and reject retired IDs", () => {
+  const base = { version: 1, runId: "11111111-1111-4111-8111-111111111111", nickname: "Crop tester", mode: "challenge" };
+  for (const crop of CROP_IDS) {
+    const steps = [{ kind: "start" }, { kind: "turn", actions: [{ type: "PLANT_CROP", moduleId: "plot", slotIndex: 0, crop }] }];
+    assert.doesNotThrow(() => parseTranscript({ ...base, steps }), crop);
+  }
+  const steps = [{ kind: "start" }, { kind: "turn", actions: [{ type: "PLANT_CROP", moduleId: "plot", slotIndex: 0, crop: "wheat" }] }];
+  assert.throws(() => parseTranscript({ ...base, steps }));
 });
 
 test("corridor isolation and capacity change actual delivery; connected storage caps reserves", () => {

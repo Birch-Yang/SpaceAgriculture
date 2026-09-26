@@ -1,4 +1,5 @@
 import { MODULE_BY_ID } from "../../data/modules.ts";
+import { isCropId } from "../../data/cropCatalog.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "./reducer.ts";
 import { resolveTurn } from "../simulation/resolveTurn.ts";
 import { seedForLevel } from "../simulation/hazards.ts";
@@ -14,7 +15,6 @@ export type RunTranscript = { version: 1; runId: string; nickname: string; mode:
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const settings = new Set(["low", "medium", "high"]);
-const crops = new Set(["lettuce", "potato", "wheat"]);
 const animals = new Set(["chicken", "pig", "cow"]);
 const feeds = new Set(["rationed", "normal", "high"]);
 const rotations = new Set([0]);
@@ -58,7 +58,7 @@ function validAction(value: unknown, build: boolean): value is PlayerAction {
   if (!string(value.moduleId) || !slot(value.slotIndex)) return false;
   if (value.type === "SET_CROP_PARAMS") return oneOf(settings, value.water) && oneOf(settings, value.light) && oneOf(settings, value.temperature);
   if (value.type === "SET_LIVESTOCK_PARAMS") return oneOf(feeds, value.feed);
-  if (value.type === "PLANT_CROP") return oneOf(crops, value.crop);
+  if (value.type === "PLANT_CROP") return isCropId(value.crop);
   if (value.type === "HARVEST_CROP") return verifiedModifier(value, "match3");
   if (value.type === "SET_ANIMAL") return oneOf(animals, value.animal);
   if (value.type === "WATER_PLOT") return Number.isInteger(value.slotIndex);
