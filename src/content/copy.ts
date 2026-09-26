@@ -7,7 +7,7 @@ export const tutorialHints = {
   lock: 'Once the mission begins, the base layout is locked.',
   repair: 'Repair damaged infrastructure before the next turn.',
   production: 'Targets count everything produced, not food left in storage.',
-  crisis: 'You have one turn to recover critical systems.',
+  crisis: 'Respond before ending this turn. Critical systems are checked at settlement.',
   allocation: 'Small utility reallocations cost AP and apply immediately.',
 } as const;
 export type TutorialHintId = keyof typeof tutorialHints;

@@ -10,7 +10,7 @@ export function HazardAlert({ type, detail }: { type: HazardType; detail?: strin
   return <div role="alert" className={`${s.notice} ${s.warning}`}><div className={s.row}><PixelAsset name={type} folder="ui" /><h3>{hazard.title}</h3></div><p>{detail ?? hazard.description}</p><p>{hazard.inspect}</p></div>;
 }
 export function CrisisOverlay({ trigger, recoveryTurn, onInspect }: { trigger: string; recoveryTurn: number; onInspect: () => void }) {
-  return <section className={`${s.notice} ${s.critical}`} role="alert" aria-label="Crisis"><p className={s.eyebrow}>CRITICAL SYSTEM FAILURE</p><h2>One turn to recover.</h2><p>{trigger}</p><p>Restore critical systems by turn {recoveryTurn}.</p><button className={s.button} onClick={onInspect}>Inspect systems</button></section>;
+  return <section className={`${s.notice} ${s.critical}`} role="alert" aria-label="Crisis"><p className={s.eyebrow}>CRITICAL SYSTEM FAILURE</p><h2>Respond this turn.</h2><p>{trigger}</p><p>Restore critical systems before turn {recoveryTurn} ends.</p><button className={s.button} onClick={onInspect}>Inspect systems</button></section>;
 }
 export function RecoverySuccess() { return <div role="status" className={`${s.notice} ${s.normal}`}><h2>Recovery confirmed.</h2><p>Critical systems recovered. Your mission continues.</p></div>; }
 export function MissionFailure({ reason, onReport }: { reason: string; onReport: () => void }) { return <section className={`${s.notice} ${s.critical}`}><h2>Mission ended</h2><p>{reason}</p><p>Every run is a chance to understand the trade-offs.</p><button className={s.button} onClick={onReport}>Review mission</button></section>; }

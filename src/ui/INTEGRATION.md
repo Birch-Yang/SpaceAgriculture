@@ -17,7 +17,7 @@ Open the HTML via a local server or the Next public asset URL `/assets/previews/
 - `UtilityPanel`: current allocation and backend-approved allocation presets, AP costs and disabled reasons. Emits REALLOCATE_UTILITY unchanged; no allocation legality or AP calculation.
 - `RepairPanel`: backend-approved targets, integrity, AP costs and disabled reasons. Emits REPAIR unchanged.
 - `ForecastPanel`: fuzzy `ForecastState` only; no schedule input. `HazardAlert`: current hazard type and optional supplied detail.
-- `CrisisOverlay`: authoritative trigger and recovery turn, inspect callback. In-flow urgent overlay panel keeps repair controls accessible; host may position it over the renderer without blocking recovery actions.
+- `CrisisOverlay`: authoritative trigger and current response turn, inspect callback. In-flow urgent overlay panel keeps repair controls accessible; host may position it over the renderer without blocking current-turn response actions.
 - `RecoverySuccess`, `MissionFailure`, `TutorialHint`: host decides when each applies. TutorialHint only displays in Progressive level 1.
 - `MissionControlPanel`: `connection` online/offline/unavailable, immutable message history (`id`, `sender`, `text`, optional time label), loading flag. Host adapts B's individual Photon results into history; no Photon calls. Offline suppresses typing but preserves history.
 - `MissionReport`: canonical report, nickname, precomputed total/rules/LLM scores, score fallback flag, verified source registry. Unknown source IDs and non-HTTPS citation URLs are omitted. All narrative renders as escaped text.

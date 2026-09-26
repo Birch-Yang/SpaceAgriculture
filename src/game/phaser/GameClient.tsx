@@ -183,9 +183,9 @@ export function GameClient() {
           score: { ...scoreWithFallback(rules), breakdown: rules },
           report: fallbackReport(buildRunSummary(result.state, nextTranscript), !!result.state.passed, curatedSources),
           saved: false, pending: true, transcript: nextTranscript });
-        void notifyAdvisor(result.state, result.summary.turn);
+        void notifyAdvisor({ ...result.state, activeHazard: result.summary.hazard }, result.summary.turn);
         void submitRun(nextTranscript);
-      } else void notifyAdvisor(result.state, result.summary.turn);
+      } else void notifyAdvisor({ ...result.state, activeHazard: result.summary.hazard }, result.summary.turn);
       setTutorialProgress((progress) => ({ ...progress, resolvedTurn: true }));
       setMessage([`Turn ${result.summary.turn}: ${result.acceptedActions.length - 1} action(s) accepted; crops +${result.summary.cropYield}, meat +${result.summary.meatYield}.`, ...result.rejectedActions, ...result.summary.warnings].join(" "));
     } catch (error) { setMessage(error instanceof Error ? error.message : "Turn failed"); }
@@ -295,7 +295,7 @@ export function GameClient() {
   const modifierAvailable = state.crops.some((plot) => "slotIndex" in plot) || state.livestock.some((animal) => "slotIndex" in animal);
 
   return <main className={styles.shell}>
-    <header className={styles.header}><div><p className={styles.kicker}>AGRONaut / LUNAR AGRICULTURE</p><h1>South Pole Outpost</h1><p className={styles.meta}>{state.nickname} · {state.mode.toUpperCase()} · LEVEL {state.level} · {selectTurnLabel(state)}</p></div><div className={styles.headerActions}><span className={`${styles.phase} ${state.crisis ? styles.crisis : ""}`}>{state.crisis ? "CRISIS" : state.phase.toUpperCase()}</span><button onClick={() => setTutorialVisible(true)}>Tutorial</button>{state.phase !== "complete" && <button onClick={() => setState(null)}>New run</button>}</div></header>
+    <header className={styles.header}><div><p className={styles.kicker}>AGRONaut / LUNAR AGRICULTURE</p><h1>South Pole Outpost</h1><p className={styles.meta}>{state.nickname} · {state.mode.toUpperCase()} · LEVEL {state.level} · {selectTurnLabel(state)}</p></div><div className={styles.headerActions}><span className={`${styles.phase} ${state.activeHazard ? styles.crisis : ""}`}>{state.phase === "operation" && state.activeHazard ? "HAZARD" : state.phase.toUpperCase()}</span><button onClick={() => setTutorialVisible(true)}>Tutorial</button>{state.phase !== "complete" && <button onClick={() => setState(null)}>New run</button>}</div></header>
     {tutorialVisible && <TutorialGuide state={state} progress={tutorialProgress} onDismiss={dismissTutorial} />}
     <section className={styles.dashboard} aria-label="Mission resources">{resourceKeys.map((key) => {
       const value = state.resources[key];

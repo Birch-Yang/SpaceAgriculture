@@ -1,4 +1,5 @@
 import { MODULE_BY_ID } from "../data/modules.ts";
+import { previewHazardResponse } from "../game/simulation/resolveTurn.ts";
 import { EMERGENCY } from "../data/emergency.ts";
 import { emergencyResources, emergencySupplyAmount, suppliesRemaining, isEmergencyAction } from "../game/simulation/emergency.ts";
 import type { GameState, PlayerAction } from "../game/state/types.ts";
@@ -8,13 +9,20 @@ export function EmergencyPanel({ state, pending, onQueue, onCancel }: {
   state: GameState; pending: PlayerAction[]; onQueue: (action: PlayerAction) => boolean; onCancel: (index: number) => void;
 }) {
   const supplyQueued = pending.some(action => action.type === "USE_EMERGENCY_SUPPLY");
-  const free = !!state.crisis && !pending.some(isEmergencyAction);
+  const hazard = state.activeHazard;
+  const free = !!hazard && !pending.some(isEmergencyAction);
+  const ready = previewHazardResponse(state, pending).ready;
+  const condition = hazard?.type === "power" ? `Keep at least ${EMERGENCY.powerReserveMitigationThreshold} power in reserve after your actions.`
+    : hazard?.type === "temperature" ? `Power a connected utility module with at least ${Math.round(EMERGENCY.thermalAllocationMitigationThreshold * 100)}% thermal allocation.`
+    : hazard?.type === "radiation" || hazard?.type === "micrometeoroid" ? "Keep a connected shelter at 75% integrity or higher; repair it now if needed."
+    : "Maintain a connected communications backup link.";
   const modules = state.modules.filter(module => ["greenhouse", "livestock"].includes(MODULE_BY_ID.get(module.moduleId)!.category));
   return <section className={styles.panel} aria-label="Emergency actions">
-    <header><div><p className={styles.eyebrow}>{state.crisis ? "CRISIS RESPONSE" : "CONTINGENCY CONTROLS"}</p>
-      <h2>{state.crisis ? "One recovery turn remaining" : "Protect your reserves"}</h2></div>
+    <header><div><p className={styles.eyebrow}>{hazard ? "HAZARD RESPONSE" : "CONTINGENCY CONTROLS"}</p>
+      <h2>{hazard ? `${hazard.type.replaceAll("-", " ")} this turn` : "Protect your reserves"}</h2></div>
       <strong>{suppliesRemaining(state)} / {EMERGENCY.suppliesPerRun} supplies</strong></header>
-    {state.crisis && <p role="alert">{state.crisis.trigger}. Restore all resources above zero and temperature to 5–35°C by the next settlement.</p>}
+    {hazard && <div role="alert"><p>Current hazard: <strong>{hazard.type.replaceAll("-", " ")}</strong>. Respond before ending this turn. There is no extra recovery turn.</p>
+      <p>{condition} {ready ? <strong>Mitigation ready: severity reduced by 70% on settlement.</strong> : <strong>Mitigation condition not yet met.</strong>}</p></div>}
     <p>{free ? "Your first emergency action this turn is free. Additional emergency actions cost 1 AP." : "Each emergency action costs 1 AP."} Orders apply on End Turn; cancel before settlement without spending supplies.</p>
     <div className={styles.columns}><div><h3>Pause agriculture · {free ? "Free" : "1 AP"}</h3>
       <p>One turn without growth, harvest or output. Fixed utility demand and livestock feed drop to 25%; extra agriculture consumption stops. Progress is preserved. Automatically resumes next turn.</p>
