@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { MODULES, MODULE_BY_ID } from "../../data/modules.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../state/reducer.ts";
@@ -9,7 +10,10 @@ import { seedForLevel } from "../simulation/hazards.ts";
 import type { GameMode, GameState, PlayerAction } from "../state/types.ts";
 import type { RunTranscript } from "../state/transcript.ts";
 import type { MissionReport as MissionReportData } from "../../ai/report.ts";
-import { MissionReport } from "../../ui/MissionReport";
+import { fallbackReport } from "../../ai/report.ts";
+import { buildRunSummary } from "../../ai/schemas.ts";
+import { scoreRules, scoreWithFallback } from "../simulation/scoring.ts";
+import { readReportSnapshot, writeReportSnapshot } from "../state/reportSnapshot.ts";
 import { curatedSources } from "../../content/sources";
 import { communicationsAvailable } from "../../data/systems.ts";
 import { deriveAgentEvent, toAgentPublicState } from "../../ai/publicState.ts";
@@ -32,6 +36,7 @@ const emptyProgress: TutorialProgress = { enteredGreenhouse: false, enteredLives
 type SubmittedResult = { runId: string; score: { rules: number; llm: number; total: number; usedFallback: boolean }; report: MissionReportData; saved: boolean; reason?: string; retryable?: boolean };
 
 export function GameClient() {
+  const router = useRouter();
   const [nickname, setNickname] = useState("");
   const [imessageAddress, setImessageAddress] = useState("");
   const advisorToken = useRef<string | null>(null);
@@ -127,7 +132,13 @@ export function GameClient() {
       if (nextTranscript) setTranscript(nextTranscript);
       setState(betweenLevels ? advanceLevel(result.state) : result.state); setPending([]); setMiniResult(null);
       if (result.state.phase === "complete" && nextTranscript) {
-        void (async () => { await notifyAdvisor(result.state, result.summary.turn); await submitRun(nextTranscript); })();
+        const rules = scoreRules(result.state);
+        writeReportSnapshot({ version: 1, runId: result.state.runId, nickname: result.state.nickname,
+          score: { ...scoreWithFallback(rules), breakdown: rules },
+          report: fallbackReport(buildRunSummary(result.state, nextTranscript), !!result.state.passed, curatedSources),
+          saved: false, pending: true, transcript: nextTranscript });
+        void notifyAdvisor(result.state, result.summary.turn);
+        void submitRun(nextTranscript);
       } else void notifyAdvisor(result.state, result.summary.turn);
       setTutorialProgress((progress) => ({ ...progress, resolvedTurn: true }));
       setMessage([`Turn ${result.summary.turn}: ${result.acceptedActions.length - 1} action(s) accepted; crops +${result.summary.cropYield}, meat +${result.summary.meatYield}.`, ...result.rejectedActions, ...result.summary.warnings].join(" "));
@@ -169,11 +180,22 @@ export function GameClient() {
     try {
       const response = await fetch("/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: run }) });
       const data = await response.json() as SubmittedResult & { error?: string; code?: string };
-      if (response.status === 409 && data.code === "already_saved" && data.runId) { setSavedRunId(data.runId); setSubmissionStatus("done"); return; }
+      if (response.status === 409 && data.code === "already_saved" && data.runId) {
+        const previous = readReportSnapshot(run.runId);
+        if (previous) writeReportSnapshot({ ...previous, saved: true, pending: false });
+        setSavedRunId(data.runId); setSubmissionStatus("done"); return;
+      }
       if (!response.ok || !data.report || !data.score) throw new Error(data.error ?? "Run submission unavailable");
+      const previous = readReportSnapshot(run.runId);
+      if (previous) writeReportSnapshot({ ...previous, report: data.report,
+        score: { ...data.score, breakdown: previous.score.breakdown }, saved: data.saved,
+        pending: false, retryable: data.retryable, reason: data.reason });
       setSubmitted(data); setSubmissionStatus("done");
       if (data.saved) setSavedRunId(data.runId);
     } catch (error) {
+      const previous = readReportSnapshot(run.runId);
+      if (previous) writeReportSnapshot({ ...previous, pending: false,
+        reason: error instanceof Error ? error.message : "Run submission unavailable" });
       setSubmissionStatus("failed");
       setMessage(error instanceof Error ? error.message : "Run submission unavailable");
     }
@@ -225,7 +247,7 @@ export function GameClient() {
   const modifierAvailable = state.crops.some((plot) => "slotIndex" in plot) || state.livestock.some((animal) => "slotIndex" in animal);
 
   return <main className={styles.shell}>
-    <header className={styles.header}><div><p className={styles.kicker}>AGRONaut / LUNAR AGRICULTURE</p><h1>South Pole Outpost</h1><p className={styles.meta}>{state.nickname} · {state.mode.toUpperCase()} · LEVEL {state.level} · TURN {state.turn}/10</p></div><div className={styles.headerActions}><span className={`${styles.phase} ${state.crisis ? styles.crisis : ""}`}>{state.crisis ? "CRISIS" : state.phase.toUpperCase()}</span><button onClick={() => setTutorialVisible(true)}>Tutorial</button><button onClick={() => setState(null)}>New run</button></div></header>
+    <header className={styles.header}><div><p className={styles.kicker}>AGRONaut / LUNAR AGRICULTURE</p><h1>South Pole Outpost</h1><p className={styles.meta}>{state.nickname} · {state.mode.toUpperCase()} · LEVEL {state.level} · TURN {state.turn}/10</p></div><div className={styles.headerActions}><span className={`${styles.phase} ${state.crisis ? styles.crisis : ""}`}>{state.crisis ? "CRISIS" : state.phase.toUpperCase()}</span><button onClick={() => setTutorialVisible(true)}>Tutorial</button>{state.phase !== "complete" && <button onClick={() => setState(null)}>New run</button>}</div></header>
     {tutorialVisible && <TutorialGuide state={state} progress={tutorialProgress} onDismiss={dismissTutorial} />}
     <section className={styles.dashboard} aria-label="Mission resources">{resourceKeys.map((key) => {
       const value = state.resources[key];
@@ -249,13 +271,13 @@ export function GameClient() {
         {pending.length > 0 && <div className={styles.section}><p className={styles.label}>QUEUED ({pending.length}) · {plannedAp} AP</p><p>Applied on End Turn. Food shortages can reduce available AP.</p>{pending.map((action, i) => <p key={i}>{action.type.replaceAll("_", " ")} · {"moduleId" in action ? `${action.moduleId} / slot ${actionSlotIndex(action) + 1}` : "targetId" in action ? action.targetId : "mission"}</p>)}<button onClick={() => setPending([])}>Clear queue</button></div>}{miniResult && <div className={styles.section}><p className={styles.label}>LAST MINIGAME</p><p>{miniResult.modifier >= 0 ? "+" : ""}{Math.round(miniResult.modifier * 100)}% bonus queued with its target action</p></div>}<div className={styles.section}><p className={styles.label}>LATEST TURN</p><p>{state.lastTurn ? `Crops +${state.lastTurn.cropYield}; meat +${state.lastTurn.meatYield}. ${state.lastTurn.warnings.join(" ")}` : "Awaiting first turn."}</p></div>{state.phase === "complete" && <div className={styles.section}><p className={styles.label}>MISSION RESULT</p><h2 className={state.passed ? styles.pass : styles.fail}>{state.passed ? "PASS" : "FAIL"}</h2><p>{state.failureReason ?? "Production goals reached."}</p></div>}
       </aside>
     </div>
-    <footer className={styles.command}><p role="status">{message}</p>{building ? <button className={styles.primary} onClick={begin}>{state.phase === "intermission" ? "BEGIN NEXT LEVEL →" : "BEGIN MISSION →"}</button> : state.phase === "operation" ? <button className={styles.primary} onClick={endTurn}>END TURN →</button> : <button className={styles.primary} onClick={() => setState(null)}>NEW MISSION →</button>}</footer>
+    <footer className={styles.command}><p role="status">{message}</p>{building ? <button className={styles.primary} onClick={begin}>{state.phase === "intermission" ? "BEGIN NEXT LEVEL →" : "BEGIN MISSION →"}</button> : state.phase === "operation" ? <button className={styles.primary} onClick={endTurn}>END TURN →</button> : <button className={styles.primary} onClick={() => router.push(`/report/${state.runId}`)}>VIEW REPORT →</button>}</footer>
     {imessageAddress.trim() && <MissionControlPanel connection={advisorConnection} messages={advisorMessages} />}
     {state.phase === "complete" && <section aria-label="Mission result">
       {submissionStatus === "submitting" && <p role="status">Calculating and saving the mission result…</p>}
       {(submissionStatus === "failed" || (submitted && !submitted.saved && submitted.retryable !== false)) && <button onClick={() => transcript && void submitRun(transcript)}>Retry saving result</button>}
-      {submitted && <><MissionReport report={submitted.report} nickname={state.nickname} scores={submitted.score} sources={curatedSources} />{!submitted.saved && <p role="status">{submitted.reason ?? "Result is available locally; saving can be retried."}</p>}</>}
-      {savedRunId && <p><a href={`/report/${savedRunId}`}>Open saved mission report</a></p>}
+      {submitted && !submitted.saved && <p role="status">{submitted.reason ?? "The report is available locally; saving can be retried."}</p>}
+      {savedRunId && <p role="status">Mission report saved. Select View Report to continue.</p>}
     </section>}
     {mini && <div className={styles.modalBackdrop}><div className={styles.modal}><MinigameBoundary key={`${mini}-${miniTarget?.moduleId}`} onFallback={() => completeMini({ completed: false, modifier: 0 })}><Suspense fallback={<p role="status">Loading minigame…</p>}>{mini === "match3" ? <Match3 onComplete={completeMini} onCancel={() => setMini(null)} /> : <RepairSnake onComplete={completeMini} onCancel={() => setMini(null)} />}</Suspense></MinigameBoundary></div></div>}
     {interiorId && <AgricultureInterior key={interiorId} state={state} moduleId={interiorId} pending={pending} feedback={message} onQueue={queue} onMini={openMini} onClose={() => setInteriorId(null)} />}

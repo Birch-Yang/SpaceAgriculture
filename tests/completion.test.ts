@@ -18,6 +18,7 @@ import { growLivestock } from "../src/game/simulation/livestock.ts";
 import { hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
 import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
 import { scoreRules } from "../src/game/simulation/scoring.ts";
+import { reportRadarAxes } from "../src/game/simulation/reportRadar.ts";
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
@@ -81,6 +82,21 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.match(report.layout, /connected to the habitat/);
   assert.ok(report.sourceIds.length > 0);
   assert.ok(report.sourceIds.every((id) => verifiedSources.some((source) => source.id === id)));
+  assert.match(report.evaluationSystem!, new RegExp(`${summary.finalScoreInputs.production}/28`));
+  assert.match(report.contribution!, new RegExp(`${state.production.cropCumulative} edible crop units`));
+  assert.match(report.researchLandscape!, /Veggie|MELiSSA/);
+  assert.match(report.evidenceBasedChanges!, /water|connect/i);
+});
+
+test("report radar tracks the current run's scoring breakdown without presenting fallback strategy as AI", () => {
+  const breakdown = { production: 14, stability: 18, efficiency: 4, resilience: 3, budget: 2, total: 41 };
+  const rulesOnly = reportRadarAxes({ total: 58.6, rules: 41, llm: 17.6, usedFallback: true, breakdown });
+  assert.equal(rulesOnly.length, 5);
+  assert.deepEqual(rulesOnly.map((axis) => axis.value), [0.5, 0.75, 0.5, 0.5, 0.5]);
+  const withStrategy = reportRadarAxes({ total: 61, rules: 41, llm: 20, usedFallback: false, breakdown });
+  assert.equal(withStrategy[5].label, "Strategy");
+  assert.equal(withStrategy[5].earned, 20);
+  assert.equal(withStrategy[5].value, 20 / 30);
 });
 
 test("minigame bonuses require replayable moves with the exact computed score", () => {

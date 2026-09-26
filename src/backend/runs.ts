@@ -48,7 +48,7 @@ export async function getLeaderboard(category: LeaderboardCategory, limit = 20) 
 export async function getReport(runId: string) {
   const client = publicSupabase();
   if (!client) return undefined;
-  const { data, error } = await client.from("runs").select("id,nickname,mode,passed,score_total,score_rules,score_llm,summary_json").eq("id", runId).maybeSingle();
+  const { data, error } = await client.from("runs").select("id,nickname,mode,passed,score_total,score_rules,score_llm,score_production,score_stability,score_efficiency,score_resilience,score_budget,summary_json").eq("id", runId).maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 }
