@@ -1180,6 +1180,28 @@
       "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
     },
     {
+      "path": "public/assets/previews/world-art-integration-v2.html",
+      "url": "/assets/previews/world-art-integration-v2.html",
+      "width": null,
+      "height": null,
+      "bytes": 968,
+      "recommended": false,
+      "status": "archived-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
+      "path": "public/assets/previews/world-art-integration-v2.png",
+      "url": "/assets/previews/world-art-integration-v2.png",
+      "width": 65536,
+      "height": 4292542531,
+      "bytes": 68925,
+      "recommended": false,
+      "status": "archived-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
       "path": "public/assets/ui/communications.svg",
       "url": "/assets/ui/communications.svg",
       "width": 32.0,
