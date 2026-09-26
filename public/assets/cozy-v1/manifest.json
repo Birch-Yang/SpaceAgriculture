@@ -1,0 +1,138 @@
+{
+  "version": "cozy-v1",
+  "license": "CC0-1.0",
+  "moduleCanvas": [
+    96,
+    96
+  ],
+  "moduleGroundAnchor": [
+    48,
+    82
+  ],
+  "cropCanvas": [
+    32,
+    32
+  ],
+  "terrainCanvas": [
+    64,
+    36
+  ],
+  "notes": "Presentation artwork only. Footprints and crop stages come from host state; art sizes do not define game balance.",
+  "crops": {
+    "lettuce": {
+      "stages": [
+        "crops/lettuce-planted.svg",
+        "crops/lettuce-seedling.svg",
+        "crops/lettuce-growing.svg",
+        "crops/lettuce-ready.svg"
+      ],
+      "readyLabel": "Harvest-ready"
+    },
+    "radish": {
+      "stages": [
+        "crops/radish-planted.svg",
+        "crops/radish-seedling.svg",
+        "crops/radish-growing.svg",
+        "crops/radish-ready.svg"
+      ],
+      "readyLabel": "Harvest-ready"
+    },
+    "chili-pepper": {
+      "stages": [
+        "crops/chili-pepper-planted.svg",
+        "crops/chili-pepper-seedling.svg",
+        "crops/chili-pepper-growing.svg",
+        "crops/chili-pepper-ready.svg"
+      ],
+      "readyLabel": "Harvest-ready"
+    },
+    "potato": {
+      "stages": [
+        "crops/potato-planted.svg",
+        "crops/potato-seedling.svg",
+        "crops/potato-growing.svg",
+        "crops/potato-ready.svg"
+      ],
+      "readyLabel": "Harvest-ready"
+    },
+    "soybean": {
+      "stages": [
+        "crops/soybean-planted.svg",
+        "crops/soybean-seedling.svg",
+        "crops/soybean-growing.svg",
+        "crops/soybean-ready.svg"
+      ],
+      "readyLabel": "Harvest-ready"
+    },
+    "arabidopsis": {
+      "stages": [
+        "crops/arabidopsis-planted.svg",
+        "crops/arabidopsis-seedling.svg",
+        "crops/arabidopsis-growing.svg",
+        "crops/arabidopsis-ready.svg"
+      ],
+      "readyLabel": "Sample-ready"
+    }
+  },
+  "files": [
+    "animals/chicken.svg",
+    "animals/cow.svg",
+    "animals/pig.svg",
+    "crops/arabidopsis-growing.svg",
+    "crops/arabidopsis-planted.svg",
+    "crops/arabidopsis-ready.svg",
+    "crops/arabidopsis-seedling.svg",
+    "crops/chili-pepper-growing.svg",
+    "crops/chili-pepper-planted.svg",
+    "crops/chili-pepper-ready.svg",
+    "crops/chili-pepper-seedling.svg",
+    "crops/lettuce-growing.svg",
+    "crops/lettuce-planted.svg",
+    "crops/lettuce-ready.svg",
+    "crops/lettuce-seedling.svg",
+    "crops/potato-growing.svg",
+    "crops/potato-planted.svg",
+    "crops/potato-ready.svg",
+    "crops/potato-seedling.svg",
+    "crops/radish-growing.svg",
+    "crops/radish-planted.svg",
+    "crops/radish-ready.svg",
+    "crops/radish-seedling.svg",
+    "crops/soybean-growing.svg",
+    "crops/soybean-planted.svg",
+    "crops/soybean-ready.svg",
+    "crops/soybean-seedling.svg",
+    "modules/battery.svg",
+    "modules/communications.svg",
+    "modules/corridor.svg",
+    "modules/greenhouse-compact.svg",
+    "modules/greenhouse-industrial.svg",
+    "modules/greenhouse-standard.svg",
+    "modules/greenhouse.svg",
+    "modules/habitat.svg",
+    "modules/livestock-compact.svg",
+    "modules/livestock-industrial.svg",
+    "modules/livestock-standard.svg",
+    "modules/livestock.svg",
+    "modules/oxygen.svg",
+    "modules/recreation.svg",
+    "modules/shelter.svg",
+    "modules/solar.svg",
+    "modules/storage.svg",
+    "modules/utility.svg",
+    "modules/water.svg",
+    "outpost-scene.svg",
+    "terrain/regolith-0.svg",
+    "terrain/regolith-1.svg",
+    "terrain/regolith-2.svg",
+    "ui/communications.svg",
+    "ui/damage.svg",
+    "ui/food.svg",
+    "ui/micrometeoroid.svg",
+    "ui/oxygen.svg",
+    "ui/power.svg",
+    "ui/radiation.svg",
+    "ui/temperature.svg",
+    "ui/water.svg"
+  ]
+}
