@@ -8,7 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/simulation.test.ts",
-    "test:crops": "node --experimental-strip-types --test tests/supply.test.ts tests/crop-catalog.test.ts"
+    "test:crops": "node --experimental-strip-types --test tests/supply.test.ts tests/crop-catalog.test.ts",
+    "demo": "next dev --hostname 127.0.0.1 --port 4180",
+    "demo:script": "python3 scripts/supply_simulation.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

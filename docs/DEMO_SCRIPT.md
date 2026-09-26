@@ -1,3 +1,20 @@
+# Current demo: six-crop supply model
+
+Start with `npm run demo` and open http://127.0.0.1:4180/supply. Run the matching Python script with `npm run demo:script` (or `python3 scripts/supply_simulation.py --json` for full results).
+
+1. Choose **Reference base**. Explain the normal capacity: 24/16 power, 12/7 water, and 4/4 thermal coverage.
+2. Click **Choose crop** on a greenhouse. Show all six crops and their growth cycles, supply demand, harvest, and research output.
+3. Advance one turn and plan the next crop. The current batch finishes before the queued crop starts; accumulated harvest is preserved. Reset to Reference base before the baseline run.
+4. Advance all 12 turns. Turn 4 reduces sunlight, turn 7 raises thermal power demand, and turn 10 reduces solar output. The reference finishes with **200 harvest points / 180 target**, matching Python.
+5. Choose **Six-crop showcase** to show Arabidopsis producing research samples separately from food.
+6. Try **Power shortage**, **Water shortage**, and **Thermal overload** to see lower-priority greenhouses slow or stop.
+
+This demo uses the uploaded lunar art and renderer, an English interface, a shared six-crop catalog, crop planning, batteries, and scripted hazards. The separate Mission page retains its network simulation. Supply Lab does not yet implement construction budget, AP, oxygen inventory, or emergency rescue.
+
+## Historical full-mission rehearsal
+
+The following describes the broader mission presentation, not the executable supply script above.
+
 # Four-minute integrated mission demo
 
 This is a rehearsal script, not an implemented fast-forward or seeded hazard feature. Developer A/B must provide a stable completed run and an authorized demo hazard path. The HTML preview is presentation-only and clearly labeled sample data.
