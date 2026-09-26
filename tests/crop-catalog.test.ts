@@ -32,3 +32,13 @@ test('legacy harvest adapter also excludes research from food and crop scores', 
   const result = harvestCrop(state, 'greenhouse', { delivery: { greenhouse: { power: 1, water: 1 } }, net: { power: 0, water: 0, oxygen: 0, food: 0 }, bottlenecks: [] });
   assert.deepEqual(result, { yield: 0, food: 0, research: 1 });
 });
+
+
+test('mission submission accepts every current crop and rejects retired wheat', async () => {
+  const { parseTranscript } = await import('../src/game/state/transcript.ts');
+  const transcript = (crop: string) => ({ version: 1, runId: '00000000-0000-4000-8000-000000000001', nickname: 'crop check', mode: 'challenge', steps: [
+    { kind: 'start' }, { kind: 'turn', actions: [{ type: 'PLANT_CROP', moduleId: 'greenhouse', crop }] },
+  ] });
+  for (const crop of CROP_IDS) assert.doesNotThrow(() => parseTranscript(transcript(crop)));
+  assert.throws(() => parseTranscript(transcript('wheat')), /Invalid run step/);
+});

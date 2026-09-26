@@ -1,3 +1,4 @@
+import { CROP_IDS } from "../../data/cropCatalog.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "./reducer.ts";
 import { resolveTurn } from "../simulation/resolveTurn.ts";
@@ -14,7 +15,7 @@ export type RunTranscript = { version: 1; runId: string; nickname: string; mode:
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const settings = new Set(["low", "medium", "high"]);
-const crops = new Set(["lettuce", "potato", "wheat"]);
+const crops = new Set<string>(CROP_IDS);
 const animals = new Set(["chicken", "pig", "cow"]);
 const feeds = new Set(["rationed", "normal", "high"]);
 const rotations = new Set([0]);

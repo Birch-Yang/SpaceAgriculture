@@ -26,7 +26,7 @@ const countFields = [
 const fmt = (n: number) => Number(n.toFixed(2));
 
 export function SupplyPlayground() {
-  const [state, setState] = useState(() => newSupply());
+  const [state, setState] = useState(() => newSupply(configs[1].config));
   const [history, setHistory] = useState<SupplyReport[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [picker, setPicker] = useState<number | null>(null);
