@@ -13,6 +13,7 @@ ${select('resource')} span,${select('resource')} small{color:#5d5744}
 ${select('panelHeading','label','operationHelp')}{color:#60543f}
 ${select('panelHeading')} small,${select('tutorial')} small{color:#60543f}
 ${select('moduleStats')}{color:#f4dfba}
+${select('moduleTop')}{grid-template-columns:56px 1fr auto}
 ${descendant(['shell','launch'], 'button')}{border:2px solid #96704d;border-radius:3px;background:#70523a;color:#fff0ce}
 ${descendant(['shell','launch'], 'button:hover')}{background:#866443}
 ${descendant(['shell','launch'], 'button:disabled')}{opacity:.48}

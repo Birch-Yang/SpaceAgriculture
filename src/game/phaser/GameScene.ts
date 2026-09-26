@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import { buildingFrames, buildingFrame } from "../../content/world-art";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { MAP_SIZE } from "../state/reducer.ts";
 import type { Cell, GameState, PlacedModule, PlayerAction } from "../state/types.ts";
@@ -30,12 +31,27 @@ export class GameScene extends Phaser.Scene {
   private graphics: Phaser.GameObjects.Graphics | null = null;
   private labels: Phaser.GameObjects.Text[] = [];
   private lastPulse = -1;
+  private sprites: Phaser.GameObjects.Image[] = [];
+  private hasBackdrop = false;
 
   constructor(private readonly callbacks: SceneCallbacks) {
     super({ key: "LunarBase" });
   }
 
+  preload(): void {
+    this.load.image('pixel-buildings', '/assets/pixel-v2/buildings.png');
+    this.load.image('lunar-ground', '/assets/pixel-v2/lunar-background-v2.png');
+  }
+
   create(): void {
+    if (this.textures.exists('pixel-buildings')) {
+      const texture = this.textures.get('pixel-buildings');
+      texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      for (const [name, [x,y,w,h]] of Object.entries(buildingFrames)) texture.add(name, 0, x,y,w,h);
+    }
+    this.hasBackdrop = this.textures.exists('lunar-ground');
+    if (this.hasBackdrop) this.add.image(VIEW.width / 2, VIEW.height / 2, 'lunar-ground').setDisplaySize(VIEW.width, VIEW.height).setDepth(-2).setScrollFactor(0);
+
     this.graphics = this.add.graphics();
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => this.onMove(pointer));
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.onDown(pointer));
@@ -186,7 +202,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private text(x: number, y: number, value: string, color = "#ecf6f2", size = 11): void {
-    this.labels.push(this.add.text(x, y, value, { fontFamily: "monospace", fontSize: `${size}px`, color, backgroundColor: "#10232dbb", padding: { x: 3, y: 2 } }).setOrigin(0.5).setResolution(2));
+    this.labels.push(this.add.text(x, y, value, { fontFamily: "monospace", fontSize: `${size}px`, color, backgroundColor: "#10232dbb", padding: { x: 3, y: 2 } }).setOrigin(0.5).setResolution(2).setDepth(20000));
   }
 
   private paint(): void {
@@ -195,7 +211,10 @@ export class GameScene extends Phaser.Scene {
     g.clear();
     this.labels.forEach((label) => label.destroy());
     this.labels = [];
+    this.sprites.forEach(sprite => sprite.destroy());
+    this.sprites = [];
     const state = this.snapshot;
+    if (!this.hasBackdrop) {
     g.fillStyle(0x111b2b);
     g.fillRect(0, 0, VIEW.width, VIEW.height);
     g.fillStyle(0x223044, 0.4);
@@ -204,12 +223,13 @@ export class GameScene extends Phaser.Scene {
       const y = (i * 101 + 17) % VIEW.height;
       g.fillCircle(x, y, i % 3 + 1);
     }
+    }
     for (let sum = 0; sum < MAP_SIZE.width + MAP_SIZE.height - 1; sum++) {
       for (let x = 0; x < MAP_SIZE.width; x++) {
         const y = sum - x;
         if (y < 0 || y >= MAP_SIZE.height) continue;
         const shade = (x * 11 + y * 17) % 7;
-        this.diamond(x, y, [0x485765, 0x4b5966, 0x4d5d69, 0x4a5866, 0x465562, 0x4c5b66, 0x4d5c69][shade]);
+        this.diamond(x, y, [0x485765, 0x4b5966, 0x4d5d69, 0x4a5866, 0x465562, 0x4c5b66, 0x4d5c69][shade], this.hasBackdrop ? (this.buildEnabled() ? 0.09 : 0.025) : 1);
       }
     }
     if (!state) return;
@@ -230,14 +250,30 @@ export class GameScene extends Phaser.Scene {
       if (edge.id === this.selectedId) for (const cell of edge.cells) this.diamond(cell.x, cell.y, edgeColors[status], 0.3, 0xffffff);
     }
 
-    const sorted = [...state.modules].sort((a, b) => a.x + a.y - b.x - b.y);
+    const frontDepth = (module: PlacedModule) => {
+      const def = MODULE_BY_ID.get(module.moduleId);
+      const size = def ? rotatedFootprint(def.footprint, module.rotation) : {w:1,h:1};
+      return module.x + module.y + size.w + size.h;
+    };
+    const sorted = [...state.modules].sort((a, b) => frontDepth(a) - frontDepth(b));
     for (const module of sorted) {
       const definition = MODULE_BY_ID.get(module.moduleId);
       if (!definition) continue;
       const { w, h } = rotatedFootprint(definition.footprint, module.rotation);
       const color = colors[definition.category] ?? 0xa2a6ad;
+      const frame = buildingFrame(definition.category, definition.id);
+      const artAvailable = this.textures.exists('pixel-buildings') && this.textures.get('pixel-buildings').has(frame);
       for (let dx = 0; dx < w; dx++) for (let dy = 0; dy < h; dy++) {
-        this.block(module.x + dx, module.y + dy, color, module.integrity, module.id === this.selectedId);
+        if (!artAvailable) this.block(module.x + dx, module.y + dy, color, module.integrity, module.id === this.selectedId);
+        else if (module.id === this.selectedId) this.diamond(module.x + dx, module.y + dy, 0xe8c36e, 0.35, 0xffe2a0);
+      }
+      if (artAvailable) {
+        const anchor = gridToScreen(module.x + (w-1)/2, module.y + (h-1)/2);
+        const sprite = this.add.image(anchor.x, anchor.y + (w+h)*VIEW.tileHeight/4, 'pixel-buildings', frame).setOrigin(0.5,1);
+        // Fit visual width to the projected footprint. Selection zoom improves crop readability without changing occupancy.
+        sprite.setScale(((w+h)*VIEW.tileWidth/2) / sprite.width).setDepth(100 + frontDepth(module));
+        if (module.integrity < 0.65) sprite.setTint(0xc49c84);
+        this.sprites.push(sprite);
       }
       const center = gridToScreen(module.x + (w - 1) / 2, module.y + (h - 1) / 2);
       const agriculture = agricultureSlots(state, module.id);
@@ -246,14 +282,14 @@ export class GameScene extends Phaser.Scene {
       const short = definition.category === "greenhouse" ? `🌱 ${crop?.crop?.slice(0, 3) ?? "empty"} ${crop?.ready ? "READY" : `${crop?.progress ?? 0}%`}`
         : definition.category === "livestock" ? `● ${animal?.animal ?? "empty"} ${animal?.progress ?? 0}%`
         : definition.label.split(" ").map((word) => word[0]).join("").slice(0, 4).toUpperCase();
-      this.text(center.x, center.y - 15, short, "#f5fbf6", 11);
-      if (crop?.crop) {
+      if (!artAvailable || module.id === this.selectedId) this.text(center.x, center.y + (w+h)*VIEW.tileHeight/4 + 10, short, "#f5fbf6", 11);
+      if (!artAvailable && crop?.crop) {
         const mature = crop.ready || crop.progress > 65;
         g.fillStyle(mature ? 0xb1e794 : 0x83cf97);
         g.fillRect(center.x - 12, center.y - 25, 6, mature ? 7 : 4);
         g.fillRect(center.x + 6, center.y - 25, 6, mature ? 7 : 4);
       }
-      if (animal?.animal) {
+      if (!artAvailable && animal?.animal) {
         g.fillStyle(animal.animal === "chicken" ? 0xf0d3a5 : animal.animal === "pig" ? 0xe8a9ad : 0xe9e4d0);
         g.fillRect(center.x - 8, center.y - 23, 16, 7);
         g.fillRect(center.x + 5, center.y - 27, 4, 5);
