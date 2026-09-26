@@ -10,6 +10,7 @@ import { DIFFICULTY } from "../src/data/difficulty.ts";
 import { HAZARDS } from "../src/data/hazards.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
+import { advanceMatch3, initialMatch3State, match3Modifier, scoreMatch3Proof, scoreRepairProof, type Match3Proof, type RepairProof } from "../src/game/minigames/proof.ts";
 import { harvestCrop } from "../src/game/simulation/crops.ts";
 import { growLivestock } from "../src/game/simulation/livestock.ts";
 import { hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
@@ -61,6 +62,35 @@ test("a complete transcript replays to the same authoritative state and rejects 
   const report = fallbackReport(buildRunSummary(state), !!state.passed, verifiedSources);
   assert.ok(report.sourceIds.length > 0);
   assert.ok(report.sourceIds.every((id) => verifiedSources.some((source) => source.id === id)));
+});
+
+test("minigame bonuses require replayable moves with the exact computed score", () => {
+  let game = initialMatch3State();
+  const swaps: [number, number][] = [];
+  for (let move = 0; move < 5; move++) {
+    let next: ReturnType<typeof advanceMatch3> = null;
+    for (let from = 0; from < 36 && !next; from++) for (const to of [from + 1, from + 6]) {
+      const candidate = advanceMatch3(game, from, to);
+      if (candidate) { next = candidate; swaps.push([from, to]); break; }
+    }
+    assert.ok(next, `legal swap ${move + 1}`);
+    game = next;
+  }
+  const proof: Match3Proof = { kind: "match3", swaps };
+  const modifier = match3Modifier(game.matches);
+  assert.equal(scoreMatch3Proof(proof), modifier);
+  assert.equal(scoreMatch3Proof({ kind: "match3", swaps: [[0, 1], ...swaps.slice(1)] }), null);
+  const transcript = (action: unknown) => ({ version: 1, runId: "11111111-1111-4111-8111-111111111111", nickname: "Tester", mode: "challenge",
+    steps: [{ kind: "start" }, { kind: "turn", actions: [action] }] });
+  const harvest = { type: "HARVEST_CROP", moduleId: "crop", slotIndex: 0, minigameModifier: modifier, minigameProof: proof };
+  assert.doesNotThrow(() => parseTranscript(transcript(harvest)));
+  assert.throws(() => parseTranscript(transcript({ ...harvest, minigameProof: undefined })));
+  assert.throws(() => parseTranscript(transcript({ ...harvest, minigameModifier: -0.1 })));
+  const repair: RepairProof = { kind: "repair", directions: ["right", "right", "right"] };
+  assert.equal(scoreRepairProof(repair), -0.05);
+  assert.equal(scoreRepairProof({ kind: "repair", directions: [...repair.directions, "right"] }), null);
+  assert.doesNotThrow(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: -0.05, minigameProof: repair })));
+  assert.throws(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: 0.1, minigameProof: repair })));
 });
 
 test("corridor isolation and capacity change actual delivery; connected storage caps reserves", () => {

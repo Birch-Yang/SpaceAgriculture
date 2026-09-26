@@ -183,10 +183,10 @@ export function GameClient() {
     setMini(null);
     if (!miniTarget || !state) return;
     const accepted = miniTarget.kind === "crop"
-      ? queue(slotAction({ type: "HARVEST_CROP", moduleId: miniTarget.moduleId }, miniTarget.slotIndex, true, result.modifier))
+      ? queue(slotAction({ type: "HARVEST_CROP", moduleId: miniTarget.moduleId }, miniTarget.slotIndex, true, result.modifier, result.proof))
       : miniTarget.kind === "animal"
-        ? queue(careAction("FEED_STALL", miniTarget.moduleId, miniTarget.slotIndex, result.modifier))
-        : queue({ type: "REPAIR", targetId: miniTarget.moduleId, minigameModifier: result.modifier } as PlayerAction);
+        ? queue(careAction("FEED_STALL", miniTarget.moduleId, miniTarget.slotIndex, result.modifier, result.proof))
+        : queue({ type: "REPAIR", targetId: miniTarget.moduleId, minigameModifier: result.modifier, ...(result.proof ? { minigameProof: result.proof } : {}) } as PlayerAction);
     if (accepted) setMiniResult(result);
     setMiniTarget(null);
   }
