@@ -14,7 +14,7 @@ Status reflects the `codex/non-ui-completion` branch based on `dev` as of 2026-0
 | 2 | Scientific reporting | The curated NASA/ESA registry existed, but reports did not receive it. | AI citations are filtered to registry IDs. The shared summary now includes measured layout distances, connectivity, resilience spending, per-turn reserves, and actual transcript decisions; the deterministic fallback report uses these measurements and cites registry entries. |
 | 2 | Five leaderboards and aggregate analytics | Backend/API/UI existed, but completed runs were never saved from game play. Analytics were limited to basic counts. | Submission populates existing leaderboard categories. Analytics now include network connectivity, actual protective budget share, crop settings, per-greenhouse yield, and observations among the top quartile of scored runs. |
 | 2 | Photon Mission Control | A local adapter existed without a real transport. | Optional Photon Spectrum iMessage enrollment, outbound events, signed/deduplicated inbound replies, coarse telemetry, encrypted short-lived sessions, quotas, and unavailable/offline states are implemented. |
-| 3 | Replay data and agricultural loop | Final rows did not retain action-level replay data. | Saved summaries include the transcript and per-turn records. Nearby active livestock can give a small, clearly gameified greenhouse recycling bonus. |
+| 3 | Replay data and agricultural loop | Final rows did not retain action-level replay data. | Saved summaries include the transcript and per-turn records, and `/api/replay/<runId>` can reconstruct ordered map and resource snapshots. Nearby active livestock can give a small, clearly gameified greenhouse recycling bonus. |
 
 ## Verification completed locally
 

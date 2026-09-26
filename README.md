@@ -17,6 +17,8 @@ Use Node.js 24. Run `npm ci`, copy `.env.example` to `.env.local`, then run `npm
 
 The server accepts only an action transcript for `/api/runs`. It replays construction and every turn before computing scores or saving a result. Accepted actions and per-turn records are retained in `summary_json.replay` for future replay tooling. This prevents a client from submitting an arbitrary final score or resource state. Minigame modifiers are bounded to ±10% and require a move-by-move proof that the server replays to calculate the claimed bonus. This verifies that a score is achievable under the game rules; a browser client cannot prove that a human performed those moves, so competitive anti-cheat would still need an authoritative challenge service.
 
+Saved runs with a transcript expose ordered state snapshots at `GET /api/replay/<runId>`. The first frame is the empty design state; subsequent frames follow accepted build and turn steps. Older runs without a stored transcript return 404.
+
 ## Database and deployment
 
 Apply the files in `supabase/migrations` in numeric order to the target Supabase project. The service-role key stays on the server. `runs` is publicly readable for leaderboards and reports, while submission claims and Mission Control sessions use service-role-only operations. Submission claims permit five new evaluations per requester per day, plus a global ceiling of 100. A run ID is bound to its transcript hash and evaluated only once; the same transcript can reuse its cached result when saving fails.

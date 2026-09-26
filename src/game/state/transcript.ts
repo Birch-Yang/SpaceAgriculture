@@ -81,11 +81,12 @@ export function parseTranscript(value: unknown): RunTranscript {
   return value as RunTranscript;
 }
 
-export function replayTranscript(transcript: RunTranscript): GameState {
+export function replayTranscript(transcript: RunTranscript, onStep?: (state: GameState, index: number, step?: RunStep) => void): GameState {
   parseTranscript(transcript);
   let state = createInitialState(transcript.runId, transcript.nickname, transcript.mode);
   let turnCount = 0;
-  for (const step of transcript.steps) {
+  onStep?.(state, -1);
+  for (const [index, step] of transcript.steps.entries()) {
     if (step.kind === "build") {
       const result = applyBuildAction(state, step.action);
       if (result.error) throw new Error(`Invalid build action: ${result.error}`);
@@ -100,6 +101,7 @@ export function replayTranscript(transcript: RunTranscript): GameState {
       if (result.rejectedActions.length) throw new Error(`Rejected action: ${result.rejectedActions[0]}`);
       state = result.state;
     }
+    onStep?.(state, index, step);
   }
   if (state.phase !== "complete") throw new Error("Run is not complete");
   return state;

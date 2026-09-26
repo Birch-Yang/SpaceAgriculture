@@ -19,6 +19,7 @@ import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
+import { createReplayFrames } from "../src/game/state/replayFrames.ts";
 import type { GameState, PlayerAction } from "../src/game/state/types.ts";
 
 const moduleActions: PlayerAction[] = [
@@ -56,6 +57,12 @@ test("a complete transcript replays to the same authoritative state and rejects 
   const transcript: RunTranscript = { version: 1, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
   assert.equal(state.phase, "complete");
   assert.deepEqual(replayTranscript(parseTranscript(transcript)), state);
+  const frames = createReplayFrames(transcript);
+  assert.equal(frames.length, steps.length + 1);
+  assert.equal(frames[0].kind, "initial");
+  assert.deepEqual(frames.at(-1)?.resources, state.resources);
+  assert.deepEqual(frames.at(-1)?.production, state.production);
+  assert.equal(frames.at(-1)?.phase, "complete");
   assert.notEqual(transcriptHash(transcript), transcriptHash({ ...transcript, steps: transcript.steps.slice(0, -1) }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "REPAIR", targetId: "fake", minigameModifier: 99 }] }] }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "build", action: { type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 90 } }] }));
