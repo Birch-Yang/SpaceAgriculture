@@ -1,5 +1,6 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
+import { SYSTEMS } from "../../data/systems.ts";
 import type { Cell, GameMode, GameState, PlacedModule, PlayerAction } from "./types.ts";
 
 export const MAP_SIZE = { width: 14, height: 14 } as const;
@@ -14,7 +15,7 @@ export function createInitialState(runId: string, nickname: string, mode: GameMo
     production: { cropCumulative: 0, meatCumulative: 0 }, modules: [], utilityEdges: [],
     crops: [], livestock: [],
     forecast: { solar: "Variable", thermal: "Elevated", impact: "Low–moderate" },
-    history: [], nextId: 1,
+    history: [], turnRecords: [], nextId: 1,
   };
 }
 
@@ -38,6 +39,7 @@ function touches(module: PlacedModule, cell: Cell): boolean {
 export function applyBuildAction(state: GameState, action: PlayerAction): { state: GameState; error?: string } {
   if (state.phase !== "design" && state.phase !== "intermission") return { state, error: "Base layout is locked during operation" };
   if (action.type === "PLACE_MODULE") {
+    if (action.rotation !== 0) return { state, error: "Modules use a fixed orientation" };
     const def = MODULE_BY_ID.get(action.moduleId);
     if (!def) return { state, error: "Unknown module" };
     const candidate: PlacedModule = { id: `module-${state.nextId}`, moduleId: def.id, x: action.x, y: action.y, rotation: action.rotation, integrity: 1,
@@ -51,8 +53,8 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
     return { state: {
       ...state, budget: state.budget - def.cost, nextId: state.nextId + 1,
       modules: [...state.modules, candidate],
-      crops: def.category === "greenhouse" ? [...state.crops, { moduleId: candidate.id, crop: "lettuce", growth: 0, ready: false, water: "medium", light: "medium", temperature: "medium" }] : state.crops,
-      livestock: def.category === "livestock" ? [...state.livestock, { moduleId: candidate.id, animal: "chicken", growth: 0, feed: "normal" }] : state.livestock,
+      crops: def.category === "greenhouse" ? [...state.crops, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, crop: slotIndex === 0 ? "lettuce" as const : null, growth: 0, ready: false, wateredThisCycle: false, water: "medium" as const, light: "medium" as const, temperature: "medium" as const }))] : state.crops,
+      livestock: def.category === "livestock" ? [...state.livestock, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, animal: slotIndex === 0 ? "chicken" as const : null, growth: 0, feed: "normal" as const, fedThisCycle: false, feedMinigameModifier: 0 }))] : state.livestock,
     } };
   }
   if (action.type === "REMOVE_MODULE") {
@@ -66,6 +68,28 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
       crops: state.crops.filter((crop) => crop.moduleId !== placed.id),
       livestock: state.livestock.filter((animal) => animal.moduleId !== placed.id),
     } };
+  }
+  if (action.type === "MOVE_MODULE") {
+    const placed = state.modules.find((item) => item.id === action.placedModuleId);
+    if (!placed) return { state, error: "Unknown placed module" };
+    if (state.utilityEdges.some((edge) => edge.from === placed.id || edge.to === placed.id))
+      return { state, error: "Remove attached corridors before moving a module" };
+    if (action.x === placed.x && action.y === placed.y) return { state, error: "Module is already at that location" };
+    if (!Number.isInteger(action.x) || !Number.isInteger(action.y)) return { state, error: "Invalid module location" };
+    const moved = { ...placed, x: action.x, y: action.y };
+    const cells = occupiedCells(moved);
+    if (cells.some(({ x, y }) => x < 0 || y < 0 || x >= MAP_SIZE.width || y >= MAP_SIZE.height))
+      return { state, error: "Module is outside the map" };
+    const blocked = new Set(state.modules.filter((module) => module.id !== placed.id).flatMap(occupiedCells).map(({ x, y }) => `${x},${y}`));
+    for (const edge of state.utilityEdges) for (const cell of edge.cells) blocked.add(`${cell.x},${cell.y}`);
+    if (cells.some(({ x, y }) => blocked.has(`${x},${y}`))) return { state, error: "Placement overlaps another object" };
+    if (state.budget < SYSTEMS.moduleMoveCost) return { state, error: "Insufficient construction budget" };
+    return { state: { ...state, budget: state.budget - SYSTEMS.moduleMoveCost,
+      modules: state.modules.map((module) => module.id === placed.id ? moved : module) } };
+  }
+  if (action.type === "REMOVE_CORRIDOR") {
+    if (!state.utilityEdges.some((edge) => edge.id === action.edgeId)) return { state, error: "Unknown utility corridor" };
+    return { state: { ...state, utilityEdges: state.utilityEdges.filter((edge) => edge.id !== action.edgeId) } };
   }
   if (action.type === "PLACE_CORRIDOR") {
     const cells = action.cells;

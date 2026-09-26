@@ -116,6 +116,7 @@ export class GameScene extends Phaser.Scene {
   private onUp(pointer: Phaser.Input.Pointer): void {
     const cell = this.pointerCell(pointer);
     const state = this.snapshot;
+    const down = this.down;
     this.down = null;
     if (!state || !cell) { this.corridorPath = []; this.paint(); return; }
     if (this.tool.kind === "module" && this.buildEnabled()) {
@@ -127,6 +128,8 @@ export class GameScene extends Phaser.Scene {
     } else if (this.tool.kind === "corridor" && this.buildEnabled()) {
       this.extendPath(cell);
       if (this.corridorPath.length > 0) this.callbacks.onAction({ type: "PLACE_CORRIDOR", cells: [...this.corridorPath] });
+    } else if (this.tool.kind === "select" && this.buildEnabled() && down && (down.x !== cell.x || down.y !== cell.y) && this.moduleAt(down, state)) {
+      this.callbacks.onAction({ type: "MOVE_MODULE", placedModuleId: this.moduleAt(down, state)!.id, x: cell.x, y: cell.y });
     } else {
       const module = this.moduleAt(cell, state);
       const edge = state.utilityEdges.find((item) => item.cells.some((part) => part.x === cell.x && part.y === cell.y));

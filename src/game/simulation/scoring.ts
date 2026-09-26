@@ -18,13 +18,22 @@ export function scoreRules(state: GameState): RuleScore {
   const crop = target.cropTarget ? state.production.cropCumulative / target.cropTarget : 0;
   const meat = target.meatTarget ? state.production.meatCumulative / target.meatTarget : 0;
   const production = clamp((crop + meat) / 2 * 28, 28);
-  const stable = ["power", "water", "oxygen", "food"].filter((key) => state.resources[key as keyof typeof state.resources] > 0).length / 4;
-  const temperature = state.resources.temperature >= 10 && state.resources.temperature <= 30 ? 1 : 0.5;
-  const stability = clamp(24 * stable * temperature * (state.crisis ? 0.65 : 1), 24);
-  const efficiency = clamp(8 * Math.min(1, (state.production.cropCumulative + state.production.meatCumulative) / Math.max(1, target.budget - state.budget) * 2), 8);
+  const records = state.turnRecords.length ? state.turnRecords : [{ resources: state.resources, crisis: !!state.crisis }];
+  const stabilityFactor = records.reduce((sum, record) => {
+    const stable = (["power", "water", "oxygen", "food"] as const).filter((key) => record.resources[key] > 0).length / 4;
+    const temperature = record.resources.temperature >= 10 && record.resources.temperature <= 30 ? 1 : 0.5;
+    return sum + stable * temperature * (record.crisis ? 0.65 : 1);
+  }, 0) / records.length;
+  const stability = clamp(24 * stabilityFactor, 24);
+  const totalBudget = state.mode === "challenge" ? target.budget : DIFFICULTY.progressive[0].budget
+    + DIFFICULTY.progressive.slice(1, state.level).reduce((sum, level) => sum + level.buildBudget, 0);
+  const spentBudget = Math.max(1, totalBudget - state.budget);
+  const efficiency = clamp(8 * Math.min(1, (state.production.cropCumulative + state.production.meatCumulative) / spentBudget * 2), 8);
   const protective = state.modules.filter((module) => ["shelter", "utility", "battery"].includes(MODULE_BY_ID.get(module.moduleId)?.category ?? "")).length;
-  const resilience = clamp(6 * Math.min(1, protective / 3), 6);
-  const budget = clamp(4 * Math.max(0, state.budget) / Math.max(1, target.budget), 4);
+  const hazardRecords = state.turnRecords.filter((record) => record.hazard);
+  const response = hazardRecords.length ? hazardRecords.filter((record) => !record.crisis).length / hazardRecords.length : 1;
+  const resilience = clamp(6 * (0.7 * Math.min(1, protective / 3) + 0.3 * response), 6);
+  const budget = clamp(4 * Math.max(0, state.budget) / Math.max(1, totalBudget), 4);
   return { production, stability, efficiency, resilience, budget, total: clamp(production + stability + efficiency + resilience + budget, 70) };
 }
 

@@ -16,6 +16,6 @@ export async function ReportScreen({ runId }: { runId: string }) {
     if (!row) return <EmptyState title="Report not available yet">This mission may not have been saved. Try again after submission.</EmptyState>;
     const summary = row.summary_json as { report?: unknown; usedFallback?: boolean } | null;
     if (!isReport(summary?.report) || row.score_total == null || !Number.isFinite(Number(row.score_total))) return <EmptyState title="Report incomplete">The stored report is missing presentation data.</EmptyState>;
-    return <MissionReport report={summary.report} nickname={row.nickname} scores={{ total: Number(row.score_total), usedFallback: summary.usedFallback }} sources={curatedSources} />;
+    return <MissionReport report={summary.report} nickname={row.nickname} scores={{ total: Number(row.score_total), rules: Number(row.score_rules), llm: Number(row.score_llm), usedFallback: summary.usedFallback }} sources={curatedSources} />;
   } catch { return <EmptyState title="Report temporarily unavailable">Please reload to retry.</EmptyState>; }
 }
