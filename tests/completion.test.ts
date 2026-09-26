@@ -5,7 +5,7 @@ import { verifySpectrumWebhook } from "../src/ai/webhookSignature.ts";
 import { fallbackReport } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
-import { communicationsAvailable, resourceCapacity } from "../src/data/systems.ts";
+import { communicationsAvailable, resourceCapacity, shelterProtection } from "../src/data/systems.ts";
 import { DIFFICULTY } from "../src/data/difficulty.ts";
 import { CROP_IDS } from "../src/data/cropCatalog.ts";
 import { HAZARDS } from "../src/data/hazards.ts";
@@ -16,6 +16,7 @@ import { harvestCrop } from "../src/game/simulation/crops.ts";
 import { growLivestock } from "../src/game/simulation/livestock.ts";
 import { hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
 import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
+import { scoreRules } from "../src/game/simulation/scoring.ts";
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
@@ -159,6 +160,21 @@ test("a connected recreation module improves AP recovery while food scarcity sti
   assert.equal(resolveTurn(extra, [], "recreation").state.ap, resolveTurn(ordinary, [], "recreation").state.ap + 1);
   extra.resources.food = 0;
   assert.ok(resolveTurn(extra, [], "recreation").state.ap < maxActionPoints(extra));
+});
+
+test("only connected and intact protective modules improve resilience score", () => {
+  const original = startOperation(base());
+  const score = scoreRules(original).resilience;
+  const isolated = structuredClone(original);
+  isolated.modules.push({ id: "isolated-shelter", moduleId: "shelter", x: 11, y: 11, rotation: 0, integrity: 1 });
+  assert.equal(scoreRules(isolated).resilience, score);
+  assert.equal(shelterProtection(isolated), 0);
+  isolated.utilityEdges.push({ id: "shelter-link", from: original.modules[0].id, to: "isolated-shelter", cells: [{ x: 10, y: 11 }], length: 1, capacity: 20, integrity: 1 });
+  assert.ok(scoreRules(isolated).resilience > score);
+  assert.ok(shelterProtection(isolated) > 0);
+  isolated.modules[isolated.modules.length - 1].integrity = 0;
+  assert.equal(scoreRules(isolated).resilience, score);
+  assert.equal(shelterProtection(isolated), 0);
 });
 
 test("a connected communications tower boosts utility backup during an outage", () => {

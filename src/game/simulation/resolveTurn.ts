@@ -1,7 +1,7 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { AGRICULTURE, boundedModifier } from "../../data/agriculture.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
-import { communicationsAvailable, connectedToHabitat, resourceCapacity, SYSTEMS } from "../../data/systems.ts";
+import { communicationsAvailable, connectedToHabitat, resourceCapacity, shelterProtection, SYSTEMS } from "../../data/systems.ts";
 import type { CropPlotState, GameEvent, GameState, LivestockState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
 import { criticalCondition } from "./crisis.ts";
 import { growCrops, harvestCrop } from "./crops.ts";
@@ -121,8 +121,7 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
 function applyHazard(state: GameState, warnings: string[]): void {
   const hazard = state.activeHazard;
   if (!hazard) return;
-  const shelter = state.modules.filter((module) => MODULE_BY_ID.get(module.moduleId)?.category === "shelter").reduce((sum, module) => sum + module.integrity, 0);
-  const protection = Math.min(0.6, shelter * 0.2);
+  const protection = shelterProtection(state);
   if (hazard.type === "power") state.resources.power = Math.max(0, state.resources.power - 8 * hazard.severity);
   if (hazard.type === "radiation") state.resources.oxygen = Math.max(0, state.resources.oxygen - 4 * hazard.severity * (1 - protection));
   if (hazard.type === "micrometeoroid" && state.modules.length > 0) {
