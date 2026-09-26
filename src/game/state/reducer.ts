@@ -51,8 +51,8 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
     return { state: {
       ...state, budget: state.budget - def.cost, nextId: state.nextId + 1,
       modules: [...state.modules, candidate],
-      crops: def.category === "greenhouse" ? [...state.crops, { moduleId: candidate.id, crop: "lettuce", growth: 0, ready: false, water: "medium", light: "medium", temperature: "medium" }] : state.crops,
-      livestock: def.category === "livestock" ? [...state.livestock, { moduleId: candidate.id, animal: "chicken", growth: 0, feed: "normal" }] : state.livestock,
+      crops: def.category === "greenhouse" ? [...state.crops, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, crop: slotIndex === 0 ? "lettuce" as const : null, growth: 0, ready: false, wateredThisCycle: false, water: "medium" as const, light: "medium" as const, temperature: "medium" as const }))] : state.crops,
+      livestock: def.category === "livestock" ? [...state.livestock, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, animal: slotIndex === 0 ? "chicken" as const : null, growth: 0, feed: "normal" as const, fedThisCycle: false, feedMinigameModifier: 0 }))] : state.livestock,
     } };
   }
   if (action.type === "REMOVE_MODULE") {

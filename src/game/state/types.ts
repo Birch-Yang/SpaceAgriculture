@@ -57,18 +57,23 @@ export type AnimalKind = "chicken" | "pig" | "cow";
 export type Setting = "low" | "medium" | "high";
 export type CropPlotState = {
   moduleId: string;
-  crop: CropKind;
+  slotIndex: number;
+  crop: CropKind | null;
   growth: number;
   ready: boolean;
+  wateredThisCycle: boolean;
   water: Setting;
   light: Setting;
   temperature: Setting;
 };
 export type LivestockState = {
   moduleId: string;
-  animal: AnimalKind;
+  slotIndex: number;
+  animal: AnimalKind | null;
   growth: number;
   feed: "rationed" | "normal" | "high";
+  fedThisCycle: boolean;
+  feedMinigameModifier: number;
 };
 export type HazardType = "temperature" | "radiation" | "micrometeoroid" | "communications" | "power";
 export type HazardInstance = { id: string; type: HazardType; severity: number; turn: number };
@@ -113,13 +118,15 @@ export type PlayerAction =
   | { type: "PLACE_MODULE"; moduleId: string; x: number; y: number; rotation: Rotation }
   | { type: "REMOVE_MODULE"; placedModuleId: string }
   | { type: "PLACE_CORRIDOR"; cells: Cell[] }
-  | { type: "SET_CROP_PARAMS"; moduleId: string; water: Setting; light: Setting; temperature: Setting }
-  | { type: "SET_LIVESTOCK_PARAMS"; moduleId: string; feed: "rationed" | "normal" | "high" }
+  | { type: "SET_CROP_PARAMS"; moduleId: string; slotIndex?: number; water: Setting; light: Setting; temperature: Setting }
+  | { type: "SET_LIVESTOCK_PARAMS"; moduleId: string; slotIndex?: number; feed: "rationed" | "normal" | "high" }
   | { type: "REALLOCATE_UTILITY"; moduleId: string; allocation: UtilityAllocation }
-  | { type: "REPAIR"; targetId: string }
-  | { type: "PLANT_CROP"; moduleId: string; crop: CropKind }
-  | { type: "HARVEST_CROP"; moduleId: string }
-  | { type: "SET_ANIMAL"; moduleId: string; animal: AnimalKind }
+  | { type: "REPAIR"; targetId: string; minigameModifier?: number }
+  | { type: "PLANT_CROP"; moduleId: string; slotIndex?: number; crop: CropKind }
+  | { type: "HARVEST_CROP"; moduleId: string; slotIndex?: number; minigameModifier?: number }
+  | { type: "SET_ANIMAL"; moduleId: string; slotIndex?: number; animal: AnimalKind }
+  | { type: "WATER_PLOT"; moduleId: string; slotIndex: number }
+  | { type: "FEED_STALL"; moduleId: string; slotIndex: number; minigameModifier?: number }
   | { type: "END_TURN" };
 
 export type TurnResult = { state: GameState; summary: TurnSummary; acceptedActions: PlayerAction[]; rejectedActions: string[] };

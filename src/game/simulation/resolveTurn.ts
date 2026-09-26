@@ -1,6 +1,7 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
+import { AGRICULTURE, boundedModifier } from "../../data/agriculture.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
-import type { GameEvent, GameState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
+import type { CropPlotState, GameEvent, GameState, LivestockState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
 import { criticalCondition } from "./crisis.ts";
 import { growCrops, harvestCrop } from "./crops.ts";
 import { hazardForTurn } from "./hazards.ts";
@@ -21,16 +22,38 @@ function actionCost(action: PlayerAction): number {
   return 1;
 }
 
-function applyOperationAction(state: GameState, action: PlayerAction): string | undefined {
+type PendingHarvest = { plot: CropPlotState; modifier: number };
+
+function validSlot(state: GameState, moduleId: string, slotIndex: number, category: "greenhouse" | "livestock"): boolean {
+  const module = state.modules.find((item) => item.id === moduleId);
+  const def = module && MODULE_BY_ID.get(module.moduleId);
+  return !!def && def.category === category && Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < def.capacity;
+}
+
+function cropSlot(state: GameState, moduleId: string, slotIndex: number): CropPlotState | undefined {
+  return validSlot(state, moduleId, slotIndex, "greenhouse")
+    ? state.crops.find((item) => item.moduleId === moduleId && item.slotIndex === slotIndex) : undefined;
+}
+
+function livestockSlot(state: GameState, moduleId: string, slotIndex: number): LivestockState | undefined {
+  return validSlot(state, moduleId, slotIndex, "livestock")
+    ? state.livestock.find((item) => item.moduleId === moduleId && item.slotIndex === slotIndex) : undefined;
+}
+
+function invalidModifier(value: number | undefined): boolean {
+  return value !== undefined && !Number.isFinite(value);
+}
+
+function applyOperationAction(state: GameState, action: PlayerAction, pendingHarvests: PendingHarvest[]): string | undefined {
   const cost = actionCost(action);
   if (cost > state.ap) return "Insufficient action points";
   if (action.type === "END_TURN") return undefined;
   if (action.type === "SET_CROP_PARAMS") {
-    const plot = state.crops.find((item) => item.moduleId === action.moduleId);
+    const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!plot) return "Crop plot not found";
     plot.water = action.water; plot.light = action.light; plot.temperature = action.temperature;
   } else if (action.type === "SET_LIVESTOCK_PARAMS") {
-    const animal = state.livestock.find((item) => item.moduleId === action.moduleId);
+    const animal = livestockSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!animal) return "Livestock module not found";
     animal.feed = action.feed;
   } else if (action.type === "REALLOCATE_UTILITY") {
@@ -43,18 +66,41 @@ function applyOperationAction(state: GameState, action: PlayerAction): string | 
   } else if (action.type === "REPAIR") {
     const target = state.modules.find((item) => item.id === action.targetId) ?? state.utilityEdges.find((item) => item.id === action.targetId);
     if (!target) return "Repair target not found";
-    target.integrity = Math.min(1, target.integrity + 0.25);
+    if (invalidModifier(action.minigameModifier)) return "Invalid minigame modifier";
+    target.integrity = Math.min(1, target.integrity + AGRICULTURE.repairIntegrityGain * (1 + boundedModifier(action.minigameModifier)));
   } else if (action.type === "PLANT_CROP") {
-    const plot = state.crops.find((item) => item.moduleId === action.moduleId);
+    const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!plot) return "Crop plot not found";
-    plot.crop = action.crop; plot.growth = 0; plot.ready = false;
+    plot.crop = action.crop; plot.growth = 0; plot.ready = false; plot.wateredThisCycle = false;
   } else if (action.type === "HARVEST_CROP") {
-    const plot = state.crops.find((item) => item.moduleId === action.moduleId);
-    if (!plot?.ready) return "Crop is not ready";
+    const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
+    if (!plot) return "Crop plot not found";
+    if (!plot.crop || !plot.ready) return "Crop is not ready";
+    if (invalidModifier(action.minigameModifier)) return "Invalid minigame modifier";
+    pendingHarvests.push({ plot: { ...plot }, modifier: boundedModifier(action.minigameModifier) });
+    plot.growth = 0; plot.ready = false; plot.wateredThisCycle = false;
   } else if (action.type === "SET_ANIMAL") {
-    const animal = state.livestock.find((item) => item.moduleId === action.moduleId);
+    const animal = livestockSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!animal) return "Livestock module not found";
-    animal.animal = action.animal; animal.growth = 0;
+    animal.animal = action.animal; animal.growth = 0; animal.fedThisCycle = false; animal.feedMinigameModifier = 0;
+  } else if (action.type === "WATER_PLOT") {
+    const plot = cropSlot(state, action.moduleId, action.slotIndex);
+    if (!plot) return "Crop plot not found";
+    if (!plot.crop) return "Crop plot is empty";
+    if (plot.wateredThisCycle) return "Crop plot was already watered this cycle";
+    if (state.resources.water < AGRICULTURE.waterActionCost) return "Insufficient water";
+    state.resources.water -= AGRICULTURE.waterActionCost;
+    plot.wateredThisCycle = true;
+  } else if (action.type === "FEED_STALL") {
+    const animal = livestockSlot(state, action.moduleId, action.slotIndex);
+    if (!animal) return "Livestock module not found";
+    if (!animal.animal) return "Livestock stall is empty";
+    if (animal.fedThisCycle) return "Livestock stall was already fed this cycle";
+    if (invalidModifier(action.minigameModifier)) return "Invalid minigame modifier";
+    if (state.resources.food < AGRICULTURE.feedActionCost) return "Insufficient food";
+    state.resources.food -= AGRICULTURE.feedActionCost;
+    animal.fedThisCycle = true;
+    animal.feedMinigameModifier = boundedModifier(action.minigameModifier);
   } else {
     return "Base layout is locked during operation";
   }
@@ -85,19 +131,19 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   const warnings: string[] = [];
   const acceptedActions: PlayerAction[] = [];
   const rejectedActions: string[] = [];
+  const pendingHarvests: PendingHarvest[] = [];
   const turn = next.turn;
 
   // 1. Reveal hazard; 2. restore AP; 3. apply strategic actions.
   next.activeHazard = hazardForTurn(next, rngSeed);
   next.ap = apRecovery(next);
   for (const action of actions) {
-    const error = applyOperationAction(next, action);
-    if (error) rejectedActions.push(`${action.type}: ${error}`);
+    const error = applyOperationAction(next, action, pendingHarvests);
+    if (error) rejectedActions.push(`${action.type}${"moduleId" in action ? ` (${action.moduleId} slot ${"slotIndex" in action ? action.slotIndex ?? 0 : 0})` : ""}: ${error}`);
     else acceptedActions.push(action);
   }
 
-  // 4. Minigame modifier is neutral until Developer A supplies a validated result.
-  // 5. Network and 6. temperature.
+  // 4. Network and 5. temperature. Accepted minigame modifiers were bounded above.
   const network = resolveUtilityGraph(next);
   warnings.push(...network.bottlenecks);
   next.resources.temperature = resolveTemperature(next);
@@ -105,13 +151,12 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   // 7. Crop growth and harvest; 8. livestock.
   let cropYield = 0;
   let cropFood = 0;
-  for (const action of acceptedActions) {
-    if (action.type !== "HARVEST_CROP") continue;
-    const harvest = harvestCrop(next, action.moduleId, network);
+  const cropOutputs: Array<{ moduleId: string; slotIndex: number; yield: number }> = [];
+  for (const pending of pendingHarvests) {
+    const harvest = harvestCrop(next, pending.plot, network, pending.modifier);
     cropYield += harvest.yield;
     cropFood += harvest.food;
-    const plot = next.crops.find((item) => item.moduleId === action.moduleId)!;
-    plot.growth = 0; plot.ready = false;
+    cropOutputs.push({ moduleId: pending.plot.moduleId, slotIndex: pending.plot.slotIndex, yield: harvest.yield });
   }
   const crops = growCrops(next, network);
   next.crops = crops.crops;
@@ -156,8 +201,8 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   const summary = { turn, hazard: next.activeHazard, resourceDelta, cropYield, meatYield: livestock.meatYield, warnings };
   const events: GameEvent[] = [
     ...(next.activeHazard ? [{ turn, type: "HAZARD", message: next.activeHazard.type }] : []),
-    ...(cropYield ? [{ turn, type: "CROP_YIELD", message: "Crops harvested", amount: cropYield }] : []),
-    ...(livestock.meatYield ? [{ turn, type: "MEAT_YIELD", message: "Livestock output", amount: livestock.meatYield }] : []),
+    ...cropOutputs.map((output) => ({ turn, type: "CROP_YIELD", message: `${output.moduleId} slot ${output.slotIndex} crops harvested`, amount: output.yield })),
+    ...livestock.outputs.map((output) => ({ turn, type: "MEAT_YIELD", message: `${output.moduleId} slot ${output.slotIndex} livestock output`, amount: output.yield })),
     ...(next.crisis?.recoveryTurn === turn + 1 ? [{ turn, type: "CRISIS", message: next.crisis.trigger }] : []),
   ];
   next.history = [...next.history, ...events];
