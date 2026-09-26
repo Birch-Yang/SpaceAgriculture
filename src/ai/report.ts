@@ -31,12 +31,12 @@ export function fallbackReport(summary: RunSummary, passed: boolean, sources: re
     overview: `This ${summary.mode} mission ${passed ? "met" : "did not meet"} its survival and production goals.`,
     production: `Cumulative crop yield: ${crop}. Cumulative meat yield: ${meat}.`,
     stability: `Final power ${summary.stabilityMetrics.finalPower}, water ${summary.stabilityMetrics.finalWater}, oxygen ${summary.stabilityMetrics.finalOxygen}, food ${summary.stabilityMetrics.finalFood}, temperature ${summary.stabilityMetrics.finalTemperature}.`,
-    layout: `${summary.layoutMetrics.moduleCount} modules used ${summary.layoutMetrics.corridorLength} corridor cells.`,
-    disasterResponse: `${summary.hazardHistory.length} major hazards were recorded.`,
-    agriculture: "This simplified simulation models crops and livestock as strategic trade-offs. Large-animal lunar livestock is speculative and educational.",
+    layout: `${summary.layoutMetrics.moduleCount} modules used ${summary.layoutMetrics.corridorLength} corridor cells. ${Math.round((summary.layoutMetrics.connectedModuleShare ?? 0) * 100)}% of modules were connected to the habitat; ${Math.round((summary.layoutMetrics.resilienceBudgetShare ?? 0) * 100)}% of module cost went to protective systems.`,
+    disasterResponse: `${summary.hazardHistory.length} major hazards and ${summary.stabilityMetrics.crisisCount ?? 0} crisis events were recorded.`,
+    agriculture: `The base produced ${crop} crop units and ${meat} meat units. This simplified simulation models crop and livestock choices as strategic trade-offs. Large-animal lunar livestock is speculative and educational.`,
     missionControl: `${summary.photonAdviceHistory.length} Mission Control messages were recorded.`,
     scientificContext: "Lunar agriculture requires coordinated life support, energy, water, and thermal control. The linked scientific sources provide context for this educational simulation, not validation of its simplified model.",
-    strategySuggests: "This player strategy is one design hypothesis worth exploring; it does not establish an optimal real lunar base.",
+    strategySuggests: `${summary.majorPlayerDecisions.slice(0, 3).join("; ") || "No detailed actions were recorded"}. This player strategy is one design hypothesis worth exploring; it does not establish an optimal real lunar base.`,
     sourceIds: sources.slice(0, 3).map((source) => source.id), usedFallback: true,
   };
 }

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid run transcript" }, { status: 400 });
   }
 
-  const summary = buildRunSummary(state);
+  const summary = buildRunSummary(state, transcript);
   try { summary.photonAdviceHistory = await missionAdviceHistory(state.runId); } catch { /* Advisor history is optional. */ }
   try {
     if (await getReport(state.runId)) return NextResponse.json({ error: "Run already submitted", runId: state.runId }, { status: 409 });

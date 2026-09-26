@@ -59,7 +59,12 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "REPAIR", targetId: "fake", minigameModifier: 99 }] }] }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "build", action: { type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 90 } }] }));
   assert.throws(() => replayTranscript({ ...transcript, steps: [...steps, { kind: "turn", actions: [] }] }));
-  const report = fallbackReport(buildRunSummary(state), !!state.passed, verifiedSources);
+  const summary = buildRunSummary(state, transcript);
+  assert.ok(summary.layoutMetrics.averageGreenhouseWaterDistance > 0);
+  assert.ok(summary.layoutMetrics.connectedModuleShare > 0);
+  assert.ok(summary.majorPlayerDecisions.some((decision) => decision.toLowerCase().includes("greenhouse")));
+  const report = fallbackReport(summary, !!state.passed, verifiedSources);
+  assert.match(report.layout, /connected to the habitat/);
   assert.ok(report.sourceIds.length > 0);
   assert.ok(report.sourceIds.every((id) => verifiedSources.some((source) => source.id === id)));
 });
