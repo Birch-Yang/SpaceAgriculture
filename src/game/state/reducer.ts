@@ -37,6 +37,20 @@ function touches(module: PlacedModule, cell: Cell): boolean {
   return occupiedCells(module).some(({ x, y }) => Math.abs(x - cell.x) + Math.abs(y - cell.y) === 1);
 }
 
+/** Exact material delta for removal; shared with the presentation. */
+export function getBuildRemovalRefund(state: GameState, targetId: string): number {
+  const initialBuild = state.phase === "design" && state.level === 1 && state.turn === 1;
+  const module = state.modules.find(item => item.id === targetId);
+  if (module) {
+    const cost = MODULE_BY_ID.get(module.moduleId)!.cost;
+    const attachedCost = state.utilityEdges.filter(edge => edge.from === targetId || edge.to === targetId)
+      .reduce((sum, edge) => sum + edge.cells.length * corridorCellCost, 0);
+    return initialBuild ? cost + attachedCost : Math.floor(cost / 2);
+  }
+  const edge = state.utilityEdges.find(item => item.id === targetId);
+  return edge ? (initialBuild ? edge.cells.length * corridorCellCost : -SYSTEMS.corridorRemovalCost) : 0;
+}
+
 export function applyBuildAction(state: GameState, action: PlayerAction): { state: GameState; error?: string } {
   if (state.phase !== "design" && state.phase !== "intermission") return { state, error: "Base layout is locked during operation" };
   if (action.type === "PLACE_MODULE") {
@@ -61,9 +75,8 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
   if (action.type === "REMOVE_MODULE") {
     const placed = state.modules.find((item) => item.id === action.placedModuleId);
     if (!placed) return { state, error: "Unknown placed module" };
-    const def = MODULE_BY_ID.get(placed.moduleId)!;
     return { state: {
-      ...state, budget: state.budget + (state.phase === "design" && state.level === 1 && state.turn === 1 ? def.cost : Math.floor(def.cost / 2)),
+      ...state, budget: state.budget + getBuildRemovalRefund(state, placed.id),
       modules: state.modules.filter((item) => item.id !== placed.id),
       utilityEdges: state.utilityEdges.filter((edge) => edge.from !== placed.id && edge.to !== placed.id),
       crops: state.crops.filter((crop) => crop.moduleId !== placed.id),
@@ -90,8 +103,9 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
   }
   if (action.type === "REMOVE_CORRIDOR") {
     if (!state.utilityEdges.some((edge) => edge.id === action.edgeId)) return { state, error: "Unknown utility corridor" };
-    if (state.budget < SYSTEMS.corridorRemovalCost) return { state, error: "Insufficient construction budget" };
-    return { state: { ...state, budget: state.budget - SYSTEMS.corridorRemovalCost,
+    const refund = getBuildRemovalRefund(state, action.edgeId);
+    if (state.budget + refund < 0) return { state, error: "Insufficient construction budget" };
+    return { state: { ...state, budget: state.budget + refund,
       utilityEdges: state.utilityEdges.filter((edge) => edge.id !== action.edgeId) } };
   }
   if (action.type === "PLACE_CORRIDOR") {

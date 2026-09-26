@@ -18,7 +18,7 @@ export function maxActionPoints(state: GameState): number {
   return baseline + (recreation ? SYSTEMS.recreationApBonus : 0);
 }
 
-function apRecovery(state: GameState): number {
+export function apRecovery(state: GameState): number {
   const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
   const reserve = state.resources.food / 60;
   const factor = reserve > 0.7 ? 1 : reserve > 0.4 ? 0.9 : reserve > 0.2 ? 0.75 : 0.6;
