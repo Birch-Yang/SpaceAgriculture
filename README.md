@@ -34,6 +34,8 @@ PR #1 was merged into `main` at `af188a6` although the planned target was `dev`;
 
 ## Checks
 
+Keep testing lightweight: one small, runnable test covering the changed behavior is enough. Do not repeat or expand tests unless a concrete failure or an integration gate requires it.
+
 Run `npm test` for the small baseline: deterministic turn replay, one-turn crisis recovery, and a ten-turn Challenge run with connected power/water/oxygen plus crop and meat production. It uses Node's built-in test runner and requires Node.js 24; no external test package is needed.
 
 Before merging to `dev`, also run `npm run typecheck` and `npm run build`. All three commands passed with Node.js 24 for the `agronaut` naming branch; the built `<title>`, `<h1>`, and Open Graph title were verified. The owner-shared deployment URL requires Vercel login; share access through Vercel when an external reviewer needs it. Vercel environment variables cannot be verified from this repository.
