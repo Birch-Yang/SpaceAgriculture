@@ -33,6 +33,8 @@ export function ScoreRadar({ score }: { score: Score }) {
           <text x={label.x} y={label.y} textAnchor={anchor} className={s.radarLabel}>{axis.label}<tspan x={label.x} dy="17" className={s.radarValue}>{axis.earned.toFixed(1)} / {axis.max}</tspan></text></g>;
       })}
     </svg>
+    <ul className={s.radarLegend} aria-label="Score by dimension">{axes.map((axis) =>
+      <li key={axis.label}><span>{axis.label}</span><strong>{axis.earned.toFixed(1)} / {axis.max}</strong></li>)}</ul>
     {score.usedFallback && <p className={s.radarNote}>Strategy is omitted until an AI evaluation is available. The displayed total uses the stated rules-only fallback.</p>}
   </figure>;
 }

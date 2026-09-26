@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import test from "node:test";
 import { verifySpectrumWebhook } from "../src/ai/webhookSignature.ts";
-import { fallbackReport } from "../src/ai/report.ts";
+import { extendShortReport, fallbackReport, generateMissionReport, MIN_REPORT_FIELD_WORDS, reportWordCount } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
 import { communicationsAvailable, resourceCapacity, shelterProtection } from "../src/data/systems.ts";
@@ -86,6 +86,34 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.match(report.contribution!, new RegExp(`${state.production.cropCumulative} edible crop units`));
   assert.match(report.researchLandscape!, /Veggie|MELiSSA/);
   assert.match(report.evidenceBasedChanges!, /water|connect/i);
+  for (const [field, value] of Object.entries(report)) {
+    if (typeof value === "string" && field !== "result")
+      assert.ok(reportWordCount(value) >= MIN_REPORT_FIELD_WORDS, `${field} is too short`);
+  }
+  const archived = extendShortReport({ ...report, usedFallback: false, production: "Brief archived comment." }, report);
+  assert.equal(archived.production, report.production);
+  assert.equal(archived.overview, report.overview);
+  assert.deepEqual(archived.fallbackFields, ["production"]);
+});
+
+test("short AI report fields fail the minimum-length gate and use complete fallback analysis", async () => {
+  const state = startOperation(base());
+  const summary = buildRunSummary(state);
+  const candidate = { ...fallbackReport(summary, false, verifiedSources), researchLandscape: "Too brief." };
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.OPENAI_API_KEY = "report-test-key";
+  globalThis.fetch = async () => new Response(JSON.stringify({ output: [{ content: [{ type: "output_text",
+    text: JSON.stringify(candidate) }] }] }), { status: 200 });
+  try {
+    const report = await generateMissionReport(summary, false, verifiedSources);
+    assert.equal(report.usedFallback, true);
+    assert.ok(reportWordCount(report.researchLandscape!) >= MIN_REPORT_FIELD_WORDS);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+  }
 });
 
 test("report radar tracks the current run's scoring breakdown without presenting fallback strategy as AI", () => {

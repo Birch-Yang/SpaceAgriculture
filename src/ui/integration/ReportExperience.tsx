@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { readReportSnapshot, writeReportSnapshot, type ReportSnapshot } from '../../game/state/reportSnapshot';
+import { parseTranscript, replayTranscript } from '../../game/state/transcript';
+import { buildRunSummary } from '../../ai/schemas';
+import { extendShortReport, fallbackReport } from '../../ai/report';
 import { MissionReport } from '../MissionReport';
 import { curatedSources } from '../../content/sources';
 import s from '../report.module.css';
@@ -21,7 +24,15 @@ export function ReportExperience({ runId, initial }: { runId: string; initial?: 
 
   useEffect(() => {
     const sync = () => {
-      const local = readReportSnapshot(runId);
+      let local = readReportSnapshot(runId);
+      if (local?.transcript) {
+        try {
+          const transcript = parseTranscript(local.transcript);
+          const state = replayTranscript(transcript);
+          if (state.runId === runId) local = { ...local, report: extendShortReport(local.report,
+            fallbackReport(buildRunSummary(state, transcript), !!state.passed, curatedSources)) };
+        } catch { /* Keep the original local report if replay is unavailable. */ }
+      }
       setSnapshot((current) => current?.saved ? current : local ?? current);
     };
     const onUpdate = (event: Event) => {

@@ -19,7 +19,8 @@ function NarrativeCard({ number, title, text }: { number: string; title: string;
 
 export function MissionReport({ report, nickname, scores, sources, runId, saved, pending, reason, retryable, retryBusy, onRetry }: MissionReportProps) {
   const citations = sources.filter((source) => report.sourceIds.includes(source.id) && /^https:\/\//.test(source.url));
-  const aiLabel = report.usedFallback ? 'Deterministic analysis · AI narrative unavailable' : 'AI analysis grounded in this mission';
+  const aiLabel = report.fallbackFields?.length ? 'Archived sections extended with rule-based analysis' : report.usedFallback
+    ? 'Rule-based analysis · AI narrative unavailable' : 'AI analysis grounded in this mission';
   const scoreStatus = scores.usedFallback ? 'Rules-only score normalized to 100' : 'Rules + strategy evaluation';
   return <main className={s.report}>
     <header className={s.hero}>
