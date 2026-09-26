@@ -26,17 +26,17 @@ Vercel project: **agronaut**. The owner-shared [deployment URL](https://agronaut
 
 | Workstream | Branch / status | Integration note |
 | --- | --- | --- |
-| Project setup + Developer B | Baseline on `dev`; official `agronaut` naming on `chore/agronaut-branding` for merge to `dev` | Next.js shell, typed state/actions, deterministic simulation, Supabase migration/APIs, AI fallbacks, and CI are available on the integration branch. |
+| Project setup + Developer B | `chore/agronaut-branding` merged into `dev` at `7b9d7af` | The official project name is `agronaut` across the package, landing page, browser title, share title, and docs. The typed simulation, Supabase APIs, AI fallbacks, and CI remain available. |
 | Developer A | Separate branch; this branch does not touch Phaser or minigames | Mount the renderer in `/game`; consume `src/game/state/types.ts` and `src/game/state/reducer.ts`. |
 | Designer/content | Separate branch; this branch does not add art or source claims | Provide verified sources for `src/ai/sourceAdapter.ts` and final copy/assets. |
 
-PR #1 was merged into `main` at `af188a6` although the planned target was `dev`; `dev` was then synchronized. Future feature PRs should target `dev`; release PRs can move tested changes from `dev` to `main`. Before editing the shared state/action contract, coordinate the exact change with the other workstreams. Next integration tasks: apply and verify the `runs` migration, connect the renderer and verified source registry, then complete the Photon adapter. A local read of `public.runs` returned `PGRST205` on 2026-09-25, so database setup still needs verification. Public OpenAI-backed run submission needs rate limiting and server-side validation before an unrestricted release.
+PR #1 was merged into `main` at `af188a6` although the planned target was `dev`; `dev` was then synchronized. The `agronaut` naming branch was pushed separately and merged into `dev` at `7b9d7af`. Future feature PRs should target `dev`; release PRs can move tested changes from `dev` to `main`. Before editing the shared state/action contract, coordinate the exact change with the other workstreams. Next integration tasks: apply and verify the `runs` migration, connect the renderer and verified source registry, then complete the Photon adapter. A local read of `public.runs` returned `PGRST205` on 2026-09-25, so database setup still needs verification. Public OpenAI-backed run submission needs rate limiting and server-side validation before an unrestricted release.
 
 ## Checks
 
 Run `npm test` for the small baseline: deterministic turn replay, one-turn crisis recovery, and a ten-turn Challenge run with connected power/water/oxygen plus crop and meat production. It uses Node's built-in test runner and requires Node.js 24; no external test package is needed.
 
-Before merging to `dev`, also run `npm run typecheck` and `npm run build`. On the initial Developer B branch, all three commands passed with Node.js 24. The owner-shared deployment URL requires Vercel login; share access through Vercel when an external reviewer needs it. Vercel environment variables cannot be verified from this repository.
+Before merging to `dev`, also run `npm run typecheck` and `npm run build`. All three commands passed with Node.js 24 for the `agronaut` naming branch; the built `<title>`, `<h1>`, and Open Graph title were verified. The owner-shared deployment URL requires Vercel login; share access through Vercel when an external reviewer needs it. Vercel environment variables cannot be verified from this repository.
 
 ## Integration
 
