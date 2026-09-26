@@ -1,0 +1,8 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101827; color: #f2f4f7; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 960px; margin: 0 auto; padding: 4rem 1.5rem; }
+a { color: #a6d8ff; }
+.eyebrow { letter-spacing: .14em; text-transform: uppercase; color: #93b9c9; font-size: .75rem; }
+.card { border: 1px solid #3b4d61; background: #172436; border-radius: 12px; padding: 1.5rem; margin: 1rem 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
