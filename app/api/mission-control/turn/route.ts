@@ -3,10 +3,10 @@ import { eventAdvice } from "../../../../src/ai/advisor.ts";
 import { validAgentPublicState, type AgentEvent } from "../../../../src/ai/publicState.ts";
 import { sendIMessage } from "../../../../src/ai/spectrum.ts";
 import { appendMissionAdvice, claimMissionMessageSlot, missionSessionByRun, updateMissionSession, validSessionToken } from "../../../../src/backend/missionSessions.ts";
+import { validMissionRunId } from "../../../../src/ai/photonValidation.ts";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const allowedEvents = new Set(["WATER_CRISIS", "CRISIS_RECOVERY", "CROP_YIELD_MILESTONE", "MEAT_YIELD_MILESTONE",
   "POWER_INSTABILITY", "CROP_OUTPUT_BEHIND", "PRODUCTION_TARGET_REACHED", "THERMAL_CONFIGURATION"]);
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (raw.length > 4_000) return NextResponse.json({ error: "Telemetry too large" }, { status: 413 });
     body = JSON.parse(raw);
   } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-  if (!body || typeof body.runId !== "string" || !uuid.test(body.runId) || !Number.isInteger(body.turn)
+  if (!body || !validMissionRunId(body.runId) || !Number.isInteger(body.turn)
     || Number(body.turn) < 1 || Number(body.turn) > 30 || typeof body.outage !== "boolean" || !validAgentPublicState(body.publicState))
     return NextResponse.json({ error: "Invalid Mission Control update" }, { status: 400 });
   let event: AgentEvent | undefined;

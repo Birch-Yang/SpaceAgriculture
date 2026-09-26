@@ -4,11 +4,20 @@ import { photonCredentials } from "./photonConfig.ts";
 import { contextualHint } from "./photonAdvisor.ts";
 import { eventAdvice, replyAdvice } from "./advisor.ts";
 import { answerPhotonQuestion } from "./photonQuestions.ts";
+import { normalizeIMessageAddress, validIMessageAddress, validMissionRunId } from "./photonValidation.ts";
 import type { AgentPublicState } from "./publicState.ts";
 import type { MissionSession } from "../backend/missionSessions.ts";
 
 const telemetry: AgentPublicState = Object.freeze({ water: "healthy", power: "stable", oxygen: "healthy", temperature: "nominal", agriculture: "on-track" });
 const session: MissionSession = { runId: "123e4567-e89b-12d3-a456-426614174000", spaceId: "test-space", tokenHash: "test", publicState: telemetry, outage: false, adviceHistory: [], lastTurn: 11, messageCount: 0 };
+
+test("Mission Control accepts game run IDs and formatted iMessage numbers", () => {
+  assert.equal(validMissionRunId(crypto.randomUUID()), true);
+  assert.equal(validMissionRunId("123e4567-e89b-12d3-426614174000"), false);
+  assert.equal(normalizeIMessageAddress("+1 (555) 123-4567"), "+15551234567");
+  assert.equal(validIMessageAddress(normalizeIMessageAddress("+1 555 123 4567")), true);
+  assert.equal(validIMessageAddress(normalizeIMessageAddress("1+ 555 123 4567")), false);
+});
 
 test("Photon credentials accept the requested names and preserve legacy aliases", () => {
   assert.deepEqual(photonCredentials({ PHOTON_PROJECT_ID: "project", PHOTON_API_KEY: "project-secret", PHOTON_WEBHOOK_SECRET: "signing", SPECTRUM_PROJECT_SECRET: "old" }), {

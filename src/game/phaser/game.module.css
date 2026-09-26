@@ -70,6 +70,11 @@
 .launchForm { display: grid; gap: 15px; margin: 32px 0 20px; }
 .launchForm label { display: grid; gap: 7px; color: #bce4cc; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .launchForm input, .launchForm select { padding: 13px; font-size: 15px; }
+.imessageEnrollment select { display: block; width: 100%; padding: 14px; margin-top: 8px; border: 2px solid #977555; border-radius: 3px; background: #f1e5cc; color: #42382e; font: inherit; }
+.imessageEnrollment select:focus-visible { outline: 3px solid #b8d59c; outline-offset: 5px; }
+.imessagePhone { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 12px; }
+.imessagePhone label { min-width: 0; }
+.imessagePhone input, .imessagePhone select { width: 100%; box-sizing: border-box; }
 .moon { width: min(40vw, 500px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 37% 36%, #aab9af, #697e80 48%, #334b57 72%, #213746 100%); box-shadow: 0 0 110px #81c7b944, inset -45px -35px 80px #152536aa; position: relative; }
 .moon::after { content: ""; position: absolute; inset: 9%; border-radius: 50%; background: radial-gradient(circle at 25% 50%, #4c666366 0 7%, transparent 8%), radial-gradient(circle at 65% 25%, #4c666366 0 5%, transparent 6%), radial-gradient(circle at 58% 65%, #4c666366 0 10%, transparent 11%); }
 .modalBackdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #06111ddc; padding: 18px; }
@@ -101,3 +106,4 @@
 :global(.minigameStart) { display: block; margin: 10px auto; }
 @media (max-width: 1200px) { .workspace { grid-template-columns: 250px minmax(450px, 1fr); } .details { grid-column: 1 / -1; max-height: none; } .dashboard { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 760px) { .shell { padding: 12px; } .workspace { display: block; } .palette, .mapColumn, .details { margin-bottom: 10px; max-height: none; } .catalog { grid-template-columns: repeat(2, 1fr); } .dashboard { grid-template-columns: repeat(2, 1fr); } .header, .command { flex-wrap: wrap; } .moon { display: none; } }
+@media (max-width: 480px) { .imessagePhone { grid-template-columns: 1fr; } }

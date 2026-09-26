@@ -18,6 +18,7 @@ import { curatedSources } from "../../content/sources";
 import { communicationsAvailable } from "../../data/systems.ts";
 import { deriveAgentEvent, toAgentPublicState } from "../../ai/publicState.ts";
 import { PhotonAdvisor } from "../../ui/PhotonAdvisor";
+import { normalizeIMessageAddress, validIMessageAddress } from "../../ai/photonValidation.ts";
 import type { MinigameResult } from "../minigames/match3/Match3.tsx";
 import { MinigameBoundary } from "../minigames/MinigameBoundary.tsx";
 import { GameCanvas } from "./GameCanvas.tsx";
@@ -33,13 +34,30 @@ const resourceKeys = ["power", "water", "oxygen", "food", "temperature"] as cons
 const Match3 = lazy(() => import("../minigames/match3/Match3.tsx").then((module) => ({ default: module.Match3 })));
 const RepairSnake = lazy(() => import("../minigames/repairSnake/RepairSnake.tsx").then((module) => ({ default: module.RepairSnake })));
 const tutorialKey = "agronaut:tutorial:v1";
+const countryCodes = [
+  { label: "United States / Canada (+1)", value: "+1" },
+  { label: "United Kingdom (+44)", value: "+44" },
+  { label: "China (+86)", value: "+86" },
+  { label: "India (+91)", value: "+91" },
+  { label: "Australia (+61)", value: "+61" },
+  { label: "France (+33)", value: "+33" },
+  { label: "Germany (+49)", value: "+49" },
+  { label: "Japan (+81)", value: "+81" },
+  { label: "South Korea (+82)", value: "+82" },
+  { label: "Singapore (+65)", value: "+65" },
+  { label: "Other country code", value: "other" },
+] as const;
 const emptyProgress: TutorialProgress = { enteredGreenhouse: false, enteredLivestock: false, queuedAction: false, resolvedTurn: false };
 type SubmittedResult = { runId: string; score: { rules: number; llm: number; total: number; usedFallback: boolean }; report: MissionReportData; saved: boolean; reason?: string; retryable?: boolean };
 
 export function GameClient() {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
-  const [imessageAddress, setImessageAddress] = useState("");
+  const [imessageMethod, setImessageMethod] = useState<"none" | "phone" | "email">("none");
+  const [countryCode, setCountryCode] = useState("+1");
+  const [otherCountryCode, setOtherCountryCode] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [imessageEmail, setImessageEmail] = useState("");
   const advisorToken = useRef<string | null>(null);
   const advisorRun = useRef<string | null>(null);
   const advisorEnrollment = useRef<Promise<void> | null>(null);
@@ -76,6 +94,19 @@ export function GameClient() {
   function launch(event: FormEvent) {
     event.preventDefault();
     try {
+      const address = imessageMethod === "phone"
+        ? normalizeIMessageAddress(`${countryCode === "other" ? otherCountryCode : countryCode}${phoneNumber}`)
+        : imessageMethod === "email" ? imessageEmail.trim() : "";
+      if (imessageMethod === "phone" && countryCode === "other" && !/^\+[1-9]\d{0,2}$/.test(otherCountryCode.trim())) {
+        setMessage("Enter a country code beginning with +, followed by one to three digits.");
+        return;
+      }
+      if (imessageMethod !== "none" && !validIMessageAddress(address)) {
+        setMessage(imessageMethod === "phone"
+          ? "Enter a country code beginning with + and your phone number using digits only."
+          : "Enter the email address registered with iMessage.");
+        return;
+      }
       const runId = crypto.randomUUID();
       const initial = createInitialState(runId, nickname.trim(), mode);
       setState(initial);
@@ -86,7 +117,7 @@ export function GameClient() {
       advisorEnrollment.current = null;
       setAdvisorConnection("unavailable"); setAdvisorDetail("");
       advisorUpdates.current = Promise.resolve();
-      if (imessageAddress.trim()) advisorEnrollment.current = enrollAdvisor(runId, imessageAddress.trim(), initial);
+      if (address) advisorEnrollment.current = enrollAdvisor(runId, address, initial);
       setTool({ kind: "select" }); setSelectedId(null); setInteriorId(null); setPending([]); setTutorialProgress(emptyProgress);
       setTutorialVisible(window.localStorage.getItem(tutorialKey) !== "seen");
       setMessage("Build a compact outpost. A Habitat Core is required to begin.");
@@ -243,7 +274,18 @@ export function GameClient() {
   if (!state) return <Onboarding form={<form onSubmit={launch} className="mission-form">
     <label>Mission callsign<input required pattern={String.raw`.*\S.*`} maxLength={32} value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="Your nickname" aria-describedby="nickname-help" /></label>
     <p id="nickname-help" className="help">Choose a nickname for public mission records. No account needed.</p>
-    <details><summary>Mission Control via iMessage (optional)</summary><label>iMessage address<input maxLength={254} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="+15551234567 or Apple ID email" /></label><p className="help">Photon sends a welcome message when you launch. During operations, ask for hints here or reply in Messages; both share two questions per turn.</p></details>
+    <details className={styles.imessageEnrollment}><summary>Mission Control via iMessage (optional)</summary>
+      <label>Connect using<select value={imessageMethod} onChange={(event) => setImessageMethod(event.target.value as "none" | "phone" | "email")}>
+        <option value="none">No Messages connection</option><option value="phone">Phone number</option><option value="email">iMessage email</option>
+      </select></label>
+      {imessageMethod === "phone" && <div className={styles.imessagePhone}>
+        <label>Country code<select value={countryCode} onChange={(event) => setCountryCode(event.target.value)}>{countryCodes.map((country) => <option key={country.value} value={country.value}>{country.label}</option>)}</select></label>
+        {countryCode === "other" && <label>Country code<input type="tel" inputMode="tel" value={otherCountryCode} onChange={(event) => setOtherCountryCode(event.target.value)} placeholder="+34" maxLength={5} required /></label>}
+        <label>Phone number (without country code)<input type="tel" inputMode="tel" autoComplete="tel-national" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} placeholder="555 123 4567" maxLength={25} required /></label>
+      </div>}
+      {imessageMethod === "email" && <label>iMessage email<input type="email" autoComplete="email" value={imessageEmail} onChange={(event) => setImessageEmail(event.target.value)} placeholder="you@example.com" maxLength={254} required /></label>}
+      <p className="help">Use the phone number or email registered with iMessage and your Photon project. Photon sends a welcome message when you launch. During operations, ask for hints here or reply in Messages; both share two questions per turn.</p>
+    </details>
     <div className="modes"><button type="submit" onClick={() => setMode("challenge")}>Challenge Mode<small>10 turns · high pressure</small></button><button type="submit" onClick={() => setMode("progressive")}>Progressive Mode<small>3 levels · learn as you grow</small></button></div>
     <p role="status" className="help">{message}</p>
   </form>} />;
@@ -283,7 +325,7 @@ export function GameClient() {
       </aside>
     </div>
     <footer className={styles.command}><p role="status">{message}</p>{building ? <button className={styles.primary} onClick={begin}>{state.phase === "intermission" ? "BEGIN NEXT LEVEL →" : "BEGIN MISSION →"}</button> : state.phase === "operation" ? <button className={styles.primary} onClick={endTurn}>END TURN →</button> : <button className={styles.primary} onClick={() => router.push(`/report/${state.runId}`)}>VIEW REPORT →</button>}</footer>
-    {imessageAddress.trim() && <PhotonAdvisor key={state.runId} state={state} token={advisorToken.current} connection={advisorConnection} detail={advisorDetail} />}
+    {imessageMethod !== "none" && <PhotonAdvisor key={state.runId} state={state} token={advisorToken.current} connection={advisorConnection} detail={advisorDetail} />}
     {state.phase === "complete" && <section aria-label="Mission result">
       {submissionStatus === "submitting" && <p role="status">Calculating and saving the mission result…</p>}
       {(submissionStatus === "failed" || (submitted && !submitted.saved && submitted.retryable !== false)) && <button onClick={() => transcript && void submitRun(transcript)}>Retry saving result</button>}
