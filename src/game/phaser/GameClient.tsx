@@ -1,15 +1,21 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { MODULES, MODULE_BY_ID } from "../../data/modules.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
-import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../state/reducer.ts";
-import { maxActionPoints, resolveTurn } from "../simulation/resolveTurn.ts";
+import { advanceLevel, applyBuildAction, createInitialState, startOperation, getBuildRemovalRefund } from "../state/reducer.ts";
+import { apRecovery, resolveTurn } from "../simulation/resolveTurn.ts";
+import { selectBuildReadinessWarnings, selectTurnLabel } from "../state/selectors.ts";
 import { seedForLevel } from "../simulation/hazards.ts";
 import type { GameMode, GameState, PlayerAction } from "../state/types.ts";
 import type { RunTranscript } from "../state/transcript.ts";
 import type { MissionReport as MissionReportData } from "../../ai/report.ts";
-import { MissionReport } from "../../ui/MissionReport";
+import { fallbackReport } from "../../ai/report.ts";
+import { buildRunSummary } from "../../ai/schemas.ts";
+import { scoreRules, scoreWithFallback } from "../simulation/scoring.ts";
+import { readReportSnapshot, writeReportSnapshot } from "../state/reportSnapshot.ts";
+import { writeLastSavedRun } from "../state/lastRun.ts";
 import { curatedSources } from "../../content/sources";
 import { communicationsAvailable } from "../../data/systems.ts";
 import { deriveAgentEvent, toAgentPublicState } from "../../ai/publicState.ts";
@@ -22,6 +28,7 @@ import { actionCost, actionSlotIndex, agricultureSlots, careAction, slotAction }
 import { TutorialGuide, type TutorialProgress } from "./TutorialGuide.tsx";
 import type { BuildTool } from "./GameScene.ts";
 import styles from "./game.module.css";
+import { Onboarding } from "../../ui/integration/Onboarding";
 import { BuildingPortrait } from "../../ui/BuildingPortrait";
 
 const resourceKeys = ["power", "water", "oxygen", "food", "temperature"] as const;
@@ -32,6 +39,7 @@ const emptyProgress: TutorialProgress = { enteredGreenhouse: false, enteredLives
 type SubmittedResult = { runId: string; score: { rules: number; llm: number; total: number; usedFallback: boolean }; report: MissionReportData; saved: boolean; reason?: string; retryable?: boolean };
 
 export function GameClient() {
+  const router = useRouter();
   const [nickname, setNickname] = useState("");
   const [imessageAddress, setImessageAddress] = useState("");
   const advisorToken = useRef<string | null>(null);
@@ -52,6 +60,7 @@ export function GameClient() {
   const [tutorialProgress, setTutorialProgress] = useState<TutorialProgress>(emptyProgress);
   const [pending, setPending] = useState<PlayerAction[]>([]);
   const [message, setMessage] = useState("Choose a mission mode and enter a callsign.");
+  const [showPreflight, setShowPreflight] = useState(false);
   const [mini, setMini] = useState<"match3" | "snake" | null>(null);
   const [miniTarget, setMiniTarget] = useState<MiniTarget | null>(null);
   const [miniResult, setMiniResult] = useState<MinigameResult | null>(null);
@@ -69,10 +78,11 @@ export function GameClient() {
   function launch(event: FormEvent) {
     event.preventDefault();
     try {
+      setShowPreflight(false);
       const runId = crypto.randomUUID();
       const initial = createInitialState(runId, nickname.trim(), mode);
       setState(initial);
-      setTranscript({ version: 1, runId, nickname: nickname.trim().slice(0, 32), mode, steps: [] });
+      setTranscript({ version: 2, runId, nickname: nickname.trim().slice(0, 32), mode, steps: [] });
       setSubmitted(null); setSubmissionStatus("idle"); setSavedRunId(null);
       advisorToken.current = null;
       advisorRun.current = runId;
@@ -87,29 +97,62 @@ export function GameClient() {
 
   function build(action: PlayerAction) {
     if (!state) return;
+    if (["REMOVE_MODULE", "REMOVE_CORRIDOR", "MOVE_MODULE"].includes(action.type)
+      && !(state.phase === "design" && state.level === 1 && state.turn === 1)) {
+      setMessage("Moving and removing structures is only available before the first turn begins.");
+      return;
+    }
+    setShowPreflight(false);
     const result = applyBuildAction(state, action);
     setState(result.state);
     if (!result.error) setTranscript((current) => current ? { ...current, steps: [...current.steps, { kind: "build", action }] } : current);
     setMessage(result.error ?? "Base layout updated.");
+    if (!result.error && action.type === "PLACE_MODULE") {
+      setTool({ kind: "select" });
+      setSelectedId(result.state.modules.at(-1)?.id ?? null);
+    }
     if (!result.error && action.type === "REMOVE_MODULE") { setSelectedId(null); setInteriorId(null); }
     if (!result.error && action.type === "REMOVE_CORRIDOR") setSelectedId(null);
   }
 
-  function begin() {
+  useEffect(() => {
+    function removeSelection(event: KeyboardEvent) {
+      if (event.key !== "Backspace" || event.repeat || event.defaultPrevented
+        || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable
+        || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'))) return;
+      if (!state || state.phase !== "design" || state.level !== 1 || state.turn !== 1
+        || !selectedId || mini || interiorId) return;
+      if (state.modules.some(item => item.id === selectedId)) {
+        event.preventDefault();
+        build({ type: "REMOVE_MODULE", placedModuleId: selectedId });
+      } else if (state.utilityEdges.some(item => item.id === selectedId)) {
+        event.preventDefault();
+        build({ type: "REMOVE_CORRIDOR", edgeId: selectedId });
+      }
+    }
+    window.addEventListener("keydown", removeSelection);
+    return () => window.removeEventListener("keydown", removeSelection);
+  }, [state, selectedId, mini, interiorId]);
+
+  function begin(confirmed = false) {
     if (!state) return;
+    if (!confirmed && selectBuildReadinessWarnings(state).length) { setShowPreflight(true); return; }
+    setShowPreflight(false);
     try { setState(startOperation(state)); setTranscript((current) => current ? { ...current, steps: [...current.steps, { kind: "start" }] } : current); setTool({ kind: "select" }); setMessage("Mission active. Base layout is locked during operation."); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Cannot begin mission"); }
   }
 
   function queue(action: PlayerAction): boolean {
     if (!state || state.phase !== "operation") { setMessage("Begin the mission before planning actions."); return false; }
-    const baseline = maxActionPoints(state);
+    const baseline = apRecovery(state);
     const sameTarget = (current: PlayerAction) => current.type === action.type
       && (("moduleId" in current && "moduleId" in action && current.moduleId === action.moduleId && actionSlotIndex(current) === actionSlotIndex(action))
         || ("targetId" in current && "targetId" in action && current.targetId === action.targetId));
     const next = [...pending.filter((current) => !sameTarget(current)), action];
     if (next.reduce((sum, current) => sum + actionCost(current), 0) > baseline) {
-      setMessage(`Only ${baseline} AP can be recovered this turn; food shortages may reduce that further. Clear an action first.`); return false;
+      setMessage(`Only ${baseline} AP will be available this turn. Clear an action first.`); return false;
     }
     setPending(next);
     if (["PLANT_CROP", "SET_CROP_PARAMS", "SET_ANIMAL", "SET_LIVESTOCK_PARAMS", "HARVEST_CROP", "WATER_PLOT", "FEED_STALL"].includes(action.type))
@@ -127,7 +170,13 @@ export function GameClient() {
       if (nextTranscript) setTranscript(nextTranscript);
       setState(betweenLevels ? advanceLevel(result.state) : result.state); setPending([]); setMiniResult(null);
       if (result.state.phase === "complete" && nextTranscript) {
-        void (async () => { await notifyAdvisor(result.state, result.summary.turn); await submitRun(nextTranscript); })();
+        const rules = scoreRules(result.state);
+        writeReportSnapshot({ version: 1, runId: result.state.runId, nickname: result.state.nickname,
+          score: { ...scoreWithFallback(rules), breakdown: rules },
+          report: fallbackReport(buildRunSummary(result.state, nextTranscript), !!result.state.passed, curatedSources),
+          saved: false, pending: true, transcript: nextTranscript });
+        void notifyAdvisor(result.state, result.summary.turn);
+        void submitRun(nextTranscript);
       } else void notifyAdvisor(result.state, result.summary.turn);
       setTutorialProgress((progress) => ({ ...progress, resolvedTurn: true }));
       setMessage([`Turn ${result.summary.turn}: ${result.acceptedActions.length - 1} action(s) accepted; crops +${result.summary.cropYield}, meat +${result.summary.meatYield}.`, ...result.rejectedActions, ...result.summary.warnings].join(" "));
@@ -169,11 +218,22 @@ export function GameClient() {
     try {
       const response = await fetch("/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: run }) });
       const data = await response.json() as SubmittedResult & { error?: string; code?: string };
-      if (response.status === 409 && data.code === "already_saved" && data.runId) { setSavedRunId(data.runId); setSubmissionStatus("done"); return; }
+      if (response.status === 409 && data.code === "already_saved" && data.runId) {
+        const previous = readReportSnapshot(run.runId);
+        if (previous) writeReportSnapshot({ ...previous, saved: true, pending: false });
+        writeLastSavedRun(data.runId); setSavedRunId(data.runId); setSubmissionStatus("done"); return;
+      }
       if (!response.ok || !data.report || !data.score) throw new Error(data.error ?? "Run submission unavailable");
+      const previous = readReportSnapshot(run.runId);
+      if (previous) writeReportSnapshot({ ...previous, report: data.report,
+        score: { ...data.score, breakdown: previous.score.breakdown }, saved: data.saved,
+        pending: false, retryable: data.retryable, reason: data.reason });
       setSubmitted(data); setSubmissionStatus("done");
-      if (data.saved) setSavedRunId(data.runId);
+      if (data.saved) { writeLastSavedRun(data.runId); setSavedRunId(data.runId); }
     } catch (error) {
+      const previous = readReportSnapshot(run.runId);
+      if (previous) writeReportSnapshot({ ...previous, pending: false,
+        reason: error instanceof Error ? error.message : "Run submission unavailable" });
       setSubmissionStatus("failed");
       setMessage(error instanceof Error ? error.message : "Run submission unavailable");
     }
@@ -208,13 +268,15 @@ export function GameClient() {
     window.localStorage.setItem(tutorialKey, "seen");
   }
 
-  if (!state) return <main className={styles.launch}>
-    <div className={styles.moon} aria-hidden="true" />
-    <div className={styles.launchContent}><p className={styles.kicker}>LUNAR SOUTH POLE / MISSION SIMULATOR</p><h1>Build food systems<br /><em>where survival comes first.</em></h1><p>Design an outpost, connect utilities, grow food, and survive the lunar environment.</p>
-      <form onSubmit={launch} className={styles.launchForm}><label>Mission callsign<input required maxLength={32} value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="Your nickname" /></label><label>Mode<select value={mode} onChange={(event) => setMode(event.target.value as GameMode)}><option value="challenge">Challenge · 10 turns</option><option value="progressive">Progressive · 3 levels</option></select></label><label>iMessage address (optional; sends Mission Control advice to you)<input maxLength={254} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="+15551234567 or Apple ID email" /></label><button className={styles.primary} type="submit">LAUNCH MISSION →</button></form><p role="status">{message}</p>
-    </div>
-  </main>;
+  if (!state) return <Onboarding form={<form onSubmit={launch} className="mission-form">
+    <label>Mission callsign<input required pattern={String.raw`.*\S.*`} maxLength={32} value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="Your nickname" aria-describedby="nickname-help" /></label>
+    <p id="nickname-help" className="help">Choose a nickname for public mission records. No account needed.</p>
+    <details><summary>Mission Control via iMessage (optional)</summary><label>iMessage address<input maxLength={254} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="+15551234567 or Apple ID email" /></label><p className="help">Sends Mission Control advice to this address when you launch.</p></details>
+    <div className="modes"><button type="submit" onClick={() => setMode("challenge")}>Challenge Mode<small>10 turns · high pressure</small></button><button type="submit" onClick={() => setMode("progressive")}>Progressive Mode<small>3 levels · learn as you grow</small></button></div>
+    <p role="status" className="help">{message}</p>
+  </form>} />;
 
+  const initialBuild = state.phase === "design" && state.level === 1 && state.turn === 1;
   const building = state.phase === "design" || state.phase === "intermission";
   const selectedModule = state.modules.find((item) => item.id === selectedId);
   const selectedEdge = state.utilityEdges.find((item) => item.id === selectedId);
@@ -225,7 +287,7 @@ export function GameClient() {
   const modifierAvailable = state.crops.some((plot) => "slotIndex" in plot) || state.livestock.some((animal) => "slotIndex" in animal);
 
   return <main className={styles.shell}>
-    <header className={styles.header}><div><p className={styles.kicker}>AGRONaut / LUNAR AGRICULTURE</p><h1>South Pole Outpost</h1><p className={styles.meta}>{state.nickname} · {state.mode.toUpperCase()} · LEVEL {state.level} · TURN {state.turn}/10</p></div><div className={styles.headerActions}><span className={`${styles.phase} ${state.crisis ? styles.crisis : ""}`}>{state.crisis ? "CRISIS" : state.phase.toUpperCase()}</span><button onClick={() => setTutorialVisible(true)}>Tutorial</button><button onClick={() => setState(null)}>New run</button></div></header>
+    <header className={styles.header}><div><p className={styles.kicker}>AGRONaut / LUNAR AGRICULTURE</p><h1>South Pole Outpost</h1><p className={styles.meta}>{state.nickname} · {state.mode.toUpperCase()} · LEVEL {state.level} · {selectTurnLabel(state)}</p></div><div className={styles.headerActions}><span className={`${styles.phase} ${state.crisis ? styles.crisis : ""}`}>{state.crisis ? "CRISIS" : state.phase.toUpperCase()}</span><button onClick={() => setTutorialVisible(true)}>Tutorial</button>{state.phase !== "complete" && <button onClick={() => setState(null)}>New run</button>}</div></header>
     {tutorialVisible && <TutorialGuide state={state} progress={tutorialProgress} onDismiss={dismissTutorial} />}
     <section className={styles.dashboard} aria-label="Mission resources">{resourceKeys.map((key) => {
       const value = state.resources[key];
@@ -234,28 +296,33 @@ export function GameClient() {
       return <div key={key} className={`${styles.resource} ${critical ? styles.low : ""}`}><span>{key.toUpperCase()}</span><strong>{value.toFixed(1)} <small>{key === "temperature" ? "°C" : "units"}</small></strong><i><b style={{ width: `${fill}%` }} /></i></div>;
     })}<div className={styles.resource}><span>CROP / MEAT</span><strong>{state.production.cropCumulative.toFixed(0)} / {state.production.meatCumulative.toFixed(0)}</strong><small>Targets {target.cropTarget} / {target.meatTarget}</small></div></section>
     <div className={styles.workspace}>
-      <aside className={styles.palette}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${maxActionPoints(state)} AP PLANNED (MAX)`}</small></div>
+      <aside className={styles.palette}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${apRecovery(state)} AP PLANNED`}</small></div>
         {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
       </aside>
-      <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Select or drag to move a disconnected module" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={!communicationsAvailable(state) ? styles.offline : styles.online}>{!communicationsAvailable(state) ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
-      <aside className={styles.details}><div className={styles.panelHeading}><strong>MISSION STATUS</strong><small>{state.phase === "complete" ? "FINAL" : "LIVE"}</small></div><div className={styles.section}><p className={styles.label}>HAZARD FORECAST</p><p>Solar {state.forecast.solar} · Thermal {state.forecast.thermal} · Impact {state.forecast.impact}</p></div>
+      <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Before turn 1: select + Backspace to remove, drag disconnected buildings to move" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={!communicationsAvailable(state) ? styles.offline : styles.online}>{!communicationsAvailable(state) ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
+      <aside className={styles.details}><div className={styles.panelHeading}><strong>MISSION STATUS</strong><small>{state.phase === "complete" ? "FINAL" : "LIVE"}</small></div><div className={styles.section}><p className={styles.label}>HAZARD FORECAST</p><p>{state.forecast.window}: Solar {state.forecast.solar} · Thermal {state.forecast.thermal} · Impact {state.forecast.impact} · Systems {state.forecast.systems}</p></div>
         {definition && selectedModule ? <div className={styles.section}><p className={styles.label}>SELECTED MODULE</p><h2>{definition.label}</h2><p>Integrity {Math.round(selectedModule.integrity * 100)}% · Grid {selectedModule.x},{selectedModule.y}</p>
           {agriculture && <><p>{agriculture.kind === "greenhouse" ? "Crop plots" : "Livestock stalls"}: {agriculture.slots.length}</p><button onClick={() => openInterior(selectedModule.id)}>Enter {agriculture.kind === "greenhouse" ? "Greenhouse" : "Livestock Module"}</button></>}
-          {building && <button onClick={() => build({ type: "REMOVE_MODULE", placedModuleId: selectedModule.id })}>Remove · refund {Math.floor(definition.cost / 2)}</button>}
+          {initialBuild && <button onClick={() => build({ type: "REMOVE_MODULE", placedModuleId: selectedModule.id })}>Remove (Backspace) · refund {getBuildRemovalRefund(state, selectedModule.id)}</button>}
           {state.phase === "operation" && <>{definition.category === "utility" && <button onClick={() => queue({ type: "REALLOCATE_UTILITY", moduleId: selectedModule.id, allocation: { thermal: 0.6, backupPower: 0.2, commsBackup: 0.2 } })}>Queue thermal boost · 1 AP</button>}
             {selectedModule.integrity < 1 && <button onClick={() => queue({ type: "REPAIR", targetId: selectedModule.id })}>Repair · 2 AP</button>}
             {selectedModule.integrity < 1 && <button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedModule.id, slotIndex: 0 })}>Repair minigame</button>}</>}
-        </div> : selectedEdge ? <div className={styles.section}><p className={styles.label}>UTILITY CORRIDOR</p><h2>{selectedEdge.id}</h2><p>Length {selectedEdge.length} · Integrity {Math.round(selectedEdge.integrity * 100)}%</p>{building && <button onClick={() => build({ type: "REMOVE_CORRIDOR", edgeId: selectedEdge.id })}>Remove corridor · 1 material</button>}{state.phase === "operation" && selectedEdge.integrity < 1 && <><button onClick={() => queue({ type: "REPAIR", targetId: selectedEdge.id })}>Repair · 2 AP</button><button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedEdge.id, slotIndex: 0 })}>Repair minigame</button></>}</div> : <div className={styles.section}><p className={styles.label}>INSPECT</p><p>Select a structure on the map to see its condition and actions.</p></div>}
-        {pending.length > 0 && <div className={styles.section}><p className={styles.label}>QUEUED ({pending.length}) · {plannedAp} AP</p><p>Applied on End Turn. Food shortages can reduce available AP.</p>{pending.map((action, i) => <p key={i}>{action.type.replaceAll("_", " ")} · {"moduleId" in action ? `${action.moduleId} / slot ${actionSlotIndex(action) + 1}` : "targetId" in action ? action.targetId : "mission"}</p>)}<button onClick={() => setPending([])}>Clear queue</button></div>}{miniResult && <div className={styles.section}><p className={styles.label}>LAST MINIGAME</p><p>{miniResult.modifier >= 0 ? "+" : ""}{Math.round(miniResult.modifier * 100)}% bonus queued with its target action</p></div>}<div className={styles.section}><p className={styles.label}>LATEST TURN</p><p>{state.lastTurn ? `Crops +${state.lastTurn.cropYield}; meat +${state.lastTurn.meatYield}. ${state.lastTurn.warnings.join(" ")}` : "Awaiting first turn."}</p></div>{state.phase === "complete" && <div className={styles.section}><p className={styles.label}>MISSION RESULT</p><h2 className={state.passed ? styles.pass : styles.fail}>{state.passed ? "PASS" : "FAIL"}</h2><p>{state.failureReason ?? "Production goals reached."}</p></div>}
+        </div> : selectedEdge ? <div className={styles.section}><p className={styles.label}>UTILITY CORRIDOR</p><h2>{selectedEdge.id}</h2><p>Length {selectedEdge.length} · Integrity {Math.round(selectedEdge.integrity * 100)}%</p>{initialBuild && <button onClick={() => build({ type: "REMOVE_CORRIDOR", edgeId: selectedEdge.id })}>Remove corridor · refund {getBuildRemovalRefund(state, selectedEdge.id)}</button>}{state.phase === "operation" && selectedEdge.integrity < 1 && <><button onClick={() => queue({ type: "REPAIR", targetId: selectedEdge.id })}>Repair · 2 AP</button><button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedEdge.id, slotIndex: 0 })}>Repair minigame</button></>}</div> : <div className={styles.section}><p className={styles.label}>INSPECT</p><p>Select a structure on the map to see its condition and actions.</p></div>}
+        {pending.length > 0 && <div className={styles.section}><p className={styles.label}>QUEUED ({pending.length}) · {plannedAp} AP</p><p>Applied on End Turn. Available AP already accounts for current food reserves.</p>{pending.map((action, i) => <p key={i}>{action.type.replaceAll("_", " ")} · {"moduleId" in action ? `${action.moduleId} / slot ${actionSlotIndex(action) + 1}` : "targetId" in action ? action.targetId : "mission"}</p>)}<button onClick={() => setPending([])}>Clear queue</button></div>}{miniResult && <div className={styles.section}><p className={styles.label}>LAST MINIGAME</p><p>{miniResult.modifier >= 0 ? "+" : ""}{Math.round(miniResult.modifier * 100)}% bonus queued with its target action</p></div>}<div className={styles.section}><p className={styles.label}>LATEST TURN</p><p>{state.lastTurn ? `Crops +${state.lastTurn.cropYield}; meat +${state.lastTurn.meatYield}. ${state.lastTurn.warnings.join(" ")}` : "Awaiting first turn."}</p></div>{state.phase === "complete" && <div className={styles.section}><p className={styles.label}>MISSION RESULT</p><h2 className={state.passed ? styles.pass : styles.fail}>{state.passed ? "PASS" : "FAIL"}</h2><p>{state.failureReason ?? "Production goals reached."}</p></div>}
       </aside>
     </div>
-    <footer className={styles.command}><p role="status">{message}</p>{building ? <button className={styles.primary} onClick={begin}>{state.phase === "intermission" ? "BEGIN NEXT LEVEL →" : "BEGIN MISSION →"}</button> : state.phase === "operation" ? <button className={styles.primary} onClick={endTurn}>END TURN →</button> : <button className={styles.primary} onClick={() => setState(null)}>NEW MISSION →</button>}</footer>
+    {building && showPreflight && <section className={styles.command} role="region" aria-label="Mission readiness check">
+      <div><h2>Check your base before starting</h2><ul>{selectBuildReadinessWarnings(state).map(warning => <li key={warning}>{warning}</li>)}</ul>
+      <p>The layout will be locked. These checks do not guarantee survival.</p>
+      <button onClick={() => setShowPreflight(false)}>Keep building</button>{" "}<button onClick={() => begin(true)}>Start anyway</button></div>
+    </section>}
+    <footer className={styles.command}><p role="status">{message}</p>{building ? <button className={styles.primary} onClick={() => begin()}>{state.phase === "intermission" ? "BEGIN NEXT LEVEL →" : "BEGIN MISSION →"}</button> : state.phase === "operation" ? <button className={styles.primary} onClick={endTurn}>END TURN →</button> : <button className={styles.primary} onClick={() => router.push(`/report/${state.runId}`)}>VIEW REPORT →</button>}</footer>
     {imessageAddress.trim() && <MissionControlPanel connection={advisorConnection} messages={advisorMessages} />}
     {state.phase === "complete" && <section aria-label="Mission result">
       {submissionStatus === "submitting" && <p role="status">Calculating and saving the mission result…</p>}
       {(submissionStatus === "failed" || (submitted && !submitted.saved && submitted.retryable !== false)) && <button onClick={() => transcript && void submitRun(transcript)}>Retry saving result</button>}
-      {submitted && <><MissionReport report={submitted.report} nickname={state.nickname} scores={submitted.score} sources={curatedSources} />{!submitted.saved && <p role="status">{submitted.reason ?? "Result is available locally; saving can be retried."}</p>}</>}
-      {savedRunId && <p><a href={`/report/${savedRunId}`}>Open saved mission report</a></p>}
+      {submitted && !submitted.saved && <p role="status">{submitted.reason ?? "The report is available locally; saving can be retried."}</p>}
+      {savedRunId && <p role="status">Mission report saved. Select View Report to continue.</p>}
     </section>}
     {mini && <div className={styles.modalBackdrop}><div className={styles.modal}><MinigameBoundary key={`${mini}-${miniTarget?.moduleId}`} onFallback={() => completeMini({ completed: false, modifier: 0 })}><Suspense fallback={<p role="status">Loading minigame…</p>}>{mini === "match3" ? <Match3 onComplete={completeMini} onCancel={() => setMini(null)} /> : <RepairSnake onComplete={completeMini} onCancel={() => setMini(null)} />}</Suspense></MinigameBoundary></div></div>}
     {interiorId && <AgricultureInterior key={interiorId} state={state} moduleId={interiorId} pending={pending} feedback={message} onQueue={queue} onMini={openMini} onClose={() => setInteriorId(null)} />}

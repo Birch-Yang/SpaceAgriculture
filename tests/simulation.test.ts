@@ -148,3 +148,91 @@ test("a connected sample base can finish ten challenge turns with active farming
   assert.equal(state.lastTurn?.turn, 10);
   assert.equal(state.passed, true, `Production: ${JSON.stringify(state.production)}; failure: ${state.failureReason}`);
 });
+
+
+test("pre-mission removal restores full module cost without duplicate refunds", () => {
+  for (const moduleId of ["habitat-core", "greenhouse-standard", "communication-tower"]) {
+    const initial = createInitialState("refund-test", "Tester", "challenge");
+    const placed = build({ type: "PLACE_MODULE", moduleId, x: 3, y: 3, rotation: 0 }, initial);
+    const placedModuleId = placed.modules[0].id;
+    assert.ok(placed.budget < initial.budget);
+    const removed = build({ type: "REMOVE_MODULE", placedModuleId }, placed);
+    assert.equal(removed.budget, initial.budget);
+    assert.equal(removed.modules.length, 0);
+    assert.equal(removed.crops.length, 0);
+    const repeated = applyBuildAction(removed, { type: "REMOVE_MODULE", placedModuleId });
+    assert.ok(repeated.error);
+    assert.equal(repeated.state.budget, initial.budget);
+    if (moduleId === "habitat-core") {
+      const active = startOperation(placed);
+      const locked = applyBuildAction(active, { type: "REMOVE_MODULE", placedModuleId });
+      assert.ok(locked.error);
+      assert.equal(locked.state.budget, active.budget);
+    }
+  }
+});
+
+// Regression coverage for the ten-mission QA findings.
+import { getBuildRemovalRefund } from "../src/game/state/reducer.ts";
+import { apRecovery } from "../src/game/simulation/resolveTurn.ts";
+import { scoreRules } from "../src/game/simulation/scoring.ts";
+import { selectBuildReadinessWarnings, selectTurnLabel } from "../src/game/state/selectors.ts";
+
+test("AP planning matches actual recovery across food reserve tiers", () => {
+  for (const food of [0, 12, 26, 43, 60]) {
+    const state = startOperation(sampleBase());
+    state.resources.food = food;
+    const expected = apRecovery(state);
+    const greenhouse = state.crops[0].moduleId;
+    const actions: PlayerAction[] = Array.from({ length: expected }, () => ({ type: "SET_CROP_PARAMS", moduleId: greenhouse, slotIndex: 0, water: "medium", light: "medium", temperature: "medium" }));
+    const result = resolveTurn(state, actions, "ap-regression");
+    assert.equal(result.rejectedActions.length, 0);
+    assert.equal(result.state.ap, 0);
+  }
+  assert.equal(apRecovery(startOperation(sampleBase())), 3);
+});
+
+test("preflight flags impossible production and disconnected systems without blocking launch", () => {
+  const connected = sampleBase();
+  assert.deepEqual(selectBuildReadinessWarnings(connected), []);
+  const disconnected = { ...connected, utilityEdges: [] };
+  assert.ok(selectBuildReadinessWarnings(disconnected).some(text => text.includes("disconnected")));
+  let bare = createInitialState("bare", "QA", "challenge");
+  bare = build({ type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 0 }, bare);
+  const warnings = selectBuildReadinessWarnings(bare);
+  assert.ok(warnings.some(text => text.includes("No greenhouse")));
+  assert.ok(warnings.some(text => text.includes("No livestock")));
+  assert.equal(startOperation(bare).phase, "operation");
+});
+
+test("initial removal refunds attached corridors exactly once and direct corridor removal is reversible", () => {
+  const original = sampleBase();
+  const greenhouse = original.modules.find(item => item.moduleId === "greenhouse-standard")!;
+  assert.equal(getBuildRemovalRefund(original, greenhouse.id), 30);
+  const removed = build({ type: "REMOVE_MODULE", placedModuleId: greenhouse.id }, original);
+  assert.equal(removed.budget, original.budget + 30);
+  assert.equal(removed.utilityEdges.length, original.utilityEdges.length - 2);
+  assert.ok(applyBuildAction(removed, { type: "REMOVE_MODULE", placedModuleId: greenhouse.id }).error);
+  const edge = original.utilityEdges[0];
+  const withoutEdge = build({ type: "REMOVE_CORRIDOR", edgeId: edge.id }, original);
+  assert.equal(withoutEdge.budget, original.budget + edge.cells.length);
+  assert.ok(applyBuildAction(withoutEdge, { type: "REMOVE_CORRIDOR", edgeId: edge.id }).error);
+  const afterBoth = build({ type: "REMOVE_MODULE", placedModuleId: greenhouse.id }, withoutEdge);
+  assert.equal(afterBoth.budget, original.budget + 30 + edge.cells.length);
+});
+
+test("overproduction cannot offset a missing production category in scoring", () => {
+  const state = sampleBase();
+  state.production = { cropCumulative: 0, meatCumulative: 1000 };
+  assert.equal(scoreRules(state).production, 14);
+  state.production = { cropCumulative: 1000, meatCumulative: 0 };
+  assert.equal(scoreRules(state).production, 14);
+  state.production = { cropCumulative: 16, meatCumulative: 10 };
+  assert.equal(scoreRules(state).production, 28);
+});
+
+test("emergency turn labels distinguish recovery from the ten-turn mission", () => {
+  const state = sampleBase();
+  assert.equal(selectTurnLabel({ ...state, turn: 10 }), "TURN 10/10");
+  assert.equal(selectTurnLabel({ ...state, turn: 11, crisis: { trigger: "power depleted", recoveryTurn: 11 } }), "EMERGENCY RECOVERY · TURN 11");
+});

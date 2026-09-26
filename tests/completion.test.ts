@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import test from "node:test";
 import { verifySpectrumWebhook } from "../src/ai/webhookSignature.ts";
-import { fallbackReport } from "../src/ai/report.ts";
+import { extendShortReport, fallbackReport, generateMissionReport, MIN_LAYOUT_ASSESSMENT_WORDS, MIN_REPORT_FIELD_WORDS, reportWordCount } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
 import { communicationsAvailable, resourceCapacity, shelterProtection } from "../src/data/systems.ts";
@@ -11,16 +11,21 @@ import { CROP_IDS } from "../src/data/cropCatalog.ts";
 import { HAZARDS } from "../src/data/hazards.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
+import { competitionRanks } from "../src/backend/ranking.ts";
+import { greenhouseDistance } from "../src/backend/analytics.ts";
+import { summarizeDecisions, summarizePressure } from "../src/backend/strategyHistory.ts";
 import { advanceMatch3, initialMatch3State, match3Modifier, scoreMatch3Proof, scoreRepairProof, type Match3Proof, type RepairProof } from "../src/game/minigames/proof.ts";
 import { harvestCrop } from "../src/game/simulation/crops.ts";
 import { growLivestock } from "../src/game/simulation/livestock.ts";
-import { hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
+import { forecastForTurn, hazardSchedule, seedForLevel } from "../src/game/simulation/hazards.ts";
 import { maxActionPoints, resolveTurn } from "../src/game/simulation/resolveTurn.ts";
 import { scoreRules } from "../src/game/simulation/scoring.ts";
+import { reportRadarAxes } from "../src/game/simulation/reportRadar.ts";
 import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
 import { createReplayFrames } from "../src/game/state/replayFrames.ts";
+import { createRunHistory } from "../src/game/state/runHistory.ts";
 import type { GameState, PlayerAction } from "../src/game/state/types.ts";
 
 const moduleActions: PlayerAction[] = [
@@ -44,6 +49,22 @@ function base(mode: "challenge" | "progressive" = "challenge"): GameState {
   return state;
 }
 
+test("records use stable competition ranks for tied scores", () => {
+  assert.deepEqual(competitionRanks([100, 92, 92, 80, 80, 70]), [1, 2, 2, 4, 4, 6]);
+  assert.deepEqual(competitionRanks([]), []);
+});
+
+test("new missions start with 220 material while archived transcripts keep their original budgets", () => {
+  for (const mode of ["challenge", "progressive"] as const) {
+    const current = createInitialState("budget-check", "Tester", mode);
+    const archived = createInitialState("budget-check", "Tester", mode, 1);
+    assert.equal(current.budget, 220);
+    assert.equal(current.rulesetVersion, 2);
+    assert.equal(archived.budget, mode === "challenge" ? 145 : 175);
+    assert.equal(archived.rulesetVersion, 1);
+  }
+});
+
 test("a complete transcript replays to the same authoritative state and rejects forged actions", () => {
   let state = startOperation(base());
   const steps: RunTranscript["steps"] = [...moduleActions.map((action) => ({ kind: "build" as const, action })), { kind: "start" }];
@@ -55,10 +76,21 @@ test("a complete transcript replays to the same authoritative state and rejects 
     steps.push({ kind: "turn", actions: result.acceptedActions });
     state = result.state;
   }
-  const transcript: RunTranscript = { version: 1, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
+  const transcript: RunTranscript = { version: 2, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
   assert.equal(state.phase, "complete");
   assert.deepEqual(replayTranscript(parseTranscript(transcript)), state);
+  const legacy = replayTranscript(parseTranscript({ ...transcript, version: 1 }));
+  assert.equal(legacy.rulesetVersion, 1);
+  assert.equal(legacy.budget, state.budget - 75);
+  assert.notEqual(scoreRules(legacy).budget, scoreRules(state).budget);
   const frames = createReplayFrames(transcript);
+  const runHistory = createRunHistory(transcript, frames, state.turnRecords);
+  assert.equal(runHistory.journal.length, transcript.steps.length);
+  assert.equal(runHistory.journal.filter((entry) => entry.kind === "turn").length, state.turnRecords.length);
+  assert.equal(runHistory.timeline.filter((entry) => entry.kind === "hazard").length,
+    state.turnRecords.filter((record) => record.hazard).length);
+  assert.match(runHistory.journal[0].actions[0], /Built Habitat Core/);
+  assert.ok(runHistory.journal.every((entry) => frames[entry.frameIndex] !== undefined));
   assert.equal(frames.length, steps.length + 1);
   assert.equal(frames[0].kind, "initial");
   assert.deepEqual(frames.at(-1)?.resources, state.resources);
@@ -67,6 +99,10 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.notEqual(transcriptHash(transcript), transcriptHash({ ...transcript, steps: transcript.steps.slice(0, -1) }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "REPAIR", targetId: "fake", minigameModifier: 99 }] }] }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "build", action: { type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 90 } }] }));
+  assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "END_TURN" }, { type: "END_TURN" }] }] }));
+  const afterEnd = resolveTurn(startOperation(base()), [{ type: "END_TURN" }, { type: "REPAIR", targetId: "module-1" }], "after-end");
+  assert.equal(afterEnd.acceptedActions.length, 1);
+  assert.match(afterEnd.rejectedActions[0], /already ended/);
   assert.throws(() => replayTranscript({ ...transcript, steps: [...steps, { kind: "turn", actions: [] }] }));
   const summary = buildRunSummary(state, transcript);
   assert.ok(summary.layoutMetrics.averageGreenhouseWaterDistance > 0);
@@ -74,8 +110,56 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.ok(summary.majorPlayerDecisions.some((decision) => decision.toLowerCase().includes("greenhouse")));
   const report = fallbackReport(summary, !!state.passed, verifiedSources);
   assert.match(report.layout, /connected to the habitat/);
+  assert.match(report.layoutAssessment!, new RegExp(`${Math.round(summary.layoutMetrics.connectedModuleShare * 100)}%`));
+  assert.ok(reportWordCount(report.layoutAssessment!) >= MIN_LAYOUT_ASSESSMENT_WORDS);
   assert.ok(report.sourceIds.length > 0);
   assert.ok(report.sourceIds.every((id) => verifiedSources.some((source) => source.id === id)));
+  assert.match(report.evaluationSystem!, new RegExp(`${summary.finalScoreInputs.production}/28`));
+  assert.match(report.contribution!, new RegExp(`${state.production.cropCumulative} edible crop units`));
+  assert.match(report.researchLandscape!, /Veggie|MELiSSA/);
+  assert.match(report.evidenceBasedChanges!, /water|connect/i);
+  for (const [field, value] of Object.entries(report)) {
+    if (typeof value === "string" && field !== "result")
+      assert.ok(reportWordCount(value) >= MIN_REPORT_FIELD_WORDS, `${field} is too short`);
+  }
+  const archived = extendShortReport({ ...report, usedFallback: false, production: "Brief archived comment." }, report);
+  assert.equal(archived.production, report.production);
+  assert.equal(archived.overview, report.overview);
+  assert.deepEqual(archived.fallbackFields, ["production"]);
+  const olderArchive = extendShortReport({ ...report, layoutAssessment: undefined, usedFallback: false }, report);
+  assert.equal(olderArchive.layoutAssessment, report.layoutAssessment);
+  assert.deepEqual(olderArchive.fallbackFields, ["layoutAssessment"]);
+});
+
+test("short AI report fields fail the minimum-length gate and use complete fallback analysis", async () => {
+  const state = startOperation(base());
+  const summary = buildRunSummary(state);
+  const candidate = { ...fallbackReport(summary, false, verifiedSources), researchLandscape: "Too brief." };
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.OPENAI_API_KEY = "report-test-key";
+  globalThis.fetch = async () => new Response(JSON.stringify({ output: [{ content: [{ type: "output_text",
+    text: JSON.stringify(candidate) }] }] }), { status: 200 });
+  try {
+    const report = await generateMissionReport(summary, false, verifiedSources);
+    assert.equal(report.usedFallback, true);
+    assert.ok(reportWordCount(report.researchLandscape!) >= MIN_REPORT_FIELD_WORDS);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+  }
+});
+
+test("report radar tracks the current run's scoring breakdown without presenting fallback strategy as AI", () => {
+  const breakdown = { production: 14, stability: 18, efficiency: 4, resilience: 3, budget: 2, total: 41 };
+  const rulesOnly = reportRadarAxes({ total: 58.6, rules: 41, llm: 17.6, usedFallback: true, breakdown });
+  assert.equal(rulesOnly.length, 5);
+  assert.deepEqual(rulesOnly.map((axis) => axis.value), [0.5, 0.75, 0.5, 0.5, 0.5]);
+  const withStrategy = reportRadarAxes({ total: 61, rules: 41, llm: 20, usedFallback: false, breakdown });
+  assert.equal(withStrategy[5].label, "Strategy");
+  assert.equal(withStrategy[5].earned, 20);
+  assert.equal(withStrategy[5].value, 20 / 30);
 });
 
 test("minigame bonuses require replayable moves with the exact computed score", () => {
@@ -105,6 +189,13 @@ test("minigame bonuses require replayable moves with the exact computed score", 
   assert.equal(scoreRepairProof({ kind: "repair", directions: [...repair.directions, "right"] }), null);
   assert.doesNotThrow(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: -0.05, minigameProof: repair })));
   assert.throws(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: 0.1, minigameProof: repair })));
+});
+
+test("analytics uses occupied footprints and excludes runs without a comparison module", () => {
+  const greenhouse = { id: "g", moduleId: "greenhouse-industrial", x: 0, y: 0, rotation: 0 as const, integrity: 1 };
+  const water = { id: "w", moduleId: "water-recycler", x: 5, y: 1, rotation: 0 as const, integrity: 1 };
+  assert.equal(greenhouseDistance([greenhouse], [water]), 2);
+  assert.equal(greenhouseDistance([greenhouse], []), undefined);
 });
 
 test("submission transcripts accept the current crop catalog and reject retired IDs", () => {
@@ -228,7 +319,48 @@ test("each level keeps a fixed hazard schedule near its pressure budget", () => 
     assert.deepEqual(schedule, hazardSchedule(context, seedForLevel(context)));
     const pressure = schedule.reduce((sum, hazard) => sum + HAZARDS[hazard.type].pressure * hazard.severity, 0);
     assert.ok(Math.abs(pressure - DIFFICULTY.progressive[level - 1].hazardPressure) < 1, `Level ${level}: ${pressure}`);
+    for (let turn = 1; turn <= 10; turn++) {
+      const forecast = forecastForTurn({ ...context, turn });
+      const window = schedule.filter((event) => event.turn >= turn && event.turn < turn + 3);
+      for (const [key, types] of Object.entries({ solar: ["radiation"], thermal: ["temperature"], impact: ["micrometeoroid"], systems: ["power", "communications"] }) as Array<["solar" | "thermal" | "impact" | "systems", string[]]>)
+        assert.equal(forecast[key] !== "Low", window.some((event) => types.includes(event.type)), `${level}/${turn}/${key}`);
+    }
   }
+});
+
+test("process analytics reconstruct crop switches and harvests from accepted mission actions", () => {
+  let state = startOperation(base());
+  const steps: RunTranscript["steps"] = [...moduleActions.map((action) => ({ kind: "build" as const, action })), { kind: "start" }];
+  const greenhouse = state.modules.find((module) => module.moduleId === "greenhouse-standard")!;
+  let switchedBack = false;
+  while (state.phase === "operation") {
+    const plot = state.crops.find((crop) => crop.moduleId === greenhouse.id && crop.slotIndex === 0)!;
+    const actions: PlayerAction[] = [];
+    if (state.turn === 1) actions.push({ type: "PLANT_CROP", moduleId: greenhouse.id, slotIndex: 0, crop: "radish" },
+      { type: "SET_CROP_PARAMS", moduleId: greenhouse.id, slotIndex: 0, water: "low", light: "high", temperature: "medium" });
+    else if (plot.ready) {
+      actions.push({ type: "HARVEST_CROP", moduleId: greenhouse.id, slotIndex: 0 });
+      if (!switchedBack && plot.crop === "radish") {
+        actions.push({ type: "PLANT_CROP", moduleId: greenhouse.id, slotIndex: 0, crop: "lettuce" });
+        switchedBack = true;
+      }
+    }
+    const result = resolveTurn(state, [...actions, { type: "END_TURN" }], seedForLevel(state));
+    assert.deepEqual(result.rejectedActions, []);
+    steps.push({ kind: "turn", actions: result.acceptedActions });
+    state = result.state;
+  }
+  const transcript: RunTranscript = { version: 1, runId: state.runId, nickname: state.nickname, mode: "challenge", steps };
+  const observed = summarizeDecisions(transcript);
+  assert.equal(observed.plantedByCrop.radish, 1);
+  assert.equal(observed.plantedByCrop.lettuce, 1);
+  assert.equal(observed.cropSwitches, 2);
+  assert.ok(observed.harvestedByCrop.radish >= 1);
+  assert.equal(observed.parameterChanges, 1);
+  assert.equal(observed.highLightSelections, 1);
+  assert.equal(observed.lowWaterSelections, 1);
+  const pressure = summarizePressure(state.turnRecords);
+  assert.equal(pressure.pressureTurns + pressure.ordinaryTurns, state.turnRecords.length);
 });
 
 test("progressive mode carries one base through three ten-turn levels", () => {
@@ -276,5 +408,8 @@ test("progressive mode carries one base through three ten-turn levels", () => {
   assert.equal(state.phase, "complete");
   assert.equal(state.passed, true, `${state.failureReason}; production=${JSON.stringify(state.production)}`);
   assert.equal(state.turnRecords.length, 30);
-  assert.deepEqual(replayTranscript(parseTranscript({ version: 1, runId: state.runId, nickname: state.nickname, mode: "progressive", steps })), state);
+  assert.deepEqual(replayTranscript(parseTranscript({ version: 2, runId: state.runId, nickname: state.nickname, mode: "progressive", steps })), state);
+  const legacy = replayTranscript(parseTranscript({ version: 1, runId: state.runId, nickname: state.nickname, mode: "progressive", steps }));
+  assert.equal(legacy.rulesetVersion, 1);
+  assert.equal(legacy.budget, state.budget - 45);
 });

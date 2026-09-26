@@ -1,5 +1,7 @@
 # Isolated UI integration
 
+> Historical integration notes. The Supply Lab described below has been removed; current acceptance is in [ACCEPTANCE_SIX_CROPS.md](../../../docs/ACCEPTANCE_SIX_CROPS.md).
+
 Branch `feat/ui-integration`, separate worktree `SpaceAgriculture-ui-integration`. Based on Developer A `e1ad13c` fetched from origin/feat/game; origin/dev at inspection was `039014f`. Original C branch `feat/ui-content` and all numbered HTML/art previews remain unchanged. Pre-integration shared page source copies live in `src/ui/preview/original-pages/` (exact files at e1ad13c).
 
 Shared presentation files changed: app/page.tsx, app/game/page.tsx, app/leaderboard/page.tsx, app/analytics/page.tsx, app/report/[runId]/page.tsx. Purpose: mount UI composition and consume existing data interfaces. No interface changes; A/B source, dependencies and global CSS remain untouched relative to the fetched game branch.

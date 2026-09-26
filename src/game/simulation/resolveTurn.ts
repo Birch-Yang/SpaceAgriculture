@@ -5,7 +5,7 @@ import { communicationsAvailable, connectedToHabitat, resourceCapacity, shelterP
 import type { CropPlotState, GameEvent, GameState, LivestockState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
 import { criticalCondition } from "./crisis.ts";
 import { growCrops, harvestCrop } from "./crops.ts";
-import { hazardForTurn } from "./hazards.ts";
+import { forecastForTurn, hazardForTurn } from "./hazards.ts";
 import { growLivestock } from "./livestock.ts";
 import { resolveTemperature } from "./temperature.ts";
 import { resolveUtilityGraph } from "./utilityGraph.ts";
@@ -18,7 +18,7 @@ export function maxActionPoints(state: GameState): number {
   return baseline + (recreation ? SYSTEMS.recreationApBonus : 0);
 }
 
-function apRecovery(state: GameState): number {
+export function apRecovery(state: GameState): number {
   const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
   const reserve = state.resources.food / 60;
   const factor = reserve > 0.7 ? 1 : reserve > 0.4 ? 0.9 : reserve > 0.2 ? 0.75 : 0.6;
@@ -150,10 +150,12 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   // 1. Reveal hazard; 2. restore AP; 3. apply strategic actions.
   next.activeHazard = hazardForTurn(next, rngSeed);
   next.ap = apRecovery(next);
+  let ended = false;
   for (const action of actions) {
+    if (ended) { rejectedActions.push(`${action.type}: Turn has already ended`); continue; }
     const error = applyOperationAction(next, action, pendingHarvests);
     if (error) rejectedActions.push(`${action.type}${"moduleId" in action ? ` (${action.moduleId} slot ${"slotIndex" in action ? action.slotIndex ?? 0 : 0})` : ""}: ${error}`);
-    else acceptedActions.push(action);
+    else { acceptedActions.push(action); if (action.type === "END_TURN") ended = true; }
   }
 
   // 4. Network and 5. temperature. Accepted minigame modifiers were bounded above.
@@ -228,6 +230,6 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
     ...(next.activeHazard ? { hazard: next.activeHazard } : {}),
   }];
   next.lastTurn = summary;
-  if (next.phase === "operation") next.turn = turn + 1;
+  if (next.phase === "operation") { next.turn = turn + 1; next.forecast = forecastForTurn(next); }
   return { state: next, summary, acceptedActions, rejectedActions };
 }

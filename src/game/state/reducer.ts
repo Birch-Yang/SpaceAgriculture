@@ -1,20 +1,22 @@
-import { DIFFICULTY } from "../../data/difficulty.ts";
+import { DIFFICULTY, LEGACY_INITIAL_BUDGET } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { SYSTEMS } from "../../data/systems.ts";
+import { forecastForTurn } from "../simulation/hazards.ts";
 import type { Cell, GameMode, GameState, PlacedModule, PlayerAction } from "./types.ts";
 
 export const MAP_SIZE = { width: 14, height: 14 } as const;
 const corridorCellCost = 1;
 
-export function createInitialState(runId: string, nickname: string, mode: GameMode): GameState {
+export function createInitialState(runId: string, nickname: string, mode: GameMode, rulesetVersion: 1 | 2 = 2): GameState {
   if (!runId.trim() || !nickname.trim()) throw new Error("Run ID and nickname are required");
   const difficulty = DIFFICULTY[mode][0];
   return {
-    runId, nickname: nickname.trim().slice(0, 32), mode, phase: "design", level: 1, turn: 1,
-    budget: difficulty.budget, ap: 0, resources: { ...difficulty.starting },
+    runId, nickname: nickname.trim().slice(0, 32), mode, rulesetVersion, phase: "design", level: 1, turn: 1,
+    budget: rulesetVersion === 1 ? LEGACY_INITIAL_BUDGET[mode] : difficulty.budget,
+    ap: 0, resources: { ...difficulty.starting },
     production: { cropCumulative: 0, meatCumulative: 0 }, modules: [], utilityEdges: [],
     crops: [], livestock: [],
-    forecast: { solar: "Variable", thermal: "Elevated", impact: "Low–moderate" },
+    forecast: forecastForTurn({ runId, mode, level: 1, turn: 1 }),
     history: [], turnRecords: [], nextId: 1,
   };
 }
@@ -34,6 +36,20 @@ function occupiedCells(module: PlacedModule): Cell[] {
 
 function touches(module: PlacedModule, cell: Cell): boolean {
   return occupiedCells(module).some(({ x, y }) => Math.abs(x - cell.x) + Math.abs(y - cell.y) === 1);
+}
+
+/** Exact material delta for removal; shared with the presentation. */
+export function getBuildRemovalRefund(state: GameState, targetId: string): number {
+  const initialBuild = state.phase === "design" && state.level === 1 && state.turn === 1;
+  const module = state.modules.find(item => item.id === targetId);
+  if (module) {
+    const cost = MODULE_BY_ID.get(module.moduleId)!.cost;
+    const attachedCost = state.utilityEdges.filter(edge => edge.from === targetId || edge.to === targetId)
+      .reduce((sum, edge) => sum + edge.cells.length * corridorCellCost, 0);
+    return initialBuild ? cost + attachedCost : Math.floor(cost / 2);
+  }
+  const edge = state.utilityEdges.find(item => item.id === targetId);
+  return edge ? (initialBuild ? edge.cells.length * corridorCellCost : -SYSTEMS.corridorRemovalCost) : 0;
 }
 
 export function applyBuildAction(state: GameState, action: PlayerAction): { state: GameState; error?: string } {
@@ -60,9 +76,8 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
   if (action.type === "REMOVE_MODULE") {
     const placed = state.modules.find((item) => item.id === action.placedModuleId);
     if (!placed) return { state, error: "Unknown placed module" };
-    const def = MODULE_BY_ID.get(placed.moduleId)!;
     return { state: {
-      ...state, budget: state.budget + Math.floor(def.cost / 2),
+      ...state, budget: state.budget + getBuildRemovalRefund(state, placed.id),
       modules: state.modules.filter((item) => item.id !== placed.id),
       utilityEdges: state.utilityEdges.filter((edge) => edge.from !== placed.id && edge.to !== placed.id),
       crops: state.crops.filter((crop) => crop.moduleId !== placed.id),
@@ -89,8 +104,9 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
   }
   if (action.type === "REMOVE_CORRIDOR") {
     if (!state.utilityEdges.some((edge) => edge.id === action.edgeId)) return { state, error: "Unknown utility corridor" };
-    if (state.budget < SYSTEMS.corridorRemovalCost) return { state, error: "Insufficient construction budget" };
-    return { state: { ...state, budget: state.budget - SYSTEMS.corridorRemovalCost,
+    const refund = getBuildRemovalRefund(state, action.edgeId);
+    if (state.budget + refund < 0) return { state, error: "Insufficient construction budget" };
+    return { state: { ...state, budget: state.budget + refund,
       utilityEdges: state.utilityEdges.filter((edge) => edge.id !== action.edgeId) } };
   }
   if (action.type === "PLACE_CORRIDOR") {
@@ -121,5 +137,5 @@ export function advanceLevel(state: GameState): GameState {
   if (state.mode !== "progressive" || state.phase !== "intermission" || state.level >= 3) throw new Error("No next level available");
   const nextLevel = (state.level + 1) as 2 | 3;
   return { ...state, level: nextLevel, turn: 1, budget: state.budget + DIFFICULTY.progressive[nextLevel - 1].buildBudget,
-    forecast: { solar: nextLevel === 3 ? "Elevated" : "Moderate", thermal: "Elevated", impact: "Moderate" }, activeHazard: undefined, lastTurn: undefined };
+    forecast: forecastForTurn({ runId: state.runId, mode: state.mode, level: nextLevel, turn: 1 }), activeHazard: undefined, lastTurn: undefined };
 }

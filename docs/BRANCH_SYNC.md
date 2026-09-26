@@ -1,5 +1,7 @@
 # Finalized demo synchronization
 
+> Historical synchronization record. The Supply Lab and Python reference mentioned below have since been removed. The current acceptance standard is [ACCEPTANCE_SIX_CROPS.md](ACCEPTANCE_SIX_CROPS.md).
+
 All existing branches are synchronized to the integrated demo release dated 2026-09-26. Their original commits remain in merge history. The current renderer supersedes the early duplicate renderer; fixed orientation and transcript-based run submission take precedence over older rotation and submission implementations.
 
 Run `npm run demo` for the local app, then open `/supply`. Run `npm run demo:script` for the Python reference. The shared catalog produces 200 harvest points in 12 turns against a target of 180. The Mission page retains its separate ten-turn network model. External database and messaging services still require configuration.

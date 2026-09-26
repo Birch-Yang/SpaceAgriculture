@@ -1,6 +1,5 @@
-import { AppFrame } from '../../src/ui/integration/AppFrame';
-import { SupplyPlayground } from '../../src/ui/integration/SupplyPlayground';
+import { redirect } from 'next/navigation';
 
 export default function SupplyPage() {
-  return <AppFrame wide><SupplyPlayground /></AppFrame>;
+  redirect('/game');
 }

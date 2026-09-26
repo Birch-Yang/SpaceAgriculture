@@ -1,4 +1,4 @@
-import { DIFFICULTY } from "../../data/difficulty.ts";
+import { DIFFICULTY, LEGACY_INITIAL_BUDGET } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { connectedToHabitat } from "../../data/systems.ts";
 import type { GameState } from "../state/types.ts";
@@ -18,7 +18,7 @@ export function scoreRules(state: GameState): RuleScore {
   const target = DIFFICULTY[state.mode][state.level - 1];
   const crop = target.cropTarget ? state.production.cropCumulative / target.cropTarget : 0;
   const meat = target.meatTarget ? state.production.meatCumulative / target.meatTarget : 0;
-  const production = clamp((crop + meat) / 2 * 28, 28);
+  const production = clamp((Math.min(1, crop) + Math.min(1, meat)) / 2 * 28, 28);
   const records = state.turnRecords.length ? state.turnRecords : [{ resources: state.resources, crisis: !!state.crisis }];
   const stabilityFactor = records.reduce((sum, record) => {
     const stable = (["power", "water", "oxygen", "food"] as const).filter((key) => record.resources[key] > 0).length / 4;
@@ -26,8 +26,9 @@ export function scoreRules(state: GameState): RuleScore {
     return sum + stable * temperature * (record.crisis ? 0.65 : 1);
   }, 0) / records.length;
   const stability = clamp(24 * stabilityFactor, 24);
-  const totalBudget = state.mode === "challenge" ? target.budget : DIFFICULTY.progressive[0].budget
-    + DIFFICULTY.progressive.slice(1, state.level).reduce((sum, level) => sum + level.buildBudget, 0);
+  const initialBudget = state.rulesetVersion === 1 ? LEGACY_INITIAL_BUDGET[state.mode] : DIFFICULTY[state.mode][0].budget;
+  const totalBudget = initialBudget + (state.mode === "progressive"
+    ? DIFFICULTY.progressive.slice(1, state.level).reduce((sum, level) => sum + level.buildBudget, 0) : 0);
   const spentBudget = Math.max(1, totalBudget - state.budget);
   const efficiency = clamp(8 * Math.min(1, (state.production.cropCumulative + state.production.meatCumulative) / spentBudget * 2), 8);
   const protective = state.modules.reduce((sum, module) => sum + (["shelter", "utility", "battery"].includes(MODULE_BY_ID.get(module.moduleId)?.category ?? "")
