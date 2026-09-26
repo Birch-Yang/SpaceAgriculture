@@ -18,7 +18,7 @@ Developer A owns implementing these interaction rules. This documentation update
 2. Run `npm install` and copy `.env.example` to `.env.local`.
 3. Run `npm run dev` and open `http://localhost:3000`.
 
-The landing page and fallback mission report work without credentials. Supabase reads/writes require its URL and keys. OpenAI-backed evaluation and reports require `OPENAI_API_KEY`. The Photon adapter is not connected yet, so adding Photon credentials alone will not activate Mission Control. Never commit `.env.local` or service keys.
+The landing page and fallback mission report work without credentials. Supabase reads/writes require its URL and keys. OpenAI-backed evaluation, reports, and the in-game Photon advisor require `OPENAI_API_KEY`. The advisor's per-turn request quota also requires the `202609270001_photon_advice_quota.sql` Supabase migration and server-side `SUPABASE_SERVICE_ROLE_KEY`. `PHOTON_API_KEY` and `PHOTON_PROJECT_ID` are not used by the in-game web chat; Spectrum/iMessage messaging remains a separate integration and is not claimed as verified. Never commit `.env.local` or service keys.
 
 ## Deployment
 

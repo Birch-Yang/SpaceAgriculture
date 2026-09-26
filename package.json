@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/simulation.test.ts"
+    "test": "node --experimental-strip-types --test src/ai/photonAdvisor.test.ts src/game/phaser/adapters.test.ts src/game/phaser/agricultureAdapter.test.ts tests/simulation.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
