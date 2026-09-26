@@ -55,82 +55,16 @@ export function GameClient() {
   const [mini, setMini] = useState<"match3" | "snake" | null>(null);
   const [miniTarget, setMiniTarget] = useState<MiniTarget | null>(null);
   const [miniResult, setMiniResult] = useState<MinigameResult | null>(null);
-  const [submission, setSubmission] = useState<RunSubmission | null>(null);
-  const [submissionAttempt, setSubmissionAttempt] = useState(0);
-  const activeRunId = useRef<string | null>(null);
-  const lastSubmissionAttempt = useRef<string | null>(null);
-  activeRunId.current = state?.runId ?? null;
-
-  function rotatePlacement() {
-    if (tool.kind !== "module") return;
-    const rotation = ((tool.rotation + 90) % 360) as Rotation;
-    setTool({ ...tool, rotation });
-    setMessage(`Placement orientation: ${rotation}°.`);
-  }
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        if (mini) { setMini(null); setMiniTarget(null); }
-        else if (interiorId) setInteriorId(null);
-        return;
-      }
-      if (event.key.toLowerCase() !== "r" || event.repeat || mini || interiorId || tool.kind !== "module" || (state?.phase !== "design" && state?.phase !== "intermission")) return;
-      const target = event.target;
-      if (target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
-      rotatePlacement();
+      if (event.key !== "Escape") return;
+      if (mini) { setMini(null); setMiniTarget(null); }
+      else if (interiorId) setInteriorId(null);
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [mini, interiorId, tool, state?.phase]);
-
-  useEffect(() => {
-    if (!state || state.phase !== "complete") return;
-    const completedRun = state;
-    const attemptKey = `${completedRun.runId}:${submissionAttempt}`;
-    if (lastSubmissionAttempt.current === attemptKey) return;
-    lastSubmissionAttempt.current = attemptKey;
-    const isCurrentRun = () => activeRunId.current === completedRun.runId;
-    setSubmission({ runId: completedRun.runId, status: "submitting" });
-
-    async function submitRun() {
-      const response = await fetch("/api/runs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: completedRun }),
-      });
-      const payload = await response.json().catch(() => ({})) as {
-        error?: unknown;
-        saved?: unknown;
-        reason?: unknown;
-        score?: { total?: unknown };
-      };
-
-      if (response.status === 409) {
-        const existingResponse = await fetch(`/api/report/${completedRun.runId}`);
-        if (!existingResponse.ok) throw new Error("This run was already submitted, but its report could not be reloaded.");
-        const existing = await existingResponse.json() as { score_total?: unknown };
-        const score = existing.score_total == null ? Number.NaN : Number(existing.score_total);
-        if (isCurrentRun()) setSubmission({ runId: completedRun.runId, status: "saved", ...(Number.isFinite(score) ? { score } : {}) });
-        return;
-      }
-      if (!response.ok && response.status !== 202) {
-        throw new Error(typeof payload.error === "string" ? payload.error : "The mission could not be submitted.");
-      }
-
-      const score = typeof payload.score?.total === "number" ? payload.score.total : Number.NaN;
-      if (isCurrentRun()) setSubmission({
-        runId: completedRun.runId,
-        status: payload.saved === true ? "saved" : "unsaved",
-        ...(Number.isFinite(score) ? { score } : {}),
-        ...(typeof payload.reason === "string" ? { message: payload.reason } : {}),
-      });
-    }
-
-    void submitRun().catch((error: unknown) => {
-      if (isCurrentRun()) setSubmission({ runId: completedRun.runId, status: "error", message: error instanceof Error ? error.message : "The mission could not be submitted." });
-    });
-  }, [state?.phase, state?.runId, submissionAttempt]);
+  }, [mini, interiorId]);
 
   function launch(event: FormEvent) {
     event.preventDefault();

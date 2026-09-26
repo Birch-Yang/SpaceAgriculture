@@ -2,12 +2,12 @@ import * as Phaser from "phaser";
 import { buildingFrames, buildingFrame } from "../../content/world-art";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { MAP_SIZE } from "../state/reducer.ts";
-import type { Cell, GameState, PlacedModule, PlayerAction, Rotation } from "../state/types.ts";
+import type { Cell, GameState, PlacedModule, PlayerAction } from "../state/types.ts";
 import { occupiedModuleCells, previewModule, renderUtilityNetwork } from "./adapters.ts";
 import { agricultureSlots } from "./agricultureAdapter.ts";
 import { gridToScreen, rotatedFootprint, screenToGrid, VIEW } from "./isometric.ts";
 
-export type BuildTool = { kind: "select" } | { kind: "module"; moduleId: string; rotation: Rotation } | { kind: "corridor" };
+export type BuildTool = { kind: "select" } | { kind: "module"; moduleId: string } | { kind: "corridor" };
 export type SceneCallbacks = {
   onAction: (action: PlayerAction) => void;
   onSelect: (id: string | null) => void;
@@ -121,10 +121,9 @@ export class GameScene extends Phaser.Scene {
     if (!state || !cell) { this.corridorPath = []; this.paint(); return; }
     if (this.tool.kind === "module" && this.buildEnabled()) {
       const definition = MODULE_BY_ID.get(this.tool.moduleId);
-      const rotation = this.tool.rotation;
-      const preview = definition && previewModule(state, definition, cell.x, cell.y, rotation);
+      const preview = definition && previewModule(state, definition, cell.x, cell.y, 0);
       if (definition && preview?.valid) {
-        this.callbacks.onAction({ type: "PLACE_MODULE", moduleId: definition.id, x: cell.x, y: cell.y, rotation });
+        this.callbacks.onAction({ type: "PLACE_MODULE", moduleId: definition.id, x: cell.x, y: cell.y, rotation: 0 });
       } else this.callbacks.onFeedback(preview?.reason ?? "This module cannot be placed here.");
     } else if (this.tool.kind === "corridor" && this.buildEnabled()) {
       this.extendPath(cell);
@@ -275,7 +274,7 @@ export class GameScene extends Phaser.Scene {
         const anchor = gridToScreen(module.x + (w-1)/2, module.y + (h-1)/2);
         const sprite = this.add.image(anchor.x, anchor.y + (w+h)*VIEW.tileHeight/4, 'pixel-buildings', frame).setOrigin(0.5,1);
         // Fit visual width to the projected footprint. Selection zoom improves crop readability without changing occupancy.
-        sprite.setScale(((w+h)*VIEW.tileWidth/2) / sprite.width).setRotation(Phaser.Math.DegToRad(module.rotation)).setDepth(100 + frontDepth(module));
+        sprite.setScale(((w+h)*VIEW.tileWidth/2) / sprite.width).setDepth(100 + frontDepth(module));
         if (module.integrity < 0.65) sprite.setTint(0xc49c84);
         this.sprites.push(sprite);
       }
@@ -315,7 +314,7 @@ export class GameScene extends Phaser.Scene {
     } else if (this.hover && this.tool.kind === "module" && this.buildEnabled()) {
       const definition = MODULE_BY_ID.get(this.tool.moduleId);
       if (definition) {
-        const preview = previewModule(state, definition, this.hover.x, this.hover.y, this.tool.rotation);
+        const preview = previewModule(state, definition, this.hover.x, this.hover.y, 0);
         for (const cell of preview.cells) if (this.inBounds(cell)) this.diamond(cell.x, cell.y, preview.valid ? 0x8de0be : 0xe7746d, preview.valid ? 0.65 : 0.2, 0xffffff);
         const point = gridToScreen(this.hover.x, this.hover.y);
         this.text(point.x, point.y - 30, preview.valid ? "PLACE" : preview.reason ?? "BLOCKED", preview.valid ? "#adf6cd" : "#ffc0b5", 10);
