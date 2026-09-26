@@ -58,7 +58,7 @@ declare updated_count integer;
 begin
   update public.mission_control_sessions
     set message_count = message_count + 1
-    where run_id = p_run_id and expires_at > now() and message_count < 25;
+    where run_id = p_run_id and expires_at > now() and not outage and message_count < 25;
   get diagnostics updated_count = row_count;
   return updated_count = 1;
 end;

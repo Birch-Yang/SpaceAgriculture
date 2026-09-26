@@ -58,7 +58,8 @@ export async function claimMissionEnrollment(runId: string, requesterHash: strin
   const client = serverSupabase();
   if (!client) return false;
   const { data, error } = await client.rpc("claim_mission_enrollment", { p_run_id: runId, p_requester_hash: requesterHash });
-  return !error && data === "claimed";
+  if (error) throw new Error("Mission Control enrollment gate unavailable");
+  return data === "claimed";
 }
 
 export async function registerMissionSession(runId: string, spaceId: string, phone: string | undefined, tokenHash: string, publicState: AgentPublicState): Promise<boolean> {
@@ -80,7 +81,8 @@ export async function missionSessionByRun(runId: string): Promise<MissionSession
   if (!client) return undefined;
   const { data, error } = await client.from("mission_control_sessions").select("*").eq("run_id", runId)
     .gt("expires_at", new Date().toISOString()).maybeSingle();
-  return error || !data ? undefined : asSession(data);
+  if (error) throw new Error("Mission Control session store unavailable");
+  return data ? asSession(data) : undefined;
 }
 
 export async function missionSessionBySpace(spaceId: string): Promise<MissionSession | undefined> {
@@ -88,18 +90,18 @@ export async function missionSessionBySpace(spaceId: string): Promise<MissionSes
   if (!client) return undefined;
   const { data, error } = await client.from("mission_control_sessions").select("*").eq("space_hash", spaceHash(spaceId))
     .gt("expires_at", new Date().toISOString()).maybeSingle();
-  return error || !data ? undefined : asSession(data);
+  if (error) throw new Error("Mission Control session store unavailable");
+  return data ? asSession(data) : undefined;
 }
 
-export async function updateMissionSession(runId: string, publicState: AgentPublicState, turn: number, outage: boolean, advice?: string): Promise<boolean> {
+export async function updateMissionSession(runId: string, publicState: AgentPublicState, turn: number, outage: boolean): Promise<boolean> {
   const client = serverSupabase();
   const session = await missionSessionByRun(runId);
   if (!client || !session || turn <= session.lastTurn) return false;
-  const history = advice ? [...session.adviceHistory, advice].slice(-25) : session.adviceHistory;
-  const { data, error } = await client.from("mission_control_sessions").update({ public_state: publicState, outage, last_turn: turn,
-    advice_history: history })
+  const { data, error } = await client.from("mission_control_sessions").update({ public_state: publicState, outage, last_turn: turn })
     .eq("run_id", runId).eq("last_turn", session.lastTurn).select("run_id").maybeSingle();
-  return !error && !!data;
+  if (error) throw new Error("Mission Control session update unavailable");
+  return !!data;
 }
 
 export async function appendMissionAdvice(runId: string, advice: string): Promise<void> {
@@ -111,7 +113,8 @@ export async function claimMissionMessageSlot(runId: string): Promise<boolean> {
   const client = serverSupabase();
   if (!client) return false;
   const { data, error } = await client.rpc("claim_mission_message", { p_run_id: runId });
-  return !error && data === true;
+  if (error) throw new Error("Mission Control message gate unavailable");
+  return data === true;
 }
 
 export async function missionAdviceHistory(runId: string): Promise<string[]> {
@@ -123,7 +126,9 @@ export async function claimWebhookMessage(messageId: string): Promise<boolean> {
   if (!client) return false;
   await cleanup();
   const { error } = await client.from("mission_control_webhook_messages").insert({ message_id: messageId });
-  return !error;
+  if (error?.code === "23505") return false;
+  if (error) throw new Error("Mission Control webhook deduplication unavailable");
+  return true;
 }
 
 export async function releaseWebhookMessage(messageId: string): Promise<void> {
