@@ -31,6 +31,9 @@ export function resolveUtilityGraph(state: GameState): NetworkResult {
   const delivery: NetworkResult["delivery"] = Object.fromEntries(state.modules.map((module) => [module.id, {}]));
   const net: NetworkResult["net"] = { power: 0, water: 0, oxygen: 0, food: 0 };
   const bottlenecks: string[] = [];
+  const coreIds = state.modules.filter((module) => MODULE_BY_ID.get(module.moduleId)?.category === "habitat").map((module) => module.id);
+  const usableEdges = new Map(state.utilityEdges.map((edge) => [edge.id, edge.capacity * edge.integrity]));
+  const connectedToCore = new Set(state.modules.filter((module) => coreIds.some((coreId) => bestPath(state, module.id, coreId, usableEdges) !== undefined)).map((module) => module.id));
   const fields: Array<[ResourceKey, "powerSupply" | "waterSupply" | "oxygenSupply", "powerDemand" | "waterDemand" | "oxygenDemand"]> = [
     ["power", "powerSupply", "powerDemand"], ["water", "waterSupply", "waterDemand"], ["oxygen", "oxygenSupply", "oxygenDemand"],
   ];
@@ -43,7 +46,8 @@ export function resolveUtilityGraph(state: GameState): NetworkResult {
       return { id: module.id, available: (def.flow[supplyField] ?? 0) * module.integrity * powerFactor };
     }).filter((source) => source.available > 0);
     const consumers = state.modules.map((module) => ({ id: module.id, demand: MODULE_BY_ID.get(module.moduleId)!.flow[demandField] ?? 0 })).filter((consumer) => consumer.demand > 0);
-    net[resource] = sources.reduce((sum, source) => sum + source.available, 0) - consumers.reduce((sum, consumer) => sum + consumer.demand, 0);
+    net[resource] = sources.filter((source) => connectedToCore.has(source.id)).reduce((sum, source) => sum + source.available, 0)
+      - consumers.filter((consumer) => connectedToCore.has(consumer.id)).reduce((sum, consumer) => sum + consumer.demand, 0);
 
     for (const consumer of consumers) {
       let received = 0;
