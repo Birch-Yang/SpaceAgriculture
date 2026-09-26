@@ -44,7 +44,7 @@ PR #1 was merged into `main` at `af188a6` although the planned target was `dev`;
 
 ### UI integration handoff (2026-09-26)
 
-[PR #5](https://github.com/Birch-Yang/SpaceAgriculture/pull/5) brings the UI, pixel art, content, and live game presentation into `dev`. Its head was synchronized with `dev` at `d451fc3` through merge commit `fb30dd1`; Git resolved the criss-cross history without any file-level conflict or shared interface change. On that resolved tree, the lightweight `npm test` baseline (3 tests), `npm run typecheck`, and `npm run build` all passed with dependencies installed inside the worktree. Developer A and the designer can continue from `dev` after PR #5 merges. Developer B's agriculture slots remain on separate [PR #3](https://github.com/Birch-Yang/SpaceAgriculture/pull/3) until that contract is integrated; UI work should not assume those fields exist on `dev` yet.
+[PR #5](https://github.com/Birch-Yang/SpaceAgriculture/pull/5) merged the UI, pixel art, content, and live game presentation into `dev` at `bb8a848`. Its head was first synchronized with `dev` at `d451fc3` through merge commit `fb30dd1`; Git resolved the criss-cross history without any file-level conflict or shared interface change. On that resolved tree, the lightweight `npm test` baseline (3 tests), `npm run typecheck`, `npm run build`, GitHub CI run 23, and Vercel all passed. Developer A and the designer should continue from the latest `dev`. Developer B's agriculture slots remain on separate [PR #3](https://github.com/Birch-Yang/SpaceAgriculture/pull/3) until that contract is integrated; UI work should not assume those fields exist on `dev` yet.
 
 ## Checks
 
