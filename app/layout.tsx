@@ -3,8 +3,13 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Lunar Agriculture Design-Space Explorer",
-  description: "Explore the trade-offs of producing food in a lunar outpost.",
+  title: "agronaut",
+  applicationName: "agronaut",
+  description: "Design and operate a lunar agriculture outpost.",
+  openGraph: {
+    title: "agronaut",
+    description: "Design and operate a lunar agriculture outpost.",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

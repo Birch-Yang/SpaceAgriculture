@@ -4,7 +4,7 @@ export default function HomePage() {
   return (
     <main>
       <p className="eyebrow">Lunar south pole · mission design</p>
-      <h1>Lunar Agriculture Design-Space Explorer</h1>
+      <h1>agronaut</h1>
       <p>Growing food on the Moon means balancing production against power, water, oxygen, heat, and resilience.</p>
       <div className="grid">
         <section className="card"><h2>Challenge</h2><p>Build a base, then survive ten high-pressure turns.</p></section>
