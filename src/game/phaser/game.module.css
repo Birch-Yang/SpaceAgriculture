@@ -1,6 +1,8 @@
 .shell, .launch { max-width: none; min-height: 100vh; padding: 24px; color: #e9f5f3; background: radial-gradient(circle at 48% 0%, #213a47 0, #0d1b27 45%, #07121d 100%); font-family: Arial, Helvetica, sans-serif; }
 .shell button, .launch button { cursor: pointer; color: inherit; border: 1px solid #456472; background: #18313d; border-radius: 6px; padding: 9px 12px; font: inherit; }
 .shell button:hover, .launch button:hover { border-color: #9ae4cb; background: #224654; }
+.shell button:disabled { cursor: not-allowed; opacity: .48; }
+.shell button:disabled:hover { border-color: #456472; background: #18313d; }
 .shell button:focus-visible, .launch button:focus-visible { outline: 2px solid #a5f0d5; outline-offset: 2px; }
 .kicker { margin: 0 0 7px; color: #9edbc5; font-size: 10px; font-weight: 800; letter-spacing: .18em; }
 .header { display: flex; justify-content: space-between; align-items: center; gap: 20px; max-width: 1760px; margin: 0 auto 16px; }
@@ -27,8 +29,6 @@
 .toolButton { display: block; width: 100%; text-align: left; margin: 5px 0; }
 .toolButton small { float: right; color: #95b9bb; }
 .shell .active { border-color: #a2e7bc; background: #265043; box-shadow: inset 3px 0 #a2e7bc; }
-.rotateRow { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; color: #b9d2d0; font-size: 11px; }
-.rotateRow button { font-size: 11px; padding: 6px 9px; }
 .catalog { display: grid; gap: 6px; }
 .shell .moduleCard { width: 100%; text-align: left; padding: 10px; background: #18313a; }
 .moduleTop { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 5px; font-size: 11px; margin-bottom: 6px; }
@@ -74,6 +74,18 @@
 .moon::after { content: ""; position: absolute; inset: 9%; border-radius: 50%; background: radial-gradient(circle at 25% 50%, #4c666366 0 7%, transparent 8%), radial-gradient(circle at 65% 25%, #4c666366 0 5%, transparent 6%), radial-gradient(circle at 58% 65%, #4c666366 0 10%, transparent 11%); }
 .modalBackdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #06111ddc; padding: 18px; }
 .modal { width: min(520px, 100%); max-height: 90vh; overflow: auto; border: 1px solid #7cb5ab; border-radius: 12px; background: #142d38; padding: 20px; box-shadow: 0 20px 90px #000b; }
+.tutorial { max-width: 1760px; margin: 0 auto 14px; padding: 12px 16px; border: 1px solid #4c9c92; border-radius: 8px; background: #18343b; }
+.tutorial p, .tutorial small { color: #c1d9d5; line-height: 1.5; }
+.tutorial p { margin: 8px 0; }
+.tutorial .panelHeading { margin-bottom: 8px; padding-bottom: 8px; }
+.interiorBackdrop { position: fixed; inset: 0; z-index: 15; display: grid; place-items: center; padding: 18px; background: #06111df0; }
+.interiorPanel { width: min(1180px, 100%); max-height: 95vh; overflow: auto; border: 1px solid #7cb5ab; border-radius: 10px; background: #102430; padding: 18px; }
+.interiorPanel .panelHeading p, .interiorHelp { color: #b4cbcd; font-size: 12px; line-height: 1.5; font-weight: 400; letter-spacing: 0; }
+.slotGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.slotCard { border: 1px solid #31505c; border-radius: 8px; padding: 16px; background: #152d39; }
+.slotCard h2 { margin: 0 0 8px; font-size: 18px; }
+.slotCard p { color: #b4cbcd; font-size: 12px; }
+.slotCard button { font-size: 11px; margin: 3px 0; }
 :global(.minigamePanel) { color: #eaf5f0; }
 :global(.minigameHeader) { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 :global(.minigameHeader strong) { font-size: 24px; }

@@ -1,15 +1,16 @@
 import * as Phaser from "phaser";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { MAP_SIZE } from "../state/reducer.ts";
-import type { Cell, GameState, PlacedModule, PlayerAction, Rotation } from "../state/types.ts";
+import type { Cell, GameState, PlacedModule, PlayerAction } from "../state/types.ts";
 import { occupiedModuleCells, previewModule, renderUtilityNetwork } from "./adapters.ts";
+import { agricultureSlots } from "./agricultureAdapter.ts";
 import { gridToScreen, rotatedFootprint, screenToGrid, VIEW } from "./isometric.ts";
 
 export type BuildTool = { kind: "select" } | { kind: "module"; moduleId: string } | { kind: "corridor" };
 export type SceneCallbacks = {
   onAction: (action: PlayerAction) => void;
   onSelect: (id: string | null) => void;
-  onRotate: () => void;
+  onFeedback: (message: string) => void;
 };
 
 const colors: Record<string, number> = {
@@ -22,7 +23,6 @@ const colors: Record<string, number> = {
 export class GameScene extends Phaser.Scene {
   private snapshot: GameState | null = null;
   private tool: BuildTool = { kind: "select" };
-  private rotation: Rotation = 0;
   private selectedId: string | null = null;
   private hover: Cell | null = null;
   private corridorPath: Cell[] = [];
@@ -40,7 +40,6 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => this.onMove(pointer));
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.onDown(pointer));
     this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => this.onUp(pointer));
-    this.input.keyboard?.on("keydown-R", () => this.callbacks.onRotate());
     this.paint();
   }
 
@@ -54,15 +53,31 @@ export class GameScene extends Phaser.Scene {
 
   setSnapshot(state: GameState): void { this.snapshot = state; this.paint(); }
   setTool(tool: BuildTool): void { this.tool = tool; this.corridorPath = []; this.paint(); }
-  setRotation(rotation: Rotation): void { this.rotation = rotation; this.paint(); }
-  setSelection(id: string | null): void { this.selectedId = id; this.paint(); }
+  setSelection(id: string | null): void {
+    if (this.selectedId === id) return;
+    this.selectedId = id;
+    const module = this.snapshot?.modules.find((item) => item.id === id);
+    const definition = module ? MODULE_BY_ID.get(module.moduleId) : undefined;
+    const camera = this.cameras.main;
+    if (module && definition) {
+      const { w, h } = rotatedFootprint(definition.footprint, module.rotation);
+      const center = gridToScreen(module.x + (w - 1) / 2, module.y + (h - 1) / 2);
+      camera.pan(center.x, center.y, 350);
+      camera.zoomTo(1.2, 350);
+    } else {
+      camera.pan(VIEW.width / 2, VIEW.height / 2, 350);
+      camera.zoomTo(1, 350);
+    }
+    this.paint();
+  }
 
   private inBounds(cell: Cell): boolean {
     return cell.x >= 0 && cell.y >= 0 && cell.x < MAP_SIZE.width && cell.y < MAP_SIZE.height;
   }
 
   private pointerCell(pointer: Phaser.Input.Pointer): Cell | null {
-    const cell = screenToGrid(pointer.x, pointer.y);
+    const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const cell = screenToGrid(point.x, point.y);
     return this.inBounds(cell) ? cell : null;
   }
 
@@ -89,9 +104,10 @@ export class GameScene extends Phaser.Scene {
     if (!state || !cell) { this.corridorPath = []; this.paint(); return; }
     if (this.tool.kind === "module" && this.buildEnabled()) {
       const definition = MODULE_BY_ID.get(this.tool.moduleId);
-      if (definition && previewModule(state, definition, cell.x, cell.y, this.rotation).valid) {
-        this.callbacks.onAction({ type: "PLACE_MODULE", moduleId: definition.id, x: cell.x, y: cell.y, rotation: this.rotation });
-      }
+      const preview = definition && previewModule(state, definition, cell.x, cell.y, 0);
+      if (definition && preview?.valid) {
+        this.callbacks.onAction({ type: "PLACE_MODULE", moduleId: definition.id, x: cell.x, y: cell.y, rotation: 0 });
+      } else this.callbacks.onFeedback(preview?.reason ?? "This module cannot be placed here.");
     } else if (this.tool.kind === "corridor" && this.buildEnabled()) {
       this.extendPath(cell);
       if (this.corridorPath.length > 0) this.callbacks.onAction({ type: "PLACE_CORRIDOR", cells: [...this.corridorPath] });
@@ -224,19 +240,20 @@ export class GameScene extends Phaser.Scene {
         this.block(module.x + dx, module.y + dy, color, module.integrity, module.id === this.selectedId);
       }
       const center = gridToScreen(module.x + (w - 1) / 2, module.y + (h - 1) / 2);
-      const crop = state.crops.find((item) => item.moduleId === module.id);
-      const animal = state.livestock.find((item) => item.moduleId === module.id);
-      const short = definition.category === "greenhouse" ? `🌱 ${crop?.crop.slice(0, 3) ?? ""} ${crop?.ready ? "READY" : `${Math.round((crop?.growth ?? 0) * 100)}%`}`
-        : definition.category === "livestock" ? `● ${animal?.animal ?? ""} ${Math.round((animal?.growth ?? 0) * 100)}%`
+      const agriculture = agricultureSlots(state, module.id);
+      const crop = agriculture?.kind === "greenhouse" ? agriculture.slots.find((slot) => slot.crop) : undefined;
+      const animal = agriculture?.kind === "livestock" ? agriculture.slots.find((slot) => slot.animal) : undefined;
+      const short = definition.category === "greenhouse" ? `🌱 ${crop?.crop?.slice(0, 3) ?? "empty"} ${crop?.ready ? "READY" : `${crop?.progress ?? 0}%`}`
+        : definition.category === "livestock" ? `● ${animal?.animal ?? "empty"} ${animal?.progress ?? 0}%`
         : definition.label.split(" ").map((word) => word[0]).join("").slice(0, 4).toUpperCase();
       this.text(center.x, center.y - 15, short, "#f5fbf6", 11);
-      if (crop) {
-        const mature = crop.ready || crop.growth > 0.65;
+      if (crop?.crop) {
+        const mature = crop.ready || crop.progress > 65;
         g.fillStyle(mature ? 0xb1e794 : 0x83cf97);
         g.fillRect(center.x - 12, center.y - 25, 6, mature ? 7 : 4);
         g.fillRect(center.x + 6, center.y - 25, 6, mature ? 7 : 4);
       }
-      if (animal) {
+      if (animal?.animal) {
         g.fillStyle(animal.animal === "chicken" ? 0xf0d3a5 : animal.animal === "pig" ? 0xe8a9ad : 0xe9e4d0);
         g.fillRect(center.x - 8, center.y - 23, 16, 7);
         g.fillRect(center.x + 5, center.y - 27, 4, 5);
@@ -258,7 +275,7 @@ export class GameScene extends Phaser.Scene {
     } else if (this.hover && this.tool.kind === "module" && this.buildEnabled()) {
       const definition = MODULE_BY_ID.get(this.tool.moduleId);
       if (definition) {
-        const preview = previewModule(state, definition, this.hover.x, this.hover.y, this.rotation);
+        const preview = previewModule(state, definition, this.hover.x, this.hover.y, 0);
         for (const cell of preview.cells) if (this.inBounds(cell)) this.diamond(cell.x, cell.y, preview.valid ? 0x8de0be : 0xe7746d, preview.valid ? 0.65 : 0.2, 0xffffff);
         const point = gridToScreen(this.hover.x, this.hover.y);
         this.text(point.x, point.y - 30, preview.valid ? "PLACE" : preview.reason ?? "BLOCKED", preview.valid ? "#adf6cd" : "#ffc0b5", 10);

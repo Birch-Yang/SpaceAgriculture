@@ -25,7 +25,3 @@ export function rotatedFootprint(footprint: { w: number; h: number }, rotation: 
     ? { w: footprint.h, h: footprint.w }
     : footprint;
 }
-
-export function nextRotation(rotation: Rotation): Rotation {
-  return ((rotation + 90) % 360) as Rotation;
-}
