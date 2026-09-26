@@ -1130,6 +1130,17 @@
       "width": null,
       "height": null,
       "bytes": 17419,
+      "recommended": false,
+      "status": "archived-preview",
+      "purpose": "Presentation only; sample values, no live simulation",
+      "source": "React/HTML presentation snapshot; gameplay-mock PNG is browser capture"
+    },
+    {
+      "path": "public/assets/previews/ui-v11.html",
+      "url": "/assets/previews/ui-v11.html",
+      "width": null,
+      "height": null,
+      "bytes": 17420,
       "recommended": true,
       "status": "illustrative-preview",
       "purpose": "Presentation only; sample values, no live simulation",
