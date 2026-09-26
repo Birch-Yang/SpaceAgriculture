@@ -31,19 +31,25 @@ export function Match3({ onComplete, onCancel }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const [moves, setMoves] = useState(5);
   const [matches, setMatches] = useState(0);
+  const [notice, setNotice] = useState("");
 
   function choose(index: number) {
-    if (selected === null) { setSelected(index); return; }
-    if (selected === index) { setSelected(null); return; }
+    if (selected === null) { setSelected(index); setNotice(""); return; }
+    if (selected === index) { setSelected(null); setNotice(""); return; }
     const near = Math.abs(Math.floor(index / WIDTH) - Math.floor(selected / WIDTH)) + Math.abs(index % WIDTH - selected % WIDTH) === 1;
-    if (!near) { setSelected(index); return; }
+    if (!near) { setSelected(index); setNotice(""); return; }
     const next = [...board];
     [next[index], next[selected]] = [next[selected], next[index]];
     const found = matchedCells(next);
+    if (!found.has(index) && !found.has(selected)) {
+      setNotice("No match formed. Choose another adjacent sample.");
+      return;
+    }
     const total = matches + found.size;
     for (const cell of found) next[cell] = (cell * 7 + moves * 3 + total) % cropIcons.length;
     setBoard(next);
     setSelected(null);
+    setNotice("");
     setMatches(total);
     setMoves(moves - 1);
     if (moves === 1) onComplete({ completed: true, modifier: Math.max(-0.1, Math.min(0.1, -0.1 + total * 0.025)) });
@@ -52,6 +58,7 @@ export function Match3({ onComplete, onCancel }: Props) {
   return <div className="minigamePanel" role="dialog" aria-modal="true" aria-label="Agriculture match three">
     <div className="minigameHeader"><div><strong>Harvest alignment</strong><p>Swap adjacent samples. Match three or more in five moves.</p></div><button onClick={onCancel} aria-label="Close minigame">×</button></div>
     <p>Moves: {moves} · Matched samples: {matches} · Modifier stays within ±10%</p>
+    {notice && <p role="status">{notice}</p>}
     <div className="matchBoard">{board.map((type, index) => <button key={index} className={selected === index ? "selected" : ""} style={{ color: cropColors[type] }} onClick={() => choose(index)} aria-label={`Sample ${index + 1}, type ${type + 1}`}>{cropIcons[type]}</button>)}</div>
   </div>;
 }
