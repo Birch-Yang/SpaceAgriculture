@@ -5,7 +5,7 @@ import { verifySpectrumWebhook } from "../src/ai/webhookSignature.ts";
 import { fallbackReport } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
-import { resourceCapacity } from "../src/data/systems.ts";
+import { communicationsAvailable, resourceCapacity } from "../src/data/systems.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
 import { harvestCrop } from "../src/game/simulation/crops.ts";
@@ -103,6 +103,20 @@ test("a connected recreation module improves AP recovery while food scarcity sti
   assert.equal(resolveTurn(extra, [], "recreation").state.ap, resolveTurn(ordinary, [], "recreation").state.ap + 1);
   extra.resources.food = 0;
   assert.ok(resolveTurn(extra, [], "recreation").state.ap < maxActionPoints(extra));
+});
+
+test("a connected communications tower boosts utility backup during an outage", () => {
+  const state = base();
+  state.activeHazard = { id: "comms-test", type: "communications", severity: 1, turn: 2 };
+  state.modules.push({ id: "module-utility", moduleId: "utility-thermal", x: 10, y: 8, rotation: 0, integrity: 1,
+    allocation: { thermal: 0.5, backupPower: 0.3, commsBackup: 0.2 } });
+  state.utilityEdges.push({ id: "edge-utility", from: state.modules[0].id, to: "module-utility", cells: [{ x: 10, y: 7 }], length: 1, capacity: 20, integrity: 1 });
+  assert.equal(communicationsAvailable(state), false);
+  state.modules.push({ id: "module-tower", moduleId: "communication-tower", x: 11, y: 8, rotation: 0, integrity: 1 });
+  state.utilityEdges.push({ id: "edge-tower", from: "module-utility", to: "module-tower", cells: [{ x: 11, y: 7 }], length: 1, capacity: 20, integrity: 1 });
+  assert.equal(communicationsAvailable(state), true);
+  state.utilityEdges.pop();
+  assert.equal(communicationsAvailable(state), false);
 });
 
 test("all three crops and livestock species produce through the connected base", () => {

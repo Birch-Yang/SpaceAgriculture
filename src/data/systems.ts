@@ -10,8 +10,10 @@ export const SYSTEMS = {
   greenhouseRecycleYieldFactor: 1.05,
   backupPowerPerUtility: 8,
   communicationsBackupThreshold: 0.4,
+  communicationsTowerBoost: 0.2,
   thermalDistanceFalloff: 0.15,
   moduleMoveCost: 2,
+  corridorRemovalCost: 1,
   recreationApBonus: 1,
 } as const;
 
@@ -65,9 +67,11 @@ export function greenhouseRecyclingBonus(state: GameState, greenhouse: PlacedMod
 
 export function communicationsAvailable(state: GameState): boolean {
   if (state.activeHazard?.type !== "communications") return true;
+  const tower = state.modules.some((module) => MODULE_BY_ID.get(module.moduleId)?.category === "communications"
+    && module.integrity > 0.5 && connectedToHabitat(state, module.id));
   return state.resources.power > 0 && state.modules.some((module) =>
     MODULE_BY_ID.get(module.moduleId)?.category === "utility"
     && module.integrity > 0.5
-    && (module.allocation?.commsBackup ?? 0) >= SYSTEMS.communicationsBackupThreshold
+    && (module.allocation?.commsBackup ?? 0) + (tower ? SYSTEMS.communicationsTowerBoost : 0) >= SYSTEMS.communicationsBackupThreshold
     && connectedToHabitat(state, module.id));
 }

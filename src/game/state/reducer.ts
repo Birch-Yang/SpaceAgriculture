@@ -89,7 +89,9 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
   }
   if (action.type === "REMOVE_CORRIDOR") {
     if (!state.utilityEdges.some((edge) => edge.id === action.edgeId)) return { state, error: "Unknown utility corridor" };
-    return { state: { ...state, utilityEdges: state.utilityEdges.filter((edge) => edge.id !== action.edgeId) } };
+    if (state.budget < SYSTEMS.corridorRemovalCost) return { state, error: "Insufficient construction budget" };
+    return { state: { ...state, budget: state.budget - SYSTEMS.corridorRemovalCost,
+      utilityEdges: state.utilityEdges.filter((edge) => edge.id !== action.edgeId) } };
   }
   if (action.type === "PLACE_CORRIDOR") {
     const cells = action.cells;

@@ -7,7 +7,7 @@ agronaut is a lunar agriculture design-space explorer. Players build an outpost,
 - **Challenge:** build from an empty map and survive ten turns under high hazard pressure.
 - **Progressive:** operate one inherited base through three ten-turn levels, with construction intermissions between levels.
 - Agriculture has independent crop plots and livestock stalls. Parameters, care actions, and the two minigames affect production. A connected water recycler near a greenhouse improves water efficiency; nearby active livestock provides a small gameified recycling bonus.
-- Integrated utility corridors carry power, water, and oxygen. Route length, integrity, capacity, demand, storage, thermal distance, shelters, and multifunction utility allocations affect survival.
+- Integrated utility corridors carry power, water, and oxygen. Route length, integrity, capacity, demand, storage, thermal distance, shelters, multifunction utility allocations, and communication-tower backup affect survival.
 - Modules retain the shared `rotation` field but have a fixed orientation in play. In a build phase, players can drag a disconnected module to move it, remove corridors, and reroute them. Operation locks the layout.
 - Completed runs use a 70-point rules score plus a 30-point structured AI evaluation when available. A template report and normalized rules score keep results available when AI fails.
 
@@ -27,7 +27,7 @@ Deploy through Vercel using the variables in `.env.example`. The existing Vercel
 
 Set `SPECTRUM_PROJECT_ID` (or legacy `PHOTON_PROJECT_ID`), `SPECTRUM_PROJECT_SECRET`, `SPECTRUM_WEBHOOK_SECRET`, and a random `MISSION_SESSION_SECRET` of at least 32 characters. Set a separate `SUBMISSION_HASH_SECRET` for request-quota hashes. Register a Photon Spectrum webhook at `https://<deployment-origin>/api/mission-control/webhook` for inbound message events and copy its signing secret into `SPECTRUM_WEBHOOK_SECRET`. See [Photon's iMessage routing](https://photon.codes/docs/spectrum-ts/providers/imessage/connection-and-routing) and [webhook signature format](https://photon.codes/docs/webhooks/verifying-signatures).
 
-The player may enter an iMessage address voluntarily. The address and conversation ID are encrypted in a two-hour session and are never stored in `runs`. A short-lived token authorizes turn updates; signed inbound webhooks are deduplicated. The advisor sees only coarse telemetry, sends advice, and cannot change game state. Enrollment is limited to three sessions per requester per day, globally 100, and each session sends at most 25 advice messages. Service or communication failure leaves the game playable with an explicit unavailable or offline state. `cleanup_mission_control()` removes expired sessions and dedupe rows on subsequent traffic; schedule it separately if expiry must happen during quiet periods.
+The player may enter an iMessage address voluntarily. The address and conversation ID are encrypted in a two-hour session and are never stored in `runs`. A short-lived token authorizes turn updates; signed inbound webhooks are deduplicated. The advisor sees only coarse telemetry, sends advice, and cannot change game state. Enrollment is limited to three sessions per requester per day, globally 100, and each session sends at most 25 advice messages. Service or communication failure leaves the game playable with an explicit unavailable or offline state. During a communications hazard, a connected tower strengthens a connected multifunction utility's backup allocation. `cleanup_mission_control()` removes expired sessions and dedupe rows on subsequent traffic; schedule it separately if expiry must happen during quiet periods.
 
 ## Scientific framing
 
@@ -35,4 +35,4 @@ Mission reports cite only IDs from the curated NASA/ESA source registry in `src/
 
 ## Current external verification limits
 
-The project needs its SQL migrations applied and its deployment variables configured before live persistence, OpenAI, or iMessage can be verified. A production URL also needs access settings reviewed for public play. No branch is merged by this worktree.
+The Photon project credential supplied during development established an SDK connection locally, without being written to this repository. The project still needs its SQL migrations applied and deployment variables configured before live persistence, OpenAI, or iMessage send/receive can be verified. A production URL also needs access settings reviewed for public play. No branch is merged by this worktree.
