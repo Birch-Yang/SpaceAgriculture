@@ -1,0 +1,7 @@
+import { Panel } from './primitives';
+import s from './ui.module.css';
+export type MessageView = { id: string; sender: 'control' | 'player'; text: string; timeLabel?: string };
+export type MissionControlPanelProps = { connection: 'online' | 'offline' | 'unavailable'; messages: readonly MessageView[]; loading?: boolean };
+export function MissionControlPanel({ connection, messages, loading }: MissionControlPanelProps) {
+  return <Panel title="Mission Control" eyebrow={`● ${connection}`}><p className={s.muted}>Remote advisory / limited telemetry</p>{connection === 'offline' && <div role="alert" className={`${s.notice} ${s.critical}`}><strong>MISSION CONTROL LINK LOST</strong><p>Use local system readings. Advice resumes when communications recover.</p></div>}{connection === 'unavailable' && <p role="status" className={s.notice}>Mission Control temporarily unavailable. Your mission can continue.</p>}<div className={s.messages} role="log" aria-label="Mission Control message history" aria-live="polite">{!messages.length && <p className={s.muted}>No transmissions yet.</p>}{messages.map(message => <article className={`${s.message} ${message.sender === 'player' ? s.playerMessage : ''}`} key={message.id}><p className={s.eyebrow}>{message.sender === 'control' ? 'Mission Control' : 'Outpost'}</p><p>{message.text}</p>{message.timeLabel && <small>{message.timeLabel}</small>}</article>)}</div>{loading && connection === 'online' && <p role="status" className={s.typing}>Mission Control is preparing a response…</p>}</Panel>;
+}
