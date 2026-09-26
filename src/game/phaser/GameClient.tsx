@@ -18,6 +18,7 @@ import { curatedSources } from "../../content/sources";
 import { communicationsAvailable } from "../../data/systems.ts";
 import { deriveAgentEvent, toAgentPublicState } from "../../ai/publicState.ts";
 import { PhotonAdvisor } from "../../ui/PhotonAdvisor";
+import { photonHazardAlert } from "../../ai/photonHazards.ts";
 import { normalizeIMessageAddress, validIMessageAddress } from "../../ai/photonValidation.ts";
 import type { MinigameResult } from "../minigames/match3/Match3.tsx";
 import { MinigameBoundary } from "../minigames/MinigameBoundary.tsx";
@@ -203,7 +204,8 @@ export function GameClient() {
       try {
         const response = await fetch("/api/mission-control/turn", { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ runId: next.runId, token: advisorToken.current, turn,
-            publicState: toAgentPublicState(next), event: next.phase === "operation" && next.lastTurn?.turn === resolvedTurn ? deriveAgentEvent(next) : undefined, outage }),
+            publicState: toAgentPublicState(next), event: next.phase === "operation" && next.lastTurn?.turn === resolvedTurn
+              ? photonHazardAlert(next) ?? deriveAgentEvent(next) : undefined, outage }),
           signal: AbortSignal.timeout(30000) });
         const data = await response.json() as { status?: string; text?: string };
         if (advisorRun.current !== next.runId) return;
