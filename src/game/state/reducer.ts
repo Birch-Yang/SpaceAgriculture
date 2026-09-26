@@ -1,3 +1,4 @@
+import { EMERGENCY } from "../../data/emergency.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { SYSTEMS } from "../../data/systems.ts";
@@ -16,7 +17,7 @@ export function createInitialState(runId: string, nickname: string, mode: GameMo
     production: { cropCumulative: 0, meatCumulative: 0 }, modules: [], utilityEdges: [],
     crops: [], livestock: [],
     forecast: forecastForTurn({ runId, mode, level: 1, turn: 1 }),
-    history: [], turnRecords: [], nextId: 1,
+    history: [], turnRecords: [], nextId: 1, emergencySuppliesRemaining: EMERGENCY.suppliesPerRun,
   };
 }
 

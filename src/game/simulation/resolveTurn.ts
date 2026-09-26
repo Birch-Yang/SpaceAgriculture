@@ -1,3 +1,4 @@
+import { emergencyResources, emergencySupplyAmount, suppliesRemaining, isPaused, isAgricultureAction, operationActionCost } from "./emergency.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { AGRICULTURE, boundedModifier } from "../../data/agriculture.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
@@ -25,12 +26,6 @@ export function apRecovery(state: GameState): number {
   return Math.max(1, Math.floor(baseline * factor)) + maxActionPoints(state) - baseline;
 }
 
-function actionCost(action: PlayerAction): number {
-  if (action.type === "REPAIR") return 2;
-  if (action.type === "END_TURN") return 0;
-  return 1;
-}
-
 type PendingHarvest = { plot: CropPlotState; modifier: number };
 
 function validSlot(state: GameState, moduleId: string, slotIndex: number, category: "greenhouse" | "livestock"): boolean {
@@ -53,11 +48,29 @@ function invalidModifier(value: number | undefined): boolean {
   return value !== undefined && !Number.isFinite(value);
 }
 
-function applyOperationAction(state: GameState, action: PlayerAction, pendingHarvests: PendingHarvest[]): string | undefined {
-  const cost = actionCost(action);
+function applyOperationAction(state: GameState, action: PlayerAction, pendingHarvests: PendingHarvest[], accepted: PlayerAction[]): string | undefined {
+  const cost = operationActionCost(state, action, accepted);
   if (cost > state.ap) return "Insufficient action points";
   if (action.type === "END_TURN") return undefined;
-  if (action.type === "SET_CROP_PARAMS") {
+  if (isAgricultureAction(action) && "moduleId" in action && isPaused(state, action.moduleId)) return "Module is paused; cancel its pause before farming";
+  if (action.type === "PAUSE_MODULE") {
+    const module = state.modules.find(item => item.id === action.moduleId);
+    const category = module && MODULE_BY_ID.get(module.moduleId)?.category;
+    if (category !== "greenhouse" && category !== "livestock") return "Only agriculture modules can be paused";
+    if (isPaused(state, action.moduleId)) return "Module is already paused this turn";
+    if (accepted.some(item => isAgricultureAction(item) && "moduleId" in item && item.moduleId === action.moduleId)) return "Cancel farming actions for this module before pausing it";
+    state.pausedModuleIds = [...(state.pausedModuleIds ?? []), action.moduleId];
+    state.history.push({ turn: state.turn, type: "EMERGENCY_PAUSE", message: `${action.moduleId} paused for one turn; resumes next turn` });
+  } else if (action.type === "USE_EMERGENCY_SUPPLY") {
+    if (!emergencyResources.includes(action.resource)) return "Invalid emergency resource";
+    if (accepted.some(item => item.type === "USE_EMERGENCY_SUPPLY")) return "Only one emergency supply per turn";
+    if (suppliesRemaining(state) <= 0) return "No emergency supplies remaining";
+    const amount = Math.min(emergencySupplyAmount(action.resource), Math.max(0, resourceCapacity(state, action.resource) - state.resources[action.resource]));
+    if (amount <= 0) return "Resource storage is already full";
+    state.resources[action.resource] += amount;
+    state.emergencySuppliesRemaining = suppliesRemaining(state) - 1;
+    state.history.push({ turn: state.turn, type: "EMERGENCY_SUPPLY", message: `Emergency ${action.resource} +${amount}`, amount });
+  } else if (action.type === "SET_CROP_PARAMS") {
     const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!plot) return "Crop plot not found";
     plot.water = action.water; plot.light = action.light; plot.temperature = action.temperature;
@@ -135,28 +148,38 @@ function applyHazard(state: GameState, warnings: string[]): void {
   warnings.push(`Hazard: ${hazard.type}`);
 }
 
+/** Validates only player actions; never reveals or simulates future hazards. */
+export function planOperationActions(state: GameState, actions: PlayerAction[]) {
+  const next = structuredClone(state);
+  next.pausedModuleIds = [];
+  next.ap = apRecovery(state);
+  const acceptedActions: PlayerAction[] = [];
+  const rejectedActions: string[] = [];
+  const pendingHarvests: PendingHarvest[] = [];
+  if (state.phase !== "operation") return { state: next, acceptedActions, rejectedActions: ["Mission is not in operation"], pendingHarvests, apUsed: 0 };
+  let ended = false;
+  for (const action of actions) {
+    if (ended) { rejectedActions.push(`${action.type}: Turn has already ended`); continue; }
+    const error = applyOperationAction(next, action, pendingHarvests, acceptedActions);
+    if (error) rejectedActions.push(`${action.type}${"moduleId" in action ? ` (${action.moduleId} slot ${"slotIndex" in action ? action.slotIndex ?? 0 : 0})` : ""}: ${error}`);
+    else { acceptedActions.push(action); if (action.type === "END_TURN") ended = true; }
+  }
+
+  return { state: next, acceptedActions, rejectedActions, pendingHarvests, apUsed: apRecovery(state) - next.ap };
+}
+
 export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: string): TurnResult {
   if (state.crops.some(plot => plot.crop !== null && !isCropId(plot.crop))) throw new Error('This run contains a retired crop ID. Start a new run or explicitly migrate it.');
   if (state.phase !== "operation") throw new Error("Turn resolution requires operation phase");
   if (!rngSeed) throw new Error("A deterministic RNG seed is required");
-  const next: GameState = structuredClone(state);
-  const before = { ...next.resources };
+  const { state: next, acceptedActions, rejectedActions, pendingHarvests } = planOperationActions(state, actions);
+  const before = { ...state.resources };
   const warnings: string[] = [];
-  const acceptedActions: PlayerAction[] = [];
-  const rejectedActions: string[] = [];
-  const pendingHarvests: PendingHarvest[] = [];
   const turn = next.turn;
 
   // 1. Reveal hazard; 2. restore AP; 3. apply strategic actions.
   next.activeHazard = hazardForTurn(next, rngSeed);
-  next.ap = apRecovery(next);
-  let ended = false;
-  for (const action of actions) {
-    if (ended) { rejectedActions.push(`${action.type}: Turn has already ended`); continue; }
-    const error = applyOperationAction(next, action, pendingHarvests);
-    if (error) rejectedActions.push(`${action.type}${"moduleId" in action ? ` (${action.moduleId} slot ${"slotIndex" in action ? action.slotIndex ?? 0 : 0})` : ""}: ${error}`);
-    else { acceptedActions.push(action); if (action.type === "END_TURN") ended = true; }
-  }
+
 
   // 4. Network and 5. temperature. Accepted minigame modifiers were bounded above.
   const network = resolveUtilityGraph(next);
@@ -229,6 +252,7 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
     cropYield, meatYield: livestock.meatYield, crisis: !!next.crisis,
     ...(next.activeHazard ? { hazard: next.activeHazard } : {}),
   }];
+  next.pausedModuleIds = [];
   next.lastTurn = summary;
   if (next.phase === "operation") { next.turn = turn + 1; next.forecast = forecastForTurn(next); }
   return { state: next, summary, acceptedActions, rejectedActions };

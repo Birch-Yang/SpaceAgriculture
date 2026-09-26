@@ -125,9 +125,15 @@ export type GameState = {
   passed?: boolean;
   failureReason?: string;
   nextId: number;
+  /** Optional for compatibility with older local snapshots. Never reset between levels. */
+  emergencySuppliesRemaining?: number;
+  /** Resolver-only scope: cleared after this turn's production and consumption. */
+  pausedModuleIds?: string[];
 };
 
 export type PlayerAction =
+  | { type: "PAUSE_MODULE"; moduleId: string }
+  | { type: "USE_EMERGENCY_SUPPLY"; resource: ResourceKey }
   | { type: "PLACE_MODULE"; moduleId: string; x: number; y: number; rotation: Rotation }
   | { type: "REMOVE_MODULE"; placedModuleId: string }
   | { type: "MOVE_MODULE"; placedModuleId: string; x: number; y: number }

@@ -48,6 +48,8 @@ function validAction(value: unknown, build: boolean): value is PlayerAction {
     return false;
   }
   if (value.type === "END_TURN") return true;
+  if (value.type === "PAUSE_MODULE") return string(value.moduleId);
+  if (value.type === "USE_EMERGENCY_SUPPLY") return oneOf(new Set(["power", "water", "oxygen", "food"]), value.resource);
   if (value.type === "REPAIR") return string(value.targetId) && verifiedModifier(value, "repair");
   if (value.type === "REALLOCATE_UTILITY") {
     if (!string(value.moduleId) || !record(value.allocation)) return false;

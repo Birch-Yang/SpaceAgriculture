@@ -1,3 +1,5 @@
+import { EMERGENCY } from "../../data/emergency.ts";
+import { isPaused } from "./emergency.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { SYSTEMS } from "../../data/systems.ts";
 import type { GameState, ResourceKey, UtilityEdge } from "../state/types.ts";
@@ -85,7 +87,7 @@ export function resolveUtilityGraph(state: GameState): NetworkResult {
     const consumers = state.modules.filter((module) => (MODULE_BY_ID.get(module.moduleId)?.flow[demandField] ?? 0) > 0)
       .sort((a, b) => (cores.includes(a.id) ? -1 : 0) - (cores.includes(b.id) ? -1 : 0) || a.id.localeCompare(b.id));
     for (const module of consumers) {
-      const demand = (MODULE_BY_ID.get(module.moduleId)!.flow[demandField] ?? 0) * module.integrity;
+      const demand = (MODULE_BY_ID.get(module.moduleId)!.flow[demandField] ?? 0) * module.integrity * (isPaused(state, module.id) ? EMERGENCY.pausedDemandFraction : 1);
       let received = 0;
       while (received < demand - 0.0001 && available > 0.0001) {
         const routes = cores.map((core) => bestPath(state, core, module.id, deliveryCapacity)).filter((path): path is UtilityEdge[] => path !== undefined);

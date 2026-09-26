@@ -1,3 +1,4 @@
+import { isPaused } from "./emergency.ts";
 import { CROP_CATALOG } from '../../data/cropCatalog.ts';
 import { CROPS } from "../../data/crops.ts";
 import { AGRICULTURE, slotBaseYield } from "../../data/agriculture.ts";
@@ -13,7 +14,7 @@ export function growCrops(state: GameState, network: NetworkResult): { crops: Cr
   let waterUsed = 0;
   let powerUsed = 0;
   const crops = state.crops.map((plot) => {
-    if (plot.ready || !plot.crop) return plot;
+    if (isPaused(state, plot.moduleId) || plot.ready || !plot.crop) return plot;
     const module = state.modules.find((item) => item.id === plot.moduleId);
     if (!module) return plot;
     const def = MODULE_BY_ID.get(module.moduleId)!;
@@ -35,7 +36,7 @@ export function harvestCrop(state: GameState, plotOrId: CropPlotState | string, 
   const plot = typeof plotOrId === "string" ? state.crops.find(item => item.moduleId === plotOrId) : plotOrId;
   if (!plot) return { yield: 0, food: 0, research: 0 };
   const module = state.modules.find((item) => item.id === plot.moduleId);
-  if (!plot.ready || !plot.crop || !module) return { yield: 0, food: 0, research: 0 };
+  if (!plot.ready || !plot.crop || !module || isPaused(state, plot.moduleId)) return { yield: 0, food: 0, research: 0 };
   const def = MODULE_BY_ID.get(module.moduleId)!;
   const water = network.delivery[module.id]?.water ?? 0;
   const power = network.delivery[module.id]?.power ?? 0;

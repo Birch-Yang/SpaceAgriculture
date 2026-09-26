@@ -1,3 +1,5 @@
+import { EMERGENCY } from "../../data/emergency.ts";
+import { isPaused } from "./emergency.ts";
 import { LIVESTOCK } from "../../data/livestock.ts";
 import { AGRICULTURE, slotBaseYield } from "../../data/agriculture.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
@@ -17,6 +19,10 @@ export function growLivestock(state: GameState, network: NetworkResult): { lives
     if (!module) return animal;
     const def = MODULE_BY_ID.get(module.moduleId)!;
     const config = LIVESTOCK[animal.animal];
+    if (isPaused(state, module.id)) {
+      feedUsed += Math.min(Math.max(0, state.resources.food - feedUsed), config.feed * feedFactor[animal.feed] / def.capacity * EMERGENCY.pausedDemandFraction);
+      return animal;
+    }
     const utility = Math.min(network.delivery[module.id]?.water ?? 0, network.delivery[module.id]?.power ?? 0);
     const availableFeed = Math.max(0, state.resources.food - feedUsed);
     const requiredFeed = config.feed * feedFactor[animal.feed] / def.capacity;

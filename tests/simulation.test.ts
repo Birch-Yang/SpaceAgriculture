@@ -1,6 +1,7 @@
+import { seedForLevel } from "../src/game/simulation/hazards.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
+import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { resolveTurn } from "../src/game/simulation/resolveTurn.ts";
 import type { GameState, PlayerAction } from "../src/game/state/types.ts";
 
@@ -235,4 +236,129 @@ test("emergency turn labels distinguish recovery from the ten-turn mission", () 
   const state = sampleBase();
   assert.equal(selectTurnLabel({ ...state, turn: 10 }), "TURN 10/10");
   assert.equal(selectTurnLabel({ ...state, turn: 11, crisis: { trigger: "power depleted", recoveryTurn: 11 } }), "EMERGENCY RECOVERY · TURN 11");
+});
+
+import { planOperationActions } from "../src/game/simulation/resolveTurn.ts";
+import { suppliesRemaining, emergencySupplyAmount } from "../src/game/simulation/emergency.ts";
+import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
+import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
+
+test("emergency pause preserves occupants, stops output, reduces demand, and resumes automatically", () => {
+  const state = startOperation(sampleBase());
+  const greenhouse = state.modules.find(m => m.moduleId === "greenhouse-standard")!;
+  const livestock = state.modules.find(m => m.moduleId === "livestock-compact")!;
+  state.livestock[0].growth = 100; // Otherwise output would occur this turn.
+  const actions: PlayerAction[] = [{ type: "PAUSE_MODULE", moduleId: greenhouse.id }, { type: "PAUSE_MODULE", moduleId: livestock.id }];
+  const plan = planOperationActions(state, actions);
+  assert.deepEqual(plan.rejectedActions, []);
+  assert.equal(plan.apUsed, 2);
+  assert.ok(resolveUtilityGraph(plan.state).net.power > resolveUtilityGraph(state).net.power);
+  assert.ok(resolveUtilityGraph(plan.state).net.water > resolveUtilityGraph(state).net.water);
+  const paused = resolveTurn(state, [...actions, { type: "END_TURN" }], "pause-test");
+  assert.deepEqual(paused.state.crops, state.crops);
+  assert.deepEqual(paused.state.livestock, state.livestock);
+  assert.equal(paused.summary.meatYield, 0);
+  assert.equal(paused.summary.cropYield, 0);
+  assert.deepEqual(paused.state.pausedModuleIds, []);
+  const resumed = resolveTurn(paused.state, [{ type: "END_TURN" }], "pause-test");
+  assert.ok(resumed.summary.meatYield > 0);
+  assert.ok(resumed.state.crops[0].growth > state.crops[0].growth);
+});
+
+test("pause conflicts reject in both orders, invalid targets and duplicates spend no extra AP", () => {
+  const state = startOperation(sampleBase());
+  const id = state.crops[0].moduleId;
+  const pause: PlayerAction = { type: "PAUSE_MODULE", moduleId: id };
+  const water: PlayerAction = { type: "WATER_PLOT", moduleId: id, slotIndex: 0 };
+  for (const actions of [[pause, water], [water, pause], [pause, pause]]) {
+    const plan = planOperationActions(state, actions);
+    assert.equal(plan.acceptedActions.length, 1);
+    assert.equal(plan.rejectedActions.length, 1);
+    assert.equal(plan.apUsed, 1);
+  }
+  const invalid = planOperationActions(state, [{ type: "PAUSE_MODULE", moduleId: state.modules[0].id }]);
+  assert.equal(invalid.apUsed, 0);
+  assert.equal(invalid.rejectedActions.length, 1);
+});
+
+test("supplies are bounded, one per turn, two per run, and plans never spend live inventory", () => {
+  const state = startOperation(sampleBase());
+  const before = structuredClone(state);
+  const supply: PlayerAction = { type: "USE_EMERGENCY_SUPPLY", resource: "power" };
+  const plan = planOperationActions(state, [supply, supply]);
+  assert.deepEqual(state, before);
+  assert.equal(plan.state.resources.power - state.resources.power, emergencySupplyAmount("power"));
+  assert.equal(suppliesRemaining(plan.state), 1);
+  assert.equal(plan.rejectedActions.length, 1);
+  assert.equal(plan.apUsed, 1);
+  assert.equal(suppliesRemaining(planOperationActions(state, []).state), 2); // Cancelled queue.
+  const next = resolveTurn(state, [supply, { type: "END_TURN" }], "supply-test").state;
+  const last = resolveTurn(next, [{ type: "USE_EMERGENCY_SUPPLY", resource: "water" }, { type: "END_TURN" }], "supply-test").state;
+  assert.equal(suppliesRemaining(last), 0);
+  assert.match(planOperationActions(last, [supply]).rejectedActions[0], /No emergency supplies/);
+  state.resources.power = 39;
+  assert.equal(planOperationActions(state, [supply]).state.resources.power, 40);
+  state.resources.power = 40;
+  const full = planOperationActions(state, [supply]);
+  assert.equal(full.apUsed, 0);
+  assert.equal(suppliesRemaining(full.state), 2);
+  assert.match(full.rejectedActions[0], /already full/);
+});
+
+test("first accepted emergency action in a crisis is free; later actions use normal AP", () => {
+  const state = startOperation(sampleBase());
+  state.resources.food = 0;
+  state.crisis = { trigger: "food depleted", recoveryTurn: state.turn };
+  const actions: PlayerAction[] = [
+    { type: "PAUSE_MODULE", moduleId: "missing" },
+    { type: "USE_EMERGENCY_SUPPLY", resource: "food" },
+    { type: "PAUSE_MODULE", moduleId: state.crops[0].moduleId },
+  ];
+  const plan = planOperationActions(state, actions);
+  assert.equal(plan.apUsed, 1);
+  assert.equal(plan.acceptedActions.length, 2);
+  assert.equal(plan.rejectedActions.length, 1);
+  assert.equal(plan.state.ap, apRecovery(state) - 1); // Refill does not grant extra AP mid-turn.
+  const resolved = resolveTurn(state, actions.slice(1), "crisis-test");
+  assert.equal(resolved.state.crisis, undefined);
+  assert.ok(resolved.summary.warnings.includes("Crisis recovered"));
+});
+
+test("supplies do not extend a crisis deadline or reset when advancing levels", () => {
+  const state = startOperation(sampleBase());
+  state.resources.oxygen = 0;
+  state.modules.find(m => m.moduleId === "oxygen-generator")!.integrity = 0;
+  state.crisis = { trigger: "oxygen depleted", recoveryTurn: state.turn };
+  const failed = resolveTurn(state, [{ type: "USE_EMERGENCY_SUPPLY", resource: "water" }], "deadline-test");
+  assert.equal(failed.state.phase, "complete");
+  assert.equal(failed.state.passed, false);
+  const progressive = createInitialState("progressive-emergency", "QA", "progressive");
+  progressive.phase = "intermission";
+  progressive.passed = true;
+  progressive.emergencySuppliesRemaining = 1;
+  assert.equal(suppliesRemaining(advanceLevel(progressive)), 1);
+});
+
+test("server transcript replay validates emergency actions and reproduces client results", () => {
+  const transcript: RunTranscript = { version: 1, runId: "00000000-0000-4000-8000-000000000201", nickname: "Emergency QA", mode: "challenge", steps: [] };
+  let state = createInitialState(transcript.runId, transcript.nickname, transcript.mode);
+  const action: PlayerAction = { type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 0 };
+  state = build(action, state);
+  transcript.steps.push({ kind: "build", action }, { kind: "start" });
+  state = startOperation(state);
+  while (state.phase === "operation") {
+    const actions: PlayerAction[] = state.turn === 1 ? [{ type: "USE_EMERGENCY_SUPPLY", resource: "power" }, { type: "END_TURN" }] : [{ type: "END_TURN" }];
+    const result = resolveTurn(state, actions, seedForLevel(state));
+    assert.deepEqual(result.rejectedActions, []);
+    transcript.steps.push({ kind: "turn", actions });
+    state = result.state;
+  }
+  assert.deepEqual(replayTranscript(transcript), state);
+  const invalid = structuredClone(transcript);
+  (invalid.steps[2] as { actions: unknown[] }).actions[0] = { type: "USE_EMERGENCY_SUPPLY", resource: "temperature" };
+  assert.throws(() => parseTranscript(invalid), /Invalid run step/);
+  const duplicate = structuredClone(transcript);
+  const turn = duplicate.steps[2] as { actions: PlayerAction[] };
+  turn.actions.unshift({ type: "USE_EMERGENCY_SUPPLY", resource: "water" });
+  assert.throws(() => replayTranscript(duplicate), /Only one emergency supply/);
 });
