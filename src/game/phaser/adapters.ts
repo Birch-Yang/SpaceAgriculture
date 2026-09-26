@@ -6,9 +6,30 @@ import { rotatedFootprint } from "./isometric.ts";
 export type UtilityVisualStatus = "normal" | "connected" | "damaged" | "bottleneck" | "disconnected";
 export type UtilityVisualEdge = { edge: UtilityEdge; status: UtilityVisualStatus };
 
+function edgesConnectedToHabitat(state: GameState): Set<string> {
+  const modules = new Map(state.modules.map((module) => [module.id, module]));
+  const reachable = new Set(state.modules
+    .filter((module) => MODULE_BY_ID.get(module.moduleId)?.category === "habitat")
+    .map((module) => module.id));
+  const connectedEdges = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const edge of state.utilityEdges) {
+      if (edge.integrity <= 0.15 || edge.capacity * edge.integrity <= 0 || !modules.has(edge.from) || !modules.has(edge.to)) continue;
+      if (!reachable.has(edge.from) && !reachable.has(edge.to)) continue;
+      connectedEdges.add(edge.id);
+      if (!reachable.has(edge.from)) { reachable.add(edge.from); changed = true; }
+      if (!reachable.has(edge.to)) { reachable.add(edge.to); changed = true; }
+    }
+  }
+  return connectedEdges;
+}
+
 // Renderer-only projection of authoritative state. It never estimates resource flow.
 export function renderUtilityNetwork(state: GameState): UtilityVisualEdge[] {
   const moduleIds = new Set(state.modules.map((module) => module.id));
+  const connectedEdges = edgesConnectedToHabitat(state);
   const bottleneckModules = new Set((state.lastTurn?.warnings ?? [])
     .filter((warning) => warning.includes("% delivered"))
     .map((warning) => warning.slice(0, warning.indexOf(":")).trim().toLowerCase()));
@@ -18,7 +39,9 @@ export function renderUtilityNetwork(state: GameState): UtilityVisualEdge[] {
       ? "disconnected"
       : edge.integrity < 0.5
         ? "damaged"
-        : bottleneckModules.has(edge.from.toLowerCase()) || bottleneckModules.has(edge.to.toLowerCase())
+        : state.phase === "operation" && !connectedEdges.has(edge.id)
+          ? "disconnected"
+          : bottleneckModules.has(edge.from.toLowerCase()) || bottleneckModules.has(edge.to.toLowerCase())
           ? "bottleneck"
           : state.phase === "operation" ? "connected" : "normal",
   }));
