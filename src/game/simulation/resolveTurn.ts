@@ -7,6 +7,7 @@ import { hazardForTurn } from "./hazards.ts";
 import { growLivestock } from "./livestock.ts";
 import { resolveTemperature } from "./temperature.ts";
 import { resolveUtilityGraph } from "./utilityGraph.ts";
+import { isCropId } from '../../data/cropCatalog.ts';
 
 function apRecovery(state: GameState): number {
   const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
@@ -45,6 +46,7 @@ function applyOperationAction(state: GameState, action: PlayerAction): string | 
     if (!target) return "Repair target not found";
     target.integrity = Math.min(1, target.integrity + 0.25);
   } else if (action.type === "PLANT_CROP") {
+    if (!isCropId(action.crop)) return 'Unknown or retired crop ID';
     const plot = state.crops.find((item) => item.moduleId === action.moduleId);
     if (!plot) return "Crop plot not found";
     plot.crop = action.crop; plot.growth = 0; plot.ready = false;
@@ -78,6 +80,7 @@ function applyHazard(state: GameState, warnings: string[]): void {
 }
 
 export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: string): TurnResult {
+  if (state.crops.some(plot => !isCropId(plot.crop))) throw new Error('This run contains a retired crop ID. Start a new run or explicitly migrate it.');
   if (state.phase !== "operation") throw new Error("Turn resolution requires operation phase");
   if (!rngSeed) throw new Error("A deterministic RNG seed is required");
   const next: GameState = structuredClone(state);
@@ -110,6 +113,8 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
     const harvest = harvestCrop(next, action.moduleId, network);
     cropYield += harvest.yield;
     cropFood += harvest.food;
+    next.production.researchCumulative = (next.production.researchCumulative ?? 0) + harvest.research;
+    if (harvest.research) next.history.push({ turn, type: 'RESEARCH', message: `Collected ${harvest.research} research sample(s)`, amount: harvest.research });
     const plot = next.crops.find((item) => item.moduleId === action.moduleId)!;
     plot.growth = 0; plot.ready = false;
   }

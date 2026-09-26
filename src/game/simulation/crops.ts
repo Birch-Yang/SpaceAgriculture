@@ -1,4 +1,5 @@
 import { CROPS } from "../../data/crops.ts";
+import { CROP_CATALOG } from '../../data/cropCatalog.ts';
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import type { CropPlotState, GameState } from "../state/types.ts";
 import type { NetworkResult } from "./utilityGraph.ts";
@@ -27,15 +28,16 @@ export function growCrops(state: GameState, network: NetworkResult): { crops: Cr
   return { crops, waterUsed, powerUsed };
 }
 
-export function harvestCrop(state: GameState, moduleId: string, network: NetworkResult): { yield: number; food: number } {
+export function harvestCrop(state: GameState, moduleId: string, network: NetworkResult): { yield: number; food: number; research: number } {
   const plot = state.crops.find((item) => item.moduleId === moduleId);
   const module = state.modules.find((item) => item.id === moduleId);
-  if (!plot?.ready || !module) return { yield: 0, food: 0 };
+  if (!plot?.ready || !module) return { yield: 0, food: 0, research: 0 };
   const def = MODULE_BY_ID.get(module.moduleId)!;
   const water = network.delivery[module.id]?.water ?? 0;
   const power = network.delivery[module.id]?.power ?? 0;
+  if (CROP_CATALOG[plot.crop].role === 'research') return { yield: 0, food: 0, research: water > 0 && power > 0 && module.integrity > 0 ? CROP_CATALOG[plot.crop].researchYield : 0 };
   const temperature = Math.max(0.4, 1 - Math.abs(state.resources.temperature - temperatureSetpoint[plot.temperature]) / 30);
   const hazard = state.activeHazard?.type === "radiation" ? Math.max(0.5, 1 - state.activeHazard.severity * 0.3) : 1;
   const yieldAmount = Math.max(0, Math.round(def.baseYield * settingFactor[plot.water] * settingFactor[plot.light] * temperature * Math.min(water, power) * module.integrity * hazard));
-  return { yield: yieldAmount, food: Math.round(yieldAmount * CROPS[plot.crop].foodValue) };
+  return { yield: yieldAmount, food: Math.round(yieldAmount * CROPS[plot.crop].foodValue), research: 0 };
 }

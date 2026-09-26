@@ -1,5 +1,9 @@
 # agronaut
 
+## Six-crop interface
+
+The active crop roster is lettuce, radish, chili pepper, potato, soybean, and Arabidopsis. Edit `src/data/crop-catalog.json` for shared crop data. See [crop system handoff](docs/CROP_SYSTEM_HANDOFF.md) for types, simulation APIs, research-vs-food accounting, compatibility boundaries, and tests. The local `/supply` playground demonstrates the capacity model; `/game` retains the existing network model with the same six IDs.
+
 agronaut is a lunar agriculture design-space explorer. The current app uses Next.js, TypeScript, and Supabase; the Phaser 3 renderer and Photon Spectrum integration are separate workstreams. Its central gameplay loop is design → operate → survive → produce → score → analyze.
 
 ## Placement controls — fixed orientation, drag only

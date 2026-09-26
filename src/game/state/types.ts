@@ -52,7 +52,7 @@ export type UtilityEdge = {
   integrity: number;
   cells: Cell[];
 };
-export type CropKind = "lettuce" | "potato" | "wheat";
+export type CropKind = import('../../data/cropCatalog.ts').CropId;
 export type AnimalKind = "chicken" | "pig" | "cow";
 export type Setting = "low" | "medium" | "high";
 export type CropPlotState = {
@@ -94,7 +94,7 @@ export type GameState = {
   budget: number;
   ap: number;
   resources: ResourceState;
-  production: { cropCumulative: number; meatCumulative: number };
+  production: { cropCumulative: number; meatCumulative: number; researchCumulative?: number };
   modules: PlacedModule[];
   utilityEdges: UtilityEdge[];
   crops: CropPlotState[];
