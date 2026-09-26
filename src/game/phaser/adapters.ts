@@ -9,14 +9,16 @@ export type UtilityVisualEdge = { edge: UtilityEdge; status: UtilityVisualStatus
 // Renderer-only projection of authoritative state. It never estimates resource flow.
 export function renderUtilityNetwork(state: GameState): UtilityVisualEdge[] {
   const moduleIds = new Set(state.modules.map((module) => module.id));
-  const warnings = state.lastTurn?.warnings.join(" ").toLowerCase() ?? "";
+  const bottleneckModules = new Set((state.lastTurn?.warnings ?? [])
+    .filter((warning) => warning.includes("% delivered"))
+    .map((warning) => warning.slice(0, warning.indexOf(":")).trim().toLowerCase()));
   return state.utilityEdges.map((edge) => ({
     edge,
     status: !moduleIds.has(edge.from) || !moduleIds.has(edge.to)
       ? "disconnected"
       : edge.integrity < 0.5
         ? "damaged"
-        : warnings.includes(edge.id.toLowerCase()) && warnings.includes("bottleneck")
+        : bottleneckModules.has(edge.from.toLowerCase()) || bottleneckModules.has(edge.to.toLowerCase())
           ? "bottleneck"
           : state.phase === "operation" ? "connected" : "normal",
   }));
