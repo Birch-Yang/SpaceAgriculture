@@ -28,3 +28,7 @@ Close: “A single run is a game. Many runs can become a design-space exploratio
 Review fixtures in `src/content/prompt-qa.ts` with Developer B. Check that advice is concise, partially informed, and non-omniscient; no coordinates, hidden forecasts, or guaranteed outcomes. Reports should use “your strategy suggests,” “within this simulation,” and “among player runs.” Reject “this proves,” “NASA should use your design,” and optimal-lunar-farm claims. Verify every citation ID against `curatedSources`.
 
 Bootstrap prompt review: Photon remains adapter-only, so live output could not be tested. The report prompt already asks for cautious language, registry-only citations, and speculative livestock framing; it does not explicitly require all three editorial phrases. Developer B should enforce those in its prompt/validation as appropriate. UI context includes the required language without rewriting generated findings.
+
+## Cozy art preview
+
+Use `/assets/previews/ui-v6.html` for the new visual direction; original and v1–v5 remain accessible. Show Crops for four-stage art and Arabidopsis sample readiness, Assets for building families and condition states, and the collapsed Science & Assumptions drawer for optional source context. Six-crop controls are a UI adapter only until Developer B supplies compatible state/actions. Do not imply that the revised roster is already simulated.
