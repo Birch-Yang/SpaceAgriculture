@@ -29,7 +29,7 @@ const Match3 = lazy(() => import("../minigames/match3/Match3.tsx").then((module)
 const RepairSnake = lazy(() => import("../minigames/repairSnake/RepairSnake.tsx").then((module) => ({ default: module.RepairSnake })));
 const tutorialKey = "agronaut:tutorial:v1";
 const emptyProgress: TutorialProgress = { enteredGreenhouse: false, enteredLivestock: false, queuedAction: false, resolvedTurn: false };
-type SubmittedResult = { runId: string; score: { rules: number; llm: number; total: number; usedFallback: boolean }; report: MissionReportData; saved: boolean; reason?: string };
+type SubmittedResult = { runId: string; score: { rules: number; llm: number; total: number; usedFallback: boolean }; report: MissionReportData; saved: boolean; reason?: string; retryable?: boolean };
 
 export function GameClient() {
   const [nickname, setNickname] = useState("");
@@ -168,8 +168,8 @@ export function GameClient() {
     setSubmissionStatus("submitting");
     try {
       const response = await fetch("/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: run }) });
-      const data = await response.json() as SubmittedResult & { error?: string };
-      if (response.status === 409 && data.runId) { setSavedRunId(data.runId); setSubmissionStatus("done"); return; }
+      const data = await response.json() as SubmittedResult & { error?: string; code?: string };
+      if (response.status === 409 && data.code === "already_saved" && data.runId) { setSavedRunId(data.runId); setSubmissionStatus("done"); return; }
       if (!response.ok || !data.report || !data.score) throw new Error(data.error ?? "Run submission unavailable");
       setSubmitted(data); setSubmissionStatus("done");
       if (data.saved) setSavedRunId(data.runId);
@@ -253,7 +253,7 @@ export function GameClient() {
     {imessageAddress.trim() && <MissionControlPanel connection={advisorConnection} messages={advisorMessages} />}
     {state.phase === "complete" && <section aria-label="Mission result">
       {submissionStatus === "submitting" && <p role="status">Calculating and saving the mission result…</p>}
-      {(submissionStatus === "failed" || (submitted && !submitted.saved)) && <button onClick={() => transcript && void submitRun(transcript)}>Retry saving result</button>}
+      {(submissionStatus === "failed" || (submitted && !submitted.saved && submitted.retryable !== false)) && <button onClick={() => transcript && void submitRun(transcript)}>Retry saving result</button>}
       {submitted && <><MissionReport report={submitted.report} nickname={state.nickname} scores={submitted.score} sources={curatedSources} />{!submitted.saved && <p role="status">{submitted.reason ?? "Result is available locally; saving can be retried."}</p>}</>}
       {savedRunId && <p><a href={`/report/${savedRunId}`}>Open saved mission report</a></p>}
     </section>}
