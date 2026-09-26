@@ -56,15 +56,28 @@ export function GameClient() {
   const [miniTarget, setMiniTarget] = useState<MiniTarget | null>(null);
   const [miniResult, setMiniResult] = useState<MinigameResult | null>(null);
 
+  function rotatePlacement() {
+    if (tool.kind !== "module") return;
+    const rotation = ((tool.rotation + 90) % 360) as Rotation;
+    setTool({ ...tool, rotation });
+    setMessage(`Placement orientation: ${rotation}°.`);
+  }
+
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      if (mini) { setMini(null); setMiniTarget(null); }
-      else if (interiorId) setInteriorId(null);
+      if (event.key === "Escape") {
+        if (mini) { setMini(null); setMiniTarget(null); }
+        else if (interiorId) setInteriorId(null);
+        return;
+      }
+      if (event.key.toLowerCase() !== "r" || event.repeat || mini || interiorId || tool.kind !== "module" || (state?.phase !== "design" && state?.phase !== "intermission")) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      rotatePlacement();
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [mini, interiorId]);
+  }, [mini, interiorId, tool, state?.phase]);
 
   function launch(event: FormEvent) {
     event.preventDefault();
