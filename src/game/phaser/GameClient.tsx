@@ -5,7 +5,7 @@ import { MODULES, MODULE_BY_ID } from "../../data/modules.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../state/reducer.ts";
 import { resolveTurn } from "../simulation/resolveTurn.ts";
-import type { GameMode, GameState, PlayerAction } from "../state/types.ts";
+import type { GameMode, GameState, PlayerAction, Rotation } from "../state/types.ts";
 import { Match3, type MinigameResult } from "../minigames/match3/Match3.tsx";
 import { RepairSnake } from "../minigames/repairSnake/RepairSnake.tsx";
 import { GameCanvas } from "./GameCanvas.tsx";
@@ -35,15 +35,28 @@ export function GameClient() {
   const [miniTarget, setMiniTarget] = useState<MiniTarget | null>(null);
   const [miniResult, setMiniResult] = useState<MinigameResult | null>(null);
 
+  function rotatePlacement() {
+    if (tool.kind !== "module") return;
+    const rotation = ((tool.rotation + 90) % 360) as Rotation;
+    setTool({ ...tool, rotation });
+    setMessage(`Placement orientation: ${rotation}°.`);
+  }
+
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      if (mini) { setMini(null); setMiniTarget(null); }
-      else if (interiorId) setInteriorId(null);
+      if (event.key === "Escape") {
+        if (mini) { setMini(null); setMiniTarget(null); }
+        else if (interiorId) setInteriorId(null);
+        return;
+      }
+      if (event.key.toLowerCase() !== "r" || event.repeat || mini || interiorId || tool.kind !== "module" || (state?.phase !== "design" && state?.phase !== "intermission")) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      rotatePlacement();
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [mini, interiorId]);
+  }, [mini, interiorId, tool, state?.phase]);
 
   function launch(event: FormEvent) {
     event.preventDefault();
@@ -152,9 +165,9 @@ export function GameClient() {
     })}<div className={styles.resource}><span>CROP / MEAT</span><strong>{state.production.cropCumulative.toFixed(0)} / {state.production.meatCumulative.toFixed(0)}</strong><small>Targets {target.cropTarget} / {target.meatTarget}</small></div></section>
     <div className={styles.workspace}>
       <aside className={styles.palette}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${target.ap} AP PLANNED (MAX)`}</small></div>
-        {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
+        {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id, rotation: 0 })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div>{tool.kind === "module" && <button className={styles.toolButton} onClick={rotatePlacement} aria-label={`Rotate placement, currently ${tool.rotation} degrees`}>↻ Rotate placement · {tool.rotation}° <small>R</small></button>}</> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
       </aside>
-      <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Select to inspect" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={state.activeHazard?.type === "communications" ? styles.offline : styles.online}>{state.activeHazard?.type === "communications" ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
+      <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? tool.kind === "module" ? `Place ${tool.moduleId} · ${tool.rotation}° · press R to rotate` : "Click to place · Drag to draw a corridor · Select to inspect" : "Select a module to focus · Enter agriculture modules from details"}</span><span className={state.activeHazard?.type === "communications" ? styles.offline : styles.online}>{state.activeHazard?.type === "communications" ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
       <aside className={styles.details}><div className={styles.panelHeading}><strong>MISSION STATUS</strong><small>{state.phase === "complete" ? "FINAL" : "LIVE"}</small></div><div className={styles.section}><p className={styles.label}>HAZARD FORECAST</p><p>Solar {state.forecast.solar} · Thermal {state.forecast.thermal} · Impact {state.forecast.impact}</p></div>
         {definition && selectedModule ? <div className={styles.section}><p className={styles.label}>SELECTED MODULE</p><h2>{definition.label}</h2><p>Integrity {Math.round(selectedModule.integrity * 100)}% · Grid {selectedModule.x},{selectedModule.y}</p>
           {agriculture && <><p>{agriculture.kind === "greenhouse" ? "Crop plots" : "Livestock stalls"}: {agriculture.slots.length}</p><button onClick={() => openInterior(selectedModule.id)}>Enter {agriculture.kind === "greenhouse" ? "Greenhouse" : "Livestock Module"}</button></>}
