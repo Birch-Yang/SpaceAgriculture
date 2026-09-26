@@ -9,6 +9,6 @@ export const isPaused = (state: GameState, moduleId: string): boolean => state.p
 export const isEmergencyAction = (action: PlayerAction): boolean => action.type === "PAUSE_MODULE" || action.type === "USE_EMERGENCY_SUPPLY";
 export const isAgricultureAction = (action: PlayerAction): boolean => ["PLANT_CROP", "SET_CROP_PARAMS", "HARVEST_CROP", "WATER_PLOT", "SET_ANIMAL", "SET_LIVESTOCK_PARAMS", "FEED_STALL"].includes(action.type);
 export function operationActionCost(state: GameState, action: PlayerAction, accepted: readonly PlayerAction[]): number {
-  if (isEmergencyAction(action) && state.crisis && !accepted.some(isEmergencyAction)) return 0;
+  if (isEmergencyAction(action) && state.activeHazard && !accepted.some(isEmergencyAction)) return 0;
   return action.type === "REPAIR" ? 2 : action.type === "END_TURN" ? 0 : 1;
 }

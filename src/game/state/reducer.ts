@@ -2,7 +2,7 @@ import { EMERGENCY } from "../../data/emergency.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { SYSTEMS } from "../../data/systems.ts";
-import { forecastForTurn } from "../simulation/hazards.ts";
+import { forecastForTurn, hazardForTurn, seedForLevel } from "../simulation/hazards.ts";
 import type { Cell, GameMode, GameState, PlacedModule, PlayerAction } from "./types.ts";
 
 export const MAP_SIZE = { width: 14, height: 14 } as const;
@@ -130,7 +130,8 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
 export function startOperation(state: GameState): GameState {
   if (state.phase !== "design" && state.phase !== "intermission") throw new Error("Not in a build phase");
   if (!state.modules.some((module) => MODULE_BY_ID.get(module.moduleId)?.category === "habitat")) throw new Error("A habitat core is required");
-  return { ...state, phase: "operation" };
+  const next = { ...state, phase: "operation" as const, crisis: undefined };
+  return { ...next, activeHazard: hazardForTurn(next, seedForLevel(next)) };
 }
 
 export function advanceLevel(state: GameState): GameState {

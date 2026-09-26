@@ -1,4 +1,5 @@
 import { emergencyResources, emergencySupplyAmount, suppliesRemaining, isPaused, isAgricultureAction, operationActionCost } from "./emergency.ts";
+import { EMERGENCY } from "../../data/emergency.ts";
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { AGRICULTURE, boundedModifier } from "../../data/agriculture.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
@@ -131,6 +132,28 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
   return undefined;
 }
 
+export function hazardMitigationCondition(state: GameState, delivery?: Record<string, Partial<Record<"power" | "water" | "oxygen" | "food", number>>>): boolean {
+  const hazard = state.activeHazard;
+  if (!hazard) return false;
+  if (hazard.type === "power") return state.resources.power >= EMERGENCY.powerReserveMitigationThreshold;
+  if (hazard.type === "temperature") return state.modules.some(module => MODULE_BY_ID.get(module.moduleId)?.category === "utility"
+    && connectedToHabitat(state, module.id) && module.integrity > 0.5
+    && (module.allocation?.thermal ?? 0) >= EMERGENCY.thermalAllocationMitigationThreshold
+    && (delivery?.[module.id]?.power ?? 0) >= EMERGENCY.thermalDeliveryMitigationThreshold);
+  if (hazard.type === "radiation" || hazard.type === "micrometeoroid")
+    return shelterProtection(state) >= EMERGENCY.shelterMitigationThreshold;
+  return communicationsAvailable(state);
+}
+
+/** Current-turn response preview, using the same action and network rules as settlement. */
+export function previewHazardResponse(state: GameState, actions: PlayerAction[]) {
+  if (!state.activeHazard || state.phase !== "operation") return { ready: false, rejectedActions: [] as string[] };
+  const plan = planOperationActions(state, actions);
+  if (plan.rejectedActions.length) return { ready: false, rejectedActions: plan.rejectedActions };
+  const network = resolveUtilityGraph(plan.state);
+  return { ready: hazardMitigationCondition(plan.state, network.delivery), rejectedActions: [] as string[] };
+}
+
 function applyHazard(state: GameState, warnings: string[]): void {
   const hazard = state.activeHazard;
   if (!hazard) return;
@@ -177,13 +200,17 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   const warnings: string[] = [];
   const turn = next.turn;
 
-  // 1. Reveal hazard; 2. restore AP; 3. apply strategic actions.
+  // Current hazard is visible before actions; recompute from the authoritative seed for replay.
   next.activeHazard = hazardForTurn(next, rngSeed);
 
+  // 4. Network; then evaluate defenses after the player's current-turn actions.
 
-  // 4. Network and 5. temperature. Accepted minigame modifiers were bounded above.
   const network = resolveUtilityGraph(next);
   warnings.push(...network.bottlenecks);
+  if (next.activeHazard && hazardMitigationCondition(next, network.delivery)) {
+    next.activeHazard = { ...next.activeHazard, severity: Math.round(next.activeHazard.severity * EMERGENCY.mitigatedSeverityFraction * 100) / 100 };
+    warnings.push(`Prepared response reduced ${next.activeHazard.type} severity by 70%`);
+  }
   next.resources.temperature = resolveTemperature(next, network);
 
   // 7. Crop growth and harvest; 8. livestock.
@@ -215,17 +242,17 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   for (const key of ["power", "water", "oxygen", "food"] as const)
     next.resources[key] = Math.round(Math.min(next.resources[key], resourceCapacity(next, key)) * 10) / 10;
 
-  // 11. One complete recovery turn after a crisis trigger.
+  // 11. Resolve survival now; no extra recovery turn is created.
   const critical = criticalCondition(next);
-  if (next.crisis && turn >= next.crisis.recoveryTurn) {
-    if (critical) { next.phase = "complete"; next.passed = false; next.failureReason = `Crisis not recovered: ${critical}`; }
-    else { warnings.push("Crisis recovered"); next.crisis = undefined; }
-  } else if (!next.crisis && critical) {
-    next.crisis = { trigger: critical, recoveryTurn: turn + 1 };
-    warnings.push(`Crisis: ${critical}; one turn to recover`);
+  next.crisis = undefined;
+  if (critical) {
+    next.phase = "complete";
+    next.passed = false;
+    next.failureReason = `Critical system at end of turn: ${critical}`;
+    warnings.push(next.failureReason);
   }
 
-  if (next.phase === "operation" && turn >= 10 && !next.crisis) {
+  if (next.phase === "operation" && turn >= 10) {
     const { cropTarget, meatTarget } = DIFFICULTY[next.mode][next.level - 1];
     const passed = next.production.cropCumulative >= cropTarget && next.production.meatCumulative >= meatTarget;
     next.passed = passed;
@@ -244,16 +271,20 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
     ...(next.activeHazard ? [{ turn, type: "HAZARD", message: next.activeHazard.type }] : []),
     ...cropOutputs.map((output) => ({ turn, type: "CROP_YIELD", message: `${output.moduleId} slot ${output.slotIndex} crops harvested`, amount: output.yield })),
     ...livestock.outputs.map((output) => ({ turn, type: "MEAT_YIELD", message: `${output.moduleId} slot ${output.slotIndex} livestock output`, amount: output.yield })),
-    ...(next.crisis?.recoveryTurn === turn + 1 ? [{ turn, type: "CRISIS", message: next.crisis.trigger }] : []),
+    ...(critical ? [{ turn, type: "CRISIS", message: critical }] : []),
   ];
   next.history = [...next.history, ...events];
   next.turnRecords = [...next.turnRecords, {
     level: next.level, turn, resources: { ...next.resources }, resourceDelta: { ...resourceDelta },
-    cropYield, meatYield: livestock.meatYield, crisis: !!next.crisis,
+    cropYield, meatYield: livestock.meatYield, crisis: !!critical,
     ...(next.activeHazard ? { hazard: next.activeHazard } : {}),
   }];
   next.pausedModuleIds = [];
   next.lastTurn = summary;
-  if (next.phase === "operation") { next.turn = turn + 1; next.forecast = forecastForTurn(next); }
+  if (next.phase === "operation") {
+    next.turn = turn + 1;
+    next.forecast = forecastForTurn(next);
+    next.activeHazard = hazardForTurn(next, rngSeed);
+  }
   return { state: next, summary, acceptedActions, rejectedActions };
 }

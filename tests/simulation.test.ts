@@ -1,3 +1,4 @@
+import { createReplayFrames } from "../src/game/state/replayFrames.ts";
 import { seedForLevel } from "../src/game/simulation/hazards.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -35,16 +36,16 @@ test("same state, actions, and seed resolve identically and leave input unchange
   assert.equal(first.state.crops.find((plot) => plot.slotIndex === 1)?.growth, 0);
 });
 
-test("crisis grants one turn, then ends the mission if still critical", () => {
+test("critical resources fail on the same turn without an extra recovery turn", () => {
   const state = startOperation(sampleBase());
   state.resources.water = 0;
   state.utilityEdges = [];
-  const first = resolveTurn(state, [], "seed");
-  assert.equal(first.state.crisis?.recoveryTurn, 2);
-  assert.equal(first.state.phase, "operation");
-  const second = resolveTurn(first.state, [], "seed");
-  assert.equal(second.state.phase, "complete");
-  assert.equal(second.state.passed, false);
+  const first = resolveTurn(state, [{ type: "END_TURN" }], seedForLevel(state));
+  assert.equal(first.state.phase, "complete");
+  assert.equal(first.state.turn, 1);
+  assert.equal(first.state.passed, false);
+  assert.match(first.state.failureReason ?? "", /Critical system at end of turn/);
+  assert.equal(first.state.crisis, undefined);
 });
 
 test("agriculture modules create their exact independent capacity and remove every slot", () => {
@@ -235,7 +236,7 @@ test("overproduction cannot offset a missing production category in scoring", ()
 test("emergency turn labels distinguish recovery from the ten-turn mission", () => {
   const state = sampleBase();
   assert.equal(selectTurnLabel({ ...state, turn: 10 }), "TURN 10/10");
-  assert.equal(selectTurnLabel({ ...state, turn: 11, crisis: { trigger: "power depleted", recoveryTurn: 11 } }), "EMERGENCY RECOVERY · TURN 11");
+  assert.equal(selectTurnLabel({ ...state, turn: 10 }), "TURN 10/10");
 });
 
 import { planOperationActions } from "../src/game/simulation/resolveTurn.ts";
@@ -305,10 +306,10 @@ test("supplies are bounded, one per turn, two per run, and plans never spend liv
   assert.match(full.rejectedActions[0], /already full/);
 });
 
-test("first accepted emergency action in a crisis is free; later actions use normal AP", () => {
+test("first accepted emergency action on a hazard turn is free; later actions use normal AP", () => {
   const state = startOperation(sampleBase());
   state.resources.food = 0;
-  state.crisis = { trigger: "food depleted", recoveryTurn: state.turn };
+  state.activeHazard = { id: "test-power", type: "power", severity: 1, turn: state.turn };
   const actions: PlayerAction[] = [
     { type: "PAUSE_MODULE", moduleId: "missing" },
     { type: "USE_EMERGENCY_SUPPLY", resource: "food" },
@@ -321,14 +322,13 @@ test("first accepted emergency action in a crisis is free; later actions use nor
   assert.equal(plan.state.ap, apRecovery(state) - 1); // Refill does not grant extra AP mid-turn.
   const resolved = resolveTurn(state, actions.slice(1), "crisis-test");
   assert.equal(resolved.state.crisis, undefined);
-  assert.ok(resolved.summary.warnings.includes("Crisis recovered"));
+  assert.equal(resolved.acceptedActions[0].type, "USE_EMERGENCY_SUPPLY");
 });
 
-test("supplies do not extend a crisis deadline or reset when advancing levels", () => {
+test("supplies do not add a recovery turn or reset when advancing levels", () => {
   const state = startOperation(sampleBase());
   state.resources.oxygen = 0;
   state.modules.find(m => m.moduleId === "oxygen-generator")!.integrity = 0;
-  state.crisis = { trigger: "oxygen depleted", recoveryTurn: state.turn };
   const failed = resolveTurn(state, [{ type: "USE_EMERGENCY_SUPPLY", resource: "water" }], "deadline-test");
   assert.equal(failed.state.phase, "complete");
   assert.equal(failed.state.passed, false);
@@ -354,6 +354,8 @@ test("server transcript replay validates emergency actions and reproduces client
     state = result.state;
   }
   assert.deepEqual(replayTranscript(transcript), state);
+  for (const frame of createReplayFrames(transcript).filter(frame => frame.kind === "turn" && frame.hazard))
+    assert.equal(frame.hazard!.turn, frame.turn);
   const invalid = structuredClone(transcript);
   (invalid.steps[2] as { actions: unknown[] }).actions[0] = { type: "USE_EMERGENCY_SUPPLY", resource: "temperature" };
   assert.throws(() => parseTranscript(invalid), /Invalid run step/);
@@ -361,4 +363,65 @@ test("server transcript replay validates emergency actions and reproduces client
   const turn = duplicate.steps[2] as { actions: PlayerAction[] };
   turn.actions.unshift({ type: "USE_EMERGENCY_SUPPLY", resource: "water" });
   assert.throws(() => replayTranscript(duplicate), /Only one emergency supply/);
+});
+
+import { hazardForTurn } from "../src/game/simulation/hazards.ts";
+import { hazardMitigationCondition, previewHazardResponse } from "../src/game/simulation/resolveTurn.ts";
+import { EMERGENCY } from "../src/data/emergency.ts";
+
+test("current hazard is shown before actions and next hazard is not shown on the prior turn", () => {
+  const state = startOperation(sampleBase());
+  assert.equal(state.activeHazard, undefined);
+  assert.equal(state.activeHazard, hazardForTurn(state, seedForLevel(state)));
+  const result = resolveTurn(state, [{ type: "END_TURN" }], seedForLevel(state));
+  assert.equal(result.state.turn, 2);
+  assert.deepEqual(result.state.activeHazard, hazardForTurn(result.state, seedForLevel(result.state)));
+  assert.equal(result.summary.hazard, undefined);
+  assert.notEqual(result.state.activeHazard?.turn, 1);
+});
+
+test("current-turn power supply can cross the mitigation threshold and reduce hazard severity", () => {
+  const state = startOperation(sampleBase());
+  state.turn = 2;
+  for (let i = 1; i < 500; i++) {
+    state.runId = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+    state.activeHazard = hazardForTurn(state, seedForLevel(state));
+    if (state.activeHazard?.type === "power") break;
+  }
+  assert.equal(state.activeHazard?.type, "power");
+  state.resources.power = EMERGENCY.powerReserveMitigationThreshold - 8;
+  const rawSeverity = state.activeHazard!.severity;
+  assert.equal(previewHazardResponse(state, []).ready, false);
+  const supply: PlayerAction = { type: "USE_EMERGENCY_SUPPLY", resource: "power" };
+  assert.equal(previewHazardResponse(state, [supply]).ready, true);
+  const result = resolveTurn(state, [supply, { type: "END_TURN" }], seedForLevel(state));
+  assert.equal(result.summary.hazard?.severity, Math.round(rawSeverity * EMERGENCY.mitigatedSeverityFraction * 100) / 100);
+  assert.ok(result.summary.warnings.some(w => w.includes("reduced power severity by 70%")));
+  assert.equal(result.state.turn, 3);
+});
+
+test("shelter and thermal mitigation conditions respond to same-turn repair and allocation", () => {
+  const state = startOperation(sampleBase());
+  const shelter = { id: "shelter-test", moduleId: "shelter", x: 10, y: 10, rotation: 0 as const, integrity: 0.7 };
+  const utility = { id: "utility-test", moduleId: "utility-thermal", x: 12, y: 10, rotation: 0 as const, integrity: 1, allocation: { thermal: 0.3, backupPower: 0.5, commsBackup: 0.2 } };
+  state.modules.push(shelter, utility);
+  state.utilityEdges.push({ id: "shelter-edge", from: state.modules[0].id, to: shelter.id, length: 1, capacity: 20, integrity: 1, cells: [] });
+  state.utilityEdges.push({ id: "utility-edge", from: state.modules[0].id, to: utility.id, length: 1, capacity: 20, integrity: 1, cells: [] });
+  state.activeHazard = { id: "impact", type: "micrometeoroid", severity: 1, turn: state.turn };
+  assert.equal(previewHazardResponse(state, []).ready, false);
+  assert.equal(previewHazardResponse(state, [{ type: "REPAIR", targetId: shelter.id }]).ready, true);
+  state.activeHazard = { id: "cold", type: "temperature", severity: 1, turn: state.turn };
+  assert.equal(previewHazardResponse(state, []).ready, false);
+  assert.equal(previewHazardResponse(state, [{ type: "REALLOCATE_UTILITY", moduleId: utility.id, allocation: { thermal: 0.5, backupPower: 0.3, commsBackup: 0.2 } }]).ready, true);
+  assert.equal(hazardMitigationCondition(state), false);
+});
+
+test("ten-turn Challenge cannot produce an eleventh turn after a late hazard", () => {
+  const state = startOperation(sampleBase());
+  state.turn = 10;
+  state.resources.power = 0;
+  state.utilityEdges = [];
+  const result = resolveTurn(state, [{ type: "END_TURN" }], seedForLevel(state));
+  assert.equal(result.state.phase, "complete");
+  assert.equal(result.state.turn, 10);
 });

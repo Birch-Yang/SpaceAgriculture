@@ -28,5 +28,5 @@ export function selectBuildReadinessWarnings(state: GameState): string[] {
 }
 
 export function selectTurnLabel(state: GameState): string {
-  return state.turn > 10 ? `EMERGENCY RECOVERY · TURN ${state.turn}` : `TURN ${state.turn}/10`;
+  return `TURN ${state.turn}/10`;
 }

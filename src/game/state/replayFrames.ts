@@ -25,12 +25,13 @@ export function createReplayFrames(transcript: RunTranscript): ReplayFrame[] {
   replayTranscript(transcript, (state, index, step) => {
     frames.push({
       index, kind: step?.kind ?? "initial", ...(step?.kind === "build" ? { action: step.action.type } : {}),
-      level: state.level, turn: state.turn, phase: state.phase, budget: state.budget,
+      level: state.level, turn: step?.kind === "turn" ? (state.lastTurn?.turn ?? state.turn) : state.turn, phase: state.phase, budget: state.budget,
       resources: { ...state.resources }, production: { ...state.production },
       modules: state.modules.map((module) => ({ ...module, ...(module.allocation ? { allocation: { ...module.allocation } } : {}) })),
       utilityEdges: state.utilityEdges.map((edge) => ({ ...edge, cells: edge.cells.map((cell) => ({ ...cell })) })),
       crops: state.crops.map((crop) => ({ ...crop })), livestock: state.livestock.map((animal) => ({ ...animal })),
-      ...(state.activeHazard ? { hazard: { ...state.activeHazard } } : {}),
+      ...((step?.kind === "turn" ? state.lastTurn?.hazard : state.activeHazard)
+        ? { hazard: { ...(step?.kind === "turn" ? state.lastTurn!.hazard! : state.activeHazard!) } } : {}),
       ...(state.crisis ? { crisis: { ...state.crisis } } : {}),
     });
   });
