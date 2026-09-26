@@ -22,6 +22,16 @@ Import this repository into Vercel as a Next.js project. Set the variables liste
 
 `src/game/state/types.ts` is the initial shared renderer/simulation contract. Coordinate changes before editing it. The `/game` page is currently a renderer placeholder.
 
+## Team progress (2026-09-25, America/Chicago)
+
+| Workstream | Branch / status | Integration note |
+| --- | --- | --- |
+| Project setup + Developer B | `feat/bootstrap-simulation`, pushed; merge target `dev` | Next.js shell, typed state/actions, deterministic simulation, Supabase migration/APIs, AI fallbacks, and CI are ready for review. |
+| Developer A | Separate branch; this branch does not touch Phaser or minigames | Mount the renderer in `/game`; consume `src/game/state/types.ts` and `src/game/state/reducer.ts`. |
+| Designer/content | Separate branch; this branch does not add art or source claims | Provide verified sources for `src/ai/sourceAdapter.ts` and final copy/assets. |
+
+Recent Developer B pushes on the feature branch: `da0062f` (app/contract), `fa4f2c4` (simulation), `229d582` (backend/AI), `b453b12` (lockfile/docs), `b85d9f5` (network fix), and `080520b` (CI). The feature branch has not yet been merged into `dev`; `main` remains untouched. CI runs on feature and `dev` pushes. Before editing the shared state/action contract, coordinate the exact change with the other workstreams.
+
 ## Checks
 
 Run `npm test` for the small baseline: deterministic turn replay, one-turn crisis recovery, and a ten-turn Challenge run with connected power/water/oxygen plus crop and meat production. It uses Node's built-in test runner and requires Node.js 24; no external test package is needed.
