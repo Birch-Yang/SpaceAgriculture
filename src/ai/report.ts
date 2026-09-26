@@ -26,14 +26,15 @@ const reportSchema = {
 export function fallbackReport(summary: RunSummary, passed: boolean, sources: readonly ScientificSource[] = []): MissionReport {
   const crop = summary.productionMetrics.cropYield ?? 0;
   const meat = summary.productionMetrics.meatYield ?? 0;
+  const research = summary.productionMetrics.researchSamples ?? 0;
   return {
     result: passed ? "PASS" : "FAIL",
     overview: `This ${summary.mode} mission ${passed ? "met" : "did not meet"} its survival and production goals.`,
-    production: `Cumulative crop yield: ${crop}. Cumulative meat yield: ${meat}.`,
+    production: `Cumulative edible crop yield: ${crop}. Cumulative meat yield: ${meat}. Research samples: ${research} (not food or crop score).`,
     stability: `Final power ${summary.stabilityMetrics.finalPower}, water ${summary.stabilityMetrics.finalWater}, oxygen ${summary.stabilityMetrics.finalOxygen}, food ${summary.stabilityMetrics.finalFood}, temperature ${summary.stabilityMetrics.finalTemperature}.`,
     layout: `${summary.layoutMetrics.moduleCount} modules used ${summary.layoutMetrics.corridorLength} corridor cells. ${Math.round((summary.layoutMetrics.connectedModuleShare ?? 0) * 100)}% of modules were connected to the habitat; ${Math.round((summary.layoutMetrics.resilienceBudgetShare ?? 0) * 100)}% of module cost went to protective systems.`,
     disasterResponse: `${summary.hazardHistory.length} major hazards and ${summary.stabilityMetrics.crisisCount ?? 0} crisis events were recorded.`,
-    agriculture: `The base produced ${crop} crop units and ${meat} meat units. This simplified simulation models crop and livestock choices as strategic trade-offs. Large-animal lunar livestock is speculative and educational.`,
+    agriculture: `The base produced ${crop} edible crop units, ${meat} meat units, and ${research} research samples. Research samples do not contribute food or crop score. This simplified simulation models crop and livestock choices as strategic trade-offs. Large-animal lunar livestock is speculative and educational.`,
     missionControl: `${summary.photonAdviceHistory.length} Mission Control messages were recorded.`,
     scientificContext: "Lunar agriculture requires coordinated life support, energy, water, and thermal control. The linked scientific sources provide context for this educational simulation, not validation of its simplified model.",
     strategySuggests: `${summary.majorPlayerDecisions.slice(0, 3).join("; ") || "No detailed actions were recorded"}. This player strategy is one design hypothesis worth exploring; it does not establish an optimal real lunar base.`,
@@ -43,7 +44,7 @@ export function fallbackReport(summary: RunSummary, passed: boolean, sources: re
 
 export async function generateMissionReport(summary: RunSummary, passed: boolean, sources: readonly ScientificSource[]): Promise<MissionReport> {
   const raw = await structuredResponse("mission_report", reportSchema,
-    "Write a concise scientific mission report. Include cautious wording about observed player strategies; never claim a proven optimal NASA design. Say explicitly that large-animal lunar livestock is speculative and gameified. Do not put citations, URLs, or source titles in prose. Choose citations only by ID from the supplied verified source registry in sourceIds. Return JSON with the requested sections and sourceIds.",
+    "Write a concise scientific mission report. Include cautious wording about observed player strategies; never claim a proven optimal NASA design. Research samples are separate from edible crop yield and do not count as food or crop score. Say explicitly that large-animal lunar livestock is speculative and gameified. Do not put citations, URLs, or source titles in prose. Choose citations only by ID from the supplied verified source registry in sourceIds. Return JSON with the requested sections and sourceIds.",
     { summary, passed, sources: sources.map(({ id, title, organization, tags, shortContext }) => ({ id, title, organization, tags, shortContext })) });
   if (!raw || typeof raw !== "object") return fallbackReport(summary, passed, sources);
   const item = raw as Record<string, unknown>;
