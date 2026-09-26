@@ -9,6 +9,7 @@ export type MissionReport = {
   contribution?: string;
   overview: string;
   production: string;
+  layoutAssessment?: string;
   stability: string;
   layout: string;
   disasterResponse: string;
@@ -21,13 +22,18 @@ export type MissionReport = {
   fallbackFields?: string[];
 };
 
-const fields = ["researchLandscape", "scientificContext", "evaluationSystem", "overview", "production", "stability",
+const fields = ["researchLandscape", "scientificContext", "evaluationSystem", "overview", "production", "layoutAssessment", "stability",
   "disasterResponse", "missionControl", "evidenceBasedChanges", "layout", "agriculture", "strategySuggests", "contribution"] as const;
 export const MIN_REPORT_FIELD_WORDS = 65;
+export const MIN_LAYOUT_ASSESSMENT_WORDS = 120;
 export const reportWordCount = (value: string) => value.trim().split(/\s+/).filter(Boolean).length;
 
+function minimumWords(field: typeof fields[number]) {
+  return field === "layoutAssessment" ? MIN_LAYOUT_ASSESSMENT_WORDS : MIN_REPORT_FIELD_WORDS;
+}
+
 export function extendShortReport(report: MissionReport, fallback: MissionReport): MissionReport {
-  const shortFields = fields.filter((field) => reportWordCount(report[field] ?? "") < MIN_REPORT_FIELD_WORDS);
+  const shortFields = fields.filter((field) => reportWordCount(report[field] ?? "") < minimumWords(field));
   if (!shortFields.length) return report;
   const replacements = Object.fromEntries(shortFields.map((field) => [field, fallback[field]])) as Partial<MissionReport>;
   return { ...report, ...replacements, usedFallback: true,
@@ -38,6 +44,27 @@ const reportSchema = {
   properties: Object.fromEntries([...fields.map((field) => [field, { type: "string" }]), ["sourceIds", { type: "array", items: { type: "string" } }]]),
   required: [...fields, "sourceIds"],
 };
+
+export function fallbackLayoutAssessment(summary: RunSummary): string {
+  const modules = summary.layoutMetrics.moduleCount ?? 0;
+  const corridors = summary.layoutMetrics.corridorLength ?? 0;
+  const greenhouses = summary.layoutMetrics.greenhouseCount ?? 0;
+  const waterModules = summary.layoutMetrics.waterModuleCount ?? 0;
+  const utilityModules = summary.layoutMetrics.utilityModuleCount ?? 0;
+  const connection = Math.round((summary.layoutMetrics.connectedModuleShare ?? 0) * 100);
+  const waterDistance = summary.layoutMetrics.averageGreenhouseWaterDistance ?? 0;
+  const utilityDistance = summary.layoutMetrics.averageGreenhouseUtilityDistance ?? 0;
+  const resilienceShare = Math.round((summary.layoutMetrics.resilienceBudgetShare ?? 0) * 100);
+  const water = summary.stabilityMetrics.averageWater ?? 0;
+  const crises = summary.stabilityMetrics.crisisCount ?? 0;
+  const strength = connection >= 80
+    ? `Connecting ${connection}% of modules to the habitat is a clear layout strength: most installed equipment had a route into the base network.`
+    : `Only ${connection}% of modules were connected to the habitat, so some installed equipment may not have been able to deliver its intended benefit.`;
+  const protection = resilienceShare >= 20
+    ? `Protective modules accounted for ${resilienceShare}% of module cost, showing a meaningful commitment to resilience, although this alone does not prove redundant delivery.`
+    : `Protective modules accounted for ${resilienceShare}% of module cost, leaving limited evidence of deliberate protection against a route or utility failure.`;
+  return `This base finished with ${modules} modules and ${corridors} corridor cells, including ${greenhouses} greenhouse module${greenhouses === 1 ? '' : 's'}, ${waterModules} water module${waterModules === 1 ? '' : 's'} and ${utilityModules} utility module${utilityModules === 1 ? '' : 's'}. ${strength} ${protection} ${greenhouses && waterModules ? `The average geometric distance from a greenhouse to its nearest water module was ${waterDistance} grid steps.` : 'A greenhouse-to-water distance could not be calculated because one module type was absent.'} ${greenhouses && utilityModules ? `The comparable distance to a utility module was ${utilityDistance} steps.` : 'A greenhouse-to-utility distance was unavailable because one module type was absent.'} Shorter distances can simplify a design, but distance alone does not show whether a corridor is connected, has enough flow capacity or survives a hazard.\n\nThe layout's weak point should be judged against what happened during operation: average water reserve was ${water}, and ${crises} crisis events were recorded. ${water < 25 ? 'The narrow water margin makes the greenhouse supply route a priority for inspection.' : 'The water margin was less obviously constrained, but individual turns may still reveal a bottleneck.'} Compare the map with the operation and incident timelines to see whether a single corridor or utility was repeatedly stressed. In the next mission, retain the same crops and care settings while changing one connection or adding a backup route; compare delivered resources, harvests and crisis turns. This is a diagnosis of the simulated network and its observed outcomes, not proof that the same geometry would work on the Moon.`;
+}
 
 export function fallbackReport(summary: RunSummary, passed: boolean, sources: readonly ScientificSource[] = []): MissionReport {
   const crop = summary.productionMetrics.cropYield ?? 0;
@@ -61,6 +88,7 @@ export function fallbackReport(summary: RunSummary, passed: boolean, sources: re
     contribution: `This run tested a specific design hypothesis through these recorded choices: ${decisions}. It produced ${crop} edible crop units, ${meat} meat units, and ${research} research samples under the game's simplified constraints. That observation contributes a concrete strategy for comparison with other player runs, especially where infrastructure choices affected resource margins. A useful next question is whether a different connection or care sequence would preserve similar output with fewer crises or less cost. The result is a simulated design-space observation, not a scientific discovery or validation of lunar agriculture.`,
     overview: `This ${summary.mode} mission ${passed ? "met" : "did not meet"} its survival and production goals within the simulation. The run finished with ${crop} edible crop units, ${meat} meat units, and ${crisis} recorded crisis events. Its transparent rule scores include ${productionScore}/28 for production and ${stabilityScore}/24 for stability, so the headline result should be read alongside the separate system dimensions. A high total can still conceal a weak resource margin or fragile response to hazards. Review the sections below to identify which observed choices deserve a controlled comparison in a new mission.`,
     production: `Cumulative edible crop yield was ${crop}, and cumulative meat yield was ${meat}. The run also collected ${research} research samples; samples are tracked separately and do not count as food or crop score. Production earned ${productionScore} of 28 possible rule points. Read that score together with water and power availability, because an apparent output gain may depend on resource demand that is hard to sustain. In the next run, compare one crop or livestock change at a time and note whether edible yield improves without creating a new shortage.`,
+    layoutAssessment: fallbackLayoutAssessment(summary),
     stability: `Final resource readings were power ${power}, water ${summary.stabilityMetrics.finalWater}, oxygen ${oxygen}, food ${food}, and controlled temperature ${temperature}. The run earned ${stabilityScore} of 24 stability points and recorded ${crisis} crisis events. This score reflects conditions across turns, so the final snapshot alone cannot show every period of strain. Examine any weak reserve against the connected equipment and production load that depended on it. A useful repeat test would change one utility route or allocation and compare both the average reserve and the number of crisis turns.`,
     layout: `${summary.layoutMetrics.moduleCount} modules used ${summary.layoutMetrics.corridorLength} corridor cells, and ${connected}% of modules were connected to the habitat. Protective systems represented ${Math.round((summary.layoutMetrics.resilienceBudgetShare ?? 0) * 100)}% of module cost. Connection matters because an isolated module may appear present on the map without delivering its intended benefit. The next layout experiment should compare a shorter shared route with a redundant route, then record output, resource delivery, and hazard recovery. Additional modules only help when the network can supply them, and a more compact base can still have a critical single point of failure.`,
     disasterResponse: `${summary.hazardHistory.length} major hazards and ${crisis} crisis events were recorded in this run. The resilience dimension rewards connected protective capacity and the observed response to hazardous turns; it does not establish that every possible event was survived. Inspect which systems lost margin when a hazard arrived, and whether a repair or backup route restored useful delivery in time. In a repeat run, reserve some construction budget for protection and compare the recovery record with the present layout. Even a hazard-free run should be treated as limited evidence about resilience because its defenses were not fully exercised.`,
@@ -74,14 +102,14 @@ export function fallbackReport(summary: RunSummary, passed: boolean, sources: re
 
 export async function generateMissionReport(summary: RunSummary, passed: boolean, sources: readonly ScientificSource[]): Promise<MissionReport> {
   const raw = await structuredResponse("mission_report", reportSchema,
-    `Write a substantive, evidence-grounded mission report with distinct paragraphs in every field. Every text field must contain at least ${MIN_REPORT_FIELD_WORDS} English words; aim for 80-110 words and 4-6 useful sentences per field. First explain the current state of space agriculture research in researchLandscape and scientificContext, clearly separating orbital and ground experiments from unproven lunar deployment. In evaluationSystem explain the 70-point transparent rules and 30-point strategy rubric, using the supplied score inputs. In overview, production, stability, disasterResponse, and missionControl evaluate this particular run with actual numbers or events; never invent them. In evidenceBasedChanges, layout, agriculture, and strategySuggests give specific, testable changes tied to this run and relevant research context. In contribution describe the player's design-space hypothesis and what this run adds as an observation, never a scientific discovery or proven optimum. Avoid repeated generic praise and do not duplicate simple yield scoring in strategic judgments. Research samples are not food. Large-animal lunar livestock is speculative and gameified. Do not put URLs or invented citations in prose; choose 3-5 citation IDs only from the supplied registry in sourceIds. Return JSON with all requested fields.`,
+    `Write a substantive, evidence-grounded mission report with distinct paragraphs in every field. Every text field must contain at least ${MIN_REPORT_FIELD_WORDS} English words; aim for 80-110 words and 4-6 useful sentences per field. The layoutAssessment field must contain at least ${MIN_LAYOUT_ASSESSMENT_WORDS} words; aim for 140-190 words in two paragraphs. In that field evaluate this player's actual base layout: what worked, what was weak, habitat connection share, corridor length, greenhouse distance to water and utilities, protective budget share, potential single points of failure, and observed resource margins or crises. Distinguish geometric proximity from actual delivery. Propose one controlled layout change while keeping crops and care comparable; do not invent topology, bottlenecks, or causal claims. First explain the current state of space agriculture research in researchLandscape and scientificContext, clearly separating orbital and ground experiments from unproven lunar deployment. In evaluationSystem explain the 70-point transparent rules and 30-point strategy rubric, using the supplied score inputs. In overview, production, stability, disasterResponse, and missionControl evaluate this particular run with actual numbers or events; never invent them. In evidenceBasedChanges, layout, agriculture, and strategySuggests give specific, testable changes tied to this run and relevant research context. In contribution describe the player's design-space hypothesis and what this run adds as an observation, never a scientific discovery or proven optimum. Avoid repeated generic praise and do not duplicate simple yield scoring in strategic judgments. Research samples are not food. Large-animal lunar livestock is speculative and gameified. Do not put URLs or invented citations in prose; choose 3-5 citation IDs only from the supplied registry in sourceIds. Return JSON with all requested fields.`,
     { summary, passed, sources: sources.map(({ id, title, organization, tags, shortContext }) => ({ id, title, organization, tags, shortContext })) },
-    { maxOutputTokens: 4200, timeoutMs: 27000 });
+    { maxOutputTokens: 4800, timeoutMs: 27000 });
   if (!raw || typeof raw !== "object") return fallbackReport(summary, passed, sources);
   const item = raw as Record<string, unknown>;
   if (fields.some((field) => typeof item[field] !== "string")) return fallbackReport(summary, passed, sources);
   const narratives = Object.fromEntries(fields.map((field) => [field, (item[field] as string).trim().slice(0, 1800)])) as Pick<MissionReport, typeof fields[number]>;
-  if (fields.some((field) => reportWordCount(narratives[field] ?? "") < MIN_REPORT_FIELD_WORDS))
+  if (fields.some((field) => reportWordCount(narratives[field] ?? "") < minimumWords(field)))
     return fallbackReport(summary, passed, sources);
   const allowed = new Set(sources.map((source) => source.id));
   const sourceIds = Array.isArray(item.sourceIds) ? item.sourceIds.filter((id): id is string => typeof id === "string" && allowed.has(id)) : [];

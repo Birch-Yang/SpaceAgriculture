@@ -7,17 +7,18 @@ import { Leaderboard, type LeaderboardRow } from '../Leaderboard';
 const columns = { overall: 'score_total', production: 'score_production', stability: 'score_stability', efficiency: 'score_efficiency', resilience: 'score_resilience' } as const;
 type CurrentRank = { id: string; nickname: string; mode: string; score: number; passed: boolean; rank: number };
 
-export function RecordsScreen() {
+export function RecordsScreen({ initial }: { initial?: { rows: LeaderboardRow[]; total: number } }) {
   const [category, setCategory] = useState<LeaderboardCategory>('overall');
   const [runId, setRunId] = useState<string>();
-  const [rows, setRows] = useState<LeaderboardRow[]>([]);
+  const [rows, setRows] = useState<LeaderboardRow[]>(initial?.rows ?? []);
   const [current, setCurrent] = useState<CurrentRank | null>(null);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(initial?.total ?? 0);
+  const [loading, setLoading] = useState(!initial);
   const [error, setError] = useState<string>();
   const [retry, setRetry] = useState(0);
   useEffect(() => { setRunId(readLastSavedRun()); }, []);
   useEffect(() => {
+    if (initial && category === 'overall' && !runId && retry === 0) return;
     const controller = new AbortController();
     setLoading(true); setError(undefined); setRows([]); setCurrent(null);
     const query = new URLSearchParams({ category });
@@ -41,7 +42,7 @@ export function RecordsScreen() {
     }).catch(cause => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Mission records unavailable.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [category, retry, runId]);
+  }, [category, retry, runId, initial]);
   return <Leaderboard category={category} rows={rows} total={total} current={current} currentRunId={runId}
     onCategoryChange={setCategory} loading={loading} error={error} onRetry={() => setRetry(value => value + 1)} />;
 }

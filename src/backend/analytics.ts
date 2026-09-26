@@ -8,13 +8,18 @@ import { summarizeDecisions, summarizePressure } from "./strategyHistory.ts";
 
 export type AggregateAnalytics = {
   sampleSize: number;
+  automatedSampleSize: number;
   layout: { averageCorridorLength: number; averageGreenhouseWaterDistance: number; averageGreenhouseUtilityDistance?: number; averageModuleDensity?: number; compactGreenhouseShare: number; averageResilienceBudgetShare: number; averageConnectedModuleShare: number };
   agriculture: { cropMix: Record<string, number>; livestockMix: Record<string, number>; cropWaterSettings: Record<string, number>; cropLightSettings: Record<string, number>; cropTemperatureSettings: Record<string, number>; averageCropYield: number; averageMeatYield: number; averageCropYieldPerGreenhouse: number; aggregateCropToMeatRatio?: number | null; averageEfficiencyScore?: number };
   highPerforming: { sampleSize: number; averageCorridorLength: number; averageResilienceBudgetShare: number; averageCropYieldPerGreenhouse: number };
+  outcomes: { passed: OutcomeGroup; failed: OutcomeGroup };
   decisions?: { sampleSize: number; plantedByCrop: Record<string, number>; harvestedByCrop: Record<string, number>; cropSwitches: number; parameterChanges: number; highLightSelections: number; lowWaterSelections: number; earlyChanges: number; lateChanges: number };
   pressure?: { sampleSize: number; pressureTurns: number; ordinaryTurns: number; averageCropYieldUnderPressure: number; averageCropYieldWithoutPressure: number; nearWater: { runs: number; averageCropYieldPerPressureTurn: number }; farFromWater: { runs: number; averageCropYieldPerPressureTurn: number } };
   tradeoff?: { threshold: number; higherResilience: { runs: number; averageProductionScore: number; averageResilienceScore: number }; lowerResilience: { runs: number; averageProductionScore: number; averageResilienceScore: number } };
 };
+
+export type OutcomeGroup = { runs: number; averageCropYield: number; averageConnectedModuleShare: number;
+  averageStabilityScore: number; finalCropMix: Record<string, number> };
 
 function average(values: number[]): number {
   return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length * 100) / 100 : 0;
@@ -28,7 +33,7 @@ export function greenhouseDistance(greenhouses: PlacedModule[], targets: PlacedM
 export async function getAggregateAnalytics(): Promise<AggregateAnalytics> {
   const client = publicSupabase();
   if (!client) throw new Error("Player patterns need Supabase project URL and publishable key");
-  const { data, error } = await client.from("runs").select("layout_json,strategy_json,crop_yield,meat_yield,score_total,score_efficiency,score_production,score_resilience").order("created_at", { ascending: false }).limit(1000);
+  const { data, error } = await client.from("runs").select("layout_json,strategy_json,crop_yield,meat_yield,passed,score_total,score_efficiency,score_production,score_stability,score_resilience").order("created_at", { ascending: false }).limit(1000);
   if (error) throw new Error(error.message);
   const rows = data ?? [];
   const corridors: number[] = [];
@@ -40,13 +45,16 @@ export async function getAggregateAnalytics(): Promise<AggregateAnalytics> {
   const connectedShares: number[] = [];
   const greenhouseProductivity: number[] = [];
   const cropMix: Record<string, number> = {};
+  const outcomeAccumulators = { passed: { runs: 0, cropYield: 0, connectedShare: 0, stabilityScore: 0, finalCropMix: {} as Record<string, number> },
+    failed: { runs: 0, cropYield: 0, connectedShare: 0, stabilityScore: 0, finalCropMix: {} as Record<string, number> } };
+  let automatedSampleSize = 0;
   const livestockMix: Record<string, number> = {};
   const cropWaterSettings: Record<string, number> = {};
   const cropLightSettings: Record<string, number> = {};
   const cropTemperatureSettings: Record<string, number> = {};
   for (const row of rows) {
     const layout = row.layout_json as { modules?: PlacedModule[]; utilityEdges?: Array<{ from: string; to: string; length: number; integrity: number }> } | null;
-    const strategy = row.strategy_json as { crops?: Array<{ crop: string; water?: string; light?: string; temperature?: string }>; livestock?: Array<{ animal: string }> } | null;
+    const strategy = row.strategy_json as { origin?: string; crops?: Array<{ crop: string; water?: string; light?: string; temperature?: string }>; livestock?: Array<{ animal: string }> } | null;
     const modules = layout?.modules ?? [];
     corridors.push((layout?.utilityEdges ?? []).reduce((sum, edge) => sum + edge.length, 0));
     const greenhouses = modules.filter((module) => module.moduleId.startsWith("greenhouse"));
@@ -61,6 +69,7 @@ export async function getAggregateAnalytics(): Promise<AggregateAnalytics> {
       return sum + (footprint ? footprint.w * footprint.h : 0);
     }, 0) / 196);
     shares.push(greenhouses.length ? greenhouses.filter((module) => module.moduleId === "greenhouse-compact").length / greenhouses.length : 0);
+    if (strategy?.origin === "automated_qa") automatedSampleSize++;
     const totalCost = modules.reduce((sum, module) => sum + (MODULE_BY_ID.get(module.moduleId)?.cost ?? 0), 0);
     const resilienceCost = modules.reduce((sum, module) => sum + (["shelter", "utility", "battery"].includes(MODULE_BY_ID.get(module.moduleId)?.category ?? "")
       ? (MODULE_BY_ID.get(module.moduleId)?.cost ?? 0) : 0), 0);
@@ -76,10 +85,17 @@ export async function getAggregateAnalytics(): Promise<AggregateAnalytics> {
         if (connected.has(edge.to) && !connected.has(edge.from)) { connected.add(edge.from); changed = true; }
       }
     }
-    connectedShares.push(modules.length ? connected.size / modules.length : 0);
+    const connectedShare = modules.length ? connected.size / modules.length : 0;
+    connectedShares.push(connectedShare);
+    const outcome = row.passed ? outcomeAccumulators.passed : outcomeAccumulators.failed;
+    outcome.runs++;
+    outcome.cropYield += Number(row.crop_yield) || 0;
+    outcome.connectedShare += connectedShare;
+    outcome.stabilityScore += Number(row.score_stability) || 0;
     for (const crop of strategy?.crops ?? []) {
       if (!crop.crop) continue;
       cropMix[crop.crop] = (cropMix[crop.crop] ?? 0) + 1;
+      outcome.finalCropMix[crop.crop] = (outcome.finalCropMix[crop.crop] ?? 0) + 1;
       if (crop.water) cropWaterSettings[crop.water] = (cropWaterSettings[crop.water] ?? 0) + 1;
       if (crop.light) cropLightSettings[crop.light] = (cropLightSettings[crop.light] ?? 0) + 1;
       if (crop.temperature) cropTemperatureSettings[crop.temperature] = (cropTemperatureSettings[crop.temperature] ?? 0) + 1;
@@ -155,7 +171,14 @@ export async function getAggregateAnalytics(): Promise<AggregateAnalytics> {
   const tradeoffGroup = (group: { runs: number; production: number; resilience: number }) => ({ runs: group.runs,
     averageProductionScore: group.runs ? Math.round(group.production / group.runs * 100) / 100 : 0,
     averageResilienceScore: group.runs ? Math.round(group.resilience / group.runs * 100) / 100 : 0 });
-  return { sampleSize: rows.length, layout: { averageCorridorLength: average(corridors), averageGreenhouseWaterDistance: average(distances), averageGreenhouseUtilityDistance: average(utilityDistances), averageModuleDensity: average(moduleDensities), compactGreenhouseShare: average(shares), averageResilienceBudgetShare: average(resilienceShares), averageConnectedModuleShare: average(connectedShares) },
+  const outcomeGroup = (group: typeof outcomeAccumulators.passed): OutcomeGroup => ({ runs: group.runs,
+    averageCropYield: group.runs ? Math.round(group.cropYield / group.runs * 100) / 100 : 0,
+    averageConnectedModuleShare: group.runs ? Math.round(group.connectedShare / group.runs * 100) / 100 : 0,
+    averageStabilityScore: group.runs ? Math.round(group.stabilityScore / group.runs * 100) / 100 : 0,
+    finalCropMix: group.finalCropMix });
+  return { sampleSize: rows.length, automatedSampleSize,
+    outcomes: { passed: outcomeGroup(outcomeAccumulators.passed), failed: outcomeGroup(outcomeAccumulators.failed) },
+    layout: { averageCorridorLength: average(corridors), averageGreenhouseWaterDistance: average(distances), averageGreenhouseUtilityDistance: average(utilityDistances), averageModuleDensity: average(moduleDensities), compactGreenhouseShare: average(shares), averageResilienceBudgetShare: average(resilienceShares), averageConnectedModuleShare: average(connectedShares) },
     agriculture: { cropMix, livestockMix, cropWaterSettings, cropLightSettings, cropTemperatureSettings,
       averageCropYield: average(rows.map((row) => Number(row.crop_yield) || 0)), averageMeatYield: average(rows.map((row) => Number(row.meat_yield) || 0)), averageCropYieldPerGreenhouse: average(greenhouseProductivity),
       aggregateCropToMeatRatio: totalMeat ? Math.round(totalCrop / totalMeat * 100) / 100 : null,

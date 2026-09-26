@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import test from "node:test";
 import { verifySpectrumWebhook } from "../src/ai/webhookSignature.ts";
-import { extendShortReport, fallbackReport, generateMissionReport, MIN_REPORT_FIELD_WORDS, reportWordCount } from "../src/ai/report.ts";
+import { extendShortReport, fallbackReport, generateMissionReport, MIN_LAYOUT_ASSESSMENT_WORDS, MIN_REPORT_FIELD_WORDS, reportWordCount } from "../src/ai/report.ts";
 import { buildRunSummary } from "../src/ai/schemas.ts";
 import { verifiedSources } from "../src/ai/sourceAdapter.ts";
 import { communicationsAvailable, resourceCapacity, shelterProtection } from "../src/data/systems.ts";
@@ -25,6 +25,7 @@ import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
 import { advanceLevel, applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
 import { parseTranscript, replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
 import { createReplayFrames } from "../src/game/state/replayFrames.ts";
+import { createRunHistory } from "../src/game/state/runHistory.ts";
 import type { GameState, PlayerAction } from "../src/game/state/types.ts";
 
 const moduleActions: PlayerAction[] = [
@@ -68,6 +69,13 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.equal(state.phase, "complete");
   assert.deepEqual(replayTranscript(parseTranscript(transcript)), state);
   const frames = createReplayFrames(transcript);
+  const runHistory = createRunHistory(transcript, frames, state.turnRecords);
+  assert.equal(runHistory.journal.length, transcript.steps.length);
+  assert.equal(runHistory.journal.filter((entry) => entry.kind === "turn").length, state.turnRecords.length);
+  assert.equal(runHistory.timeline.filter((entry) => entry.kind === "hazard").length,
+    state.turnRecords.filter((record) => record.hazard).length);
+  assert.match(runHistory.journal[0].actions[0], /Built Habitat Core/);
+  assert.ok(runHistory.journal.every((entry) => frames[entry.frameIndex] !== undefined));
   assert.equal(frames.length, steps.length + 1);
   assert.equal(frames[0].kind, "initial");
   assert.deepEqual(frames.at(-1)?.resources, state.resources);
@@ -87,6 +95,8 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.ok(summary.majorPlayerDecisions.some((decision) => decision.toLowerCase().includes("greenhouse")));
   const report = fallbackReport(summary, !!state.passed, verifiedSources);
   assert.match(report.layout, /connected to the habitat/);
+  assert.match(report.layoutAssessment!, new RegExp(`${Math.round(summary.layoutMetrics.connectedModuleShare * 100)}%`));
+  assert.ok(reportWordCount(report.layoutAssessment!) >= MIN_LAYOUT_ASSESSMENT_WORDS);
   assert.ok(report.sourceIds.length > 0);
   assert.ok(report.sourceIds.every((id) => verifiedSources.some((source) => source.id === id)));
   assert.match(report.evaluationSystem!, new RegExp(`${summary.finalScoreInputs.production}/28`));
@@ -101,6 +111,9 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.equal(archived.production, report.production);
   assert.equal(archived.overview, report.overview);
   assert.deepEqual(archived.fallbackFields, ["production"]);
+  const olderArchive = extendShortReport({ ...report, layoutAssessment: undefined, usedFallback: false }, report);
+  assert.equal(olderArchive.layoutAssessment, report.layoutAssessment);
+  assert.deepEqual(olderArchive.fallbackFields, ["layoutAssessment"]);
 });
 
 test("short AI report fields fail the minimum-length gate and use complete fallback analysis", async () => {
