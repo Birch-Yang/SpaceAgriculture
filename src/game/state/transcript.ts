@@ -75,7 +75,8 @@ export function parseTranscript(value: unknown): RunTranscript {
     if (step.kind === "build" && validAction(step.action, true)) continue;
     if (step.kind === "start" || step.kind === "advance") continue;
     if (step.kind === "turn" && Array.isArray(step.actions) && step.actions.length <= 20
-      && step.actions.every((action) => validAction(action, false))) continue;
+      && step.actions.every((action) => validAction(action, false))
+      && !step.actions.slice(0, -1).some((action) => action.type === "END_TURN")) continue;
     throw new Error("Invalid run step");
   }
   return value as RunTranscript;

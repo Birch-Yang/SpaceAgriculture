@@ -150,10 +150,12 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   // 1. Reveal hazard; 2. restore AP; 3. apply strategic actions.
   next.activeHazard = hazardForTurn(next, rngSeed);
   next.ap = apRecovery(next);
+  let ended = false;
   for (const action of actions) {
+    if (ended) { rejectedActions.push(`${action.type}: Turn has already ended`); continue; }
     const error = applyOperationAction(next, action, pendingHarvests);
     if (error) rejectedActions.push(`${action.type}${"moduleId" in action ? ` (${action.moduleId} slot ${"slotIndex" in action ? action.slotIndex ?? 0 : 0})` : ""}: ${error}`);
-    else acceptedActions.push(action);
+    else { acceptedActions.push(action); if (action.type === "END_TURN") ended = true; }
   }
 
   // 4. Network and 5. temperature. Accepted minigame modifiers were bounded above.

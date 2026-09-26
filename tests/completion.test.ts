@@ -11,6 +11,7 @@ import { CROP_IDS } from "../src/data/cropCatalog.ts";
 import { HAZARDS } from "../src/data/hazards.ts";
 import { LIVESTOCK } from "../src/data/livestock.ts";
 import { transcriptHash } from "../src/backend/submissions.ts";
+import { greenhouseDistance } from "../src/backend/analytics.ts";
 import { advanceMatch3, initialMatch3State, match3Modifier, scoreMatch3Proof, scoreRepairProof, type Match3Proof, type RepairProof } from "../src/game/minigames/proof.ts";
 import { harvestCrop } from "../src/game/simulation/crops.ts";
 import { growLivestock } from "../src/game/simulation/livestock.ts";
@@ -67,6 +68,10 @@ test("a complete transcript replays to the same authoritative state and rejects 
   assert.notEqual(transcriptHash(transcript), transcriptHash({ ...transcript, steps: transcript.steps.slice(0, -1) }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "REPAIR", targetId: "fake", minigameModifier: 99 }] }] }));
   assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "build", action: { type: "PLACE_MODULE", moduleId: "habitat-core", x: 0, y: 0, rotation: 90 } }] }));
+  assert.throws(() => parseTranscript({ ...transcript, steps: [{ kind: "turn", actions: [{ type: "END_TURN" }, { type: "END_TURN" }] }] }));
+  const afterEnd = resolveTurn(startOperation(base()), [{ type: "END_TURN" }, { type: "REPAIR", targetId: "module-1" }], "after-end");
+  assert.equal(afterEnd.acceptedActions.length, 1);
+  assert.match(afterEnd.rejectedActions[0], /already ended/);
   assert.throws(() => replayTranscript({ ...transcript, steps: [...steps, { kind: "turn", actions: [] }] }));
   const summary = buildRunSummary(state, transcript);
   assert.ok(summary.layoutMetrics.averageGreenhouseWaterDistance > 0);
@@ -105,6 +110,13 @@ test("minigame bonuses require replayable moves with the exact computed score", 
   assert.equal(scoreRepairProof({ kind: "repair", directions: [...repair.directions, "right"] }), null);
   assert.doesNotThrow(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: -0.05, minigameProof: repair })));
   assert.throws(() => parseTranscript(transcript({ type: "REPAIR", targetId: "corridor", minigameModifier: 0.1, minigameProof: repair })));
+});
+
+test("analytics uses occupied footprints and excludes runs without a comparison module", () => {
+  const greenhouse = { id: "g", moduleId: "greenhouse-industrial", x: 0, y: 0, rotation: 0 as const, integrity: 1 };
+  const water = { id: "w", moduleId: "water-recycler", x: 5, y: 1, rotation: 0 as const, integrity: 1 };
+  assert.equal(greenhouseDistance([greenhouse], [water]), 2);
+  assert.equal(greenhouseDistance([greenhouse], []), undefined);
 });
 
 test("submission transcripts accept the current crop catalog and reject retired IDs", () => {
