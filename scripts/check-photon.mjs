@@ -14,6 +14,16 @@ check((process.env.MISSION_SESSION_SECRET?.length ?? 0) >= 32, "MISSION_SESSION_
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 check(!!url && !!serviceKey, "Supabase server URL and service-role key for session storage");
+const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+let webhookUrl;
+try {
+  const appUrl = new URL(appOrigin);
+  if (appUrl.protocol === "https:" && appUrl.pathname === "/" && !appUrl.search && !appUrl.hash
+    && !appUrl.username && !appUrl.password && appUrl.hostname.includes(".")
+    && !/^(?:your-|example\.|localhost$)/i.test(appUrl.hostname))
+    webhookUrl = new URL("/api/mission-control/webhook", appUrl).href;
+} catch { /* Missing or invalid deployment URL. */ }
+check(!!webhookUrl, "NEXT_PUBLIC_APP_URL is your real public HTTPS deployment origin");
 
 if (projectId && projectSecret) {
   try {
@@ -25,10 +35,14 @@ if (projectId && projectSecret) {
     if (response.ok) {
       const payload = await response.json();
       const webhooks = Array.isArray(payload.data) ? payload.data : [];
-      const expected = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-      check(webhooks.some((hook) => typeof hook.webhookUrl === "string" && (expected
-        ? hook.webhookUrl === `${expected}/api/mission-control/webhook`
-        : hook.webhookUrl.endsWith("/api/mission-control/webhook"))), "Registered /api/mission-control/webhook endpoint for this deployment");
+      check(!!webhookUrl && webhooks.some((hook) => hook.webhookUrl === webhookUrl),
+        "Registered /api/mission-control/webhook endpoint matches this deployment");
+      if (webhookUrl && webhooks.some((hook) => hook.webhookUrl === webhookUrl)) {
+        try {
+          const endpoint = await fetch(webhookUrl, { redirect: "manual", signal: AbortSignal.timeout(10000) });
+          check(endpoint.status === 405, `Public webhook route is reachable without login or redirect (HTTP ${endpoint.status})`);
+        } catch { check(false, "Public webhook route could not be reached"); }
+      }
     }
   } catch { check(false, "Photon endpoint could not be reached; check connectivity and the project credentials"); }
 }

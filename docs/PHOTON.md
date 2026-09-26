@@ -43,6 +43,8 @@ https://your-deployment-domain/api/mission-control/webhook
 
 Save the returned signing secret as `PHOTON_WEBHOOK_SECRET`. This value is separate from the project secret and is shown at webhook creation. Redeploy with it in the environment. Use a public HTTPS endpoint that does not redirect or require Vercel login; deployment protection must allow this webhook to reach the application. Do not register `localhost`. Local inbound testing requires a public HTTPS tunnel pointed at the local server.
 
+Replace `your-deployment-domain` with the real address where this Photon branch is deployed, and set `NEXT_PUBLIC_APP_URL` to that address without a path or trailing slash. A literal example hostname such as `your-deployed-domain` cannot receive webhooks. The setup checker verifies the exact registered URL and checks that a public GET to the webhook route returns HTTP 405 (the route accepts POST only). If you previously registered a placeholder URL, remove it in Photon and add the real one; save the new signing secret and redeploy.
+
 [Photon's webhook guide](https://photon.codes/docs/webhooks/managing-webhooks) describes registration and recovery if you lost the signing secret. Our handler verifies the signature over the original body, rejects stale deliveries, and deduplicates inbound message IDs.
 
 ## 4. Apply the SQL migrations
