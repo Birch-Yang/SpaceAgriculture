@@ -1,0 +1,9 @@
+'use client';
+import type { LeaderboardCategory } from '../backend/runs';
+import { EmptyState } from './primitives';
+import s from './ui.module.css';
+export type LeaderboardRow = { id: string; nickname: string; mode: string; rank: number; score: number; passed: boolean };
+export type LeaderboardProps = { category: LeaderboardCategory; rows: readonly LeaderboardRow[]; currentRunId?: string; onCategoryChange: (category: LeaderboardCategory) => void; loading?: boolean; error?: string; onRetry?: () => void };
+export function Leaderboard({ category, rows, currentRunId, onCategoryChange, loading, error, onRetry }: LeaderboardProps) {
+  return <section className={s.root}><p className={s.eyebrow}>Mission records</p><h1>Every outpost has a story.</h1><div className={s.tabs} role="group" aria-label="Leaderboard category">{(['overall','production','stability','efficiency','resilience'] as const).map(item => <button key={item} className={s.button} aria-pressed={item === category} onClick={() => onCategoryChange(item)}>{item}</button>)}</div>{loading ? <p role="status">Receiving mission records…</p> : error ? <EmptyState title="Records temporarily unavailable" onRetry={onRetry}>{error}</EmptyState> : !rows.length ? <EmptyState title="The first harvest is still ahead.">Completed missions will appear here.</EmptyState> : <div className={s.tableWrap}><table className={s.table}><caption>{category} · completed missions</caption><thead><tr><th scope="col">Rank</th><th scope="col">Nickname</th><th scope="col">Mode</th><th scope="col">Result</th><th scope="col">Score</th></tr></thead><tbody>{rows.map(row => <tr key={row.id} className={row.id === currentRunId ? s.currentPlayer : ''}><td>{row.rank}</td><th scope="row">{row.nickname}{row.id === currentRunId && <span className={s.badge}>Your run</span>}</th><td>{row.mode}</td><td>{row.passed ? 'PASS' : 'FAIL'}</td><td>{row.score}</td></tr>)}</tbody></table></div>}</section>;
+}

@@ -2,6 +2,16 @@
 
 agronaut is a lunar agriculture design-space explorer. The current app uses Next.js, TypeScript, and Supabase; the Phaser 3 renderer and Photon Spectrum integration are separate workstreams. Its central gameplay loop is design → operate → survive → produce → score → analyze.
 
+## Placement controls — fixed orientation, drag only
+
+The current product decision (2026-09-26) supersedes the original specification's rotation requirement: **modules cannot be rotated; placement uses drag-and-drop only**.
+
+- During design and permitted intermissions, drag modules to place or reposition them on the snap-to-grid map.
+- Each module keeps its authored 2.5D isometric orientation and footprint. Do not provide rotation buttons, rotation shortcuts, or alternate facing controls.
+- During active operation, the layout remains locked; this change does not enable dragging, building, or rerouting mid-mission.
+
+Developer A owns implementing these interaction rules. This documentation update does not change `GameState`, `PlayerAction`, or existing rotation fields in the shared contracts; coordinate any future contract cleanup separately.
+
 ## Local setup
 
 1. Use Node.js 20.9 or newer (Node.js 24 recommended).
