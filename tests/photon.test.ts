@@ -20,7 +20,7 @@ test("Photon recognizes real SDK iMessage webhooks and ignores other traffic", (
 test("Photon introduction states the two-question relay rule and hazard alerts remain vague", () => {
   assert.equal(QUESTIONS_PER_TURN, 2);
   assert.match(openingMessage, /2 questions per mission turn/i);
-  assert.match(questionLimitMessage, /signal quality is too poor/i);
+  assert.match(questionLimitMessage, /Pho\.\.\.ton.*break\.\.\.ing up.*next mission turn/i);
   const state = createInitialState("00000000-0000-4000-8000-000000000001", "Tester", "challenge");
   state.lastTurn = { turn: 1, hazard: { id: "hazard-1", type: "power", severity: 1, turn: 1 },
     resourceDelta: { power: 0, water: 0, oxygen: 0, food: 0, temperature: 0 }, cropYield: 0, meatYield: 0, warnings: [] };

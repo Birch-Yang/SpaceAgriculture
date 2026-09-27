@@ -2,7 +2,7 @@ export const QUESTIONS_PER_TURN = 2;
 
 export const openingMessage = `Lunar Agriculture Base Manager, this is Photon, your Earthside liaison. Our Moon-to-Earth relay is weak, so I can answer only ${QUESTIONS_PER_TURN} questions per mission turn. I receive only fragments of your telemetry. Ask me for a hint when you need one; the decisions remain yours. If the signal drops, use your local instruments until we reconnect.`;
 
-export const questionLimitMessage = "Photon relay: signal quality is too poor for another answer this turn. I can take two questions per mission turn. Check your local instruments and try again after the next turn.";
+export const questionLimitMessage = "Pho...ton to lunar outpost... the Earth–Moon relay is break...ing up. I can't make out another question on this pass... please wait until the next mission turn. Earth standing by...";
 
 export const linkRestoredMessage = "Photon relay: contact restored. We lost some telemetry during the outage; check your local incident log before making your next decision.";
 

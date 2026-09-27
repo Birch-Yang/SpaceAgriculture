@@ -5,6 +5,22 @@ const schema = { type: "object", additionalProperties: false, properties: { text
 const prefix = "Photon to lunar outpost: ";
 const genericHint = "Earth has only partial telemetry. Compare your local resource delivery, reserves, and recent incident log before committing an action.";
 
+function fallbackForQuestion(question: string, state: AgentPublicState): string {
+  if (/crisis|defen[cs]e|hazard|disaster|radiation/i.test(question))
+    return "Our relay cannot identify a best defense. Compare the local hazard forecast with integrity and backup capacity of systems supporting life support.";
+  if (/power|electric|energy|battery|solar|电|能源/i.test(question))
+    return `${state.power === "stable" ? "Earth's power trace is coarse" : "Earth sees an unstable power trace"}. Compare generation, stored reserve, and demand before settling on a cause.`;
+  if (/water|irrigat|水|灌溉/i.test(question))
+    return "Our water picture is incomplete. Compare stored reserves with delivery to life support and growing areas.";
+  if (/oxygen|air|breath|氧|呼吸/i.test(question))
+    return "Our oxygen reading is coarse. Compare supply with delivery to the habitat and the demands sharing its utility path.";
+  if (/temperature|thermal|heat|cold|warm|温|热|冷/i.test(question))
+    return "Thermal telemetry is fragmentary. Inspect local temperature trends alongside power delivery and nearby heat sources.";
+  if (/crop|plant|harvest|farm|food|livestock|animal|作物|种植|农业|牲畜/i.test(question))
+    return "Agricultural output depends on timing and utility delivery. Inspect which of those is limiting the affected growing area.";
+  return genericHint;
+}
+
 function boundedHint(value: unknown, fallback: string): string {
   if (typeof value !== "string" || !value.trim()) return prefix + fallback;
   const hint = value.trim();
@@ -35,9 +51,7 @@ export async function eventAdvice(event: AgentEvent): Promise<string> {
 }
 
 export async function replyAdvice(question: string, publicState: AgentPublicState): Promise<string> {
-  const fallback = /crisis|defen[cs]e|hazard|disaster|radiation/i.test(question)
-    ? "Our relay cannot identify a best defense. Compare the local hazard forecast with integrity and backup capacity of systems supporting life support."
-    : genericHint;
+  const fallback = fallbackForQuestion(question, publicState);
   if (/ignore.{0,30}instructions|system prompt|act as|guarantee|win for me|exact (steps|solution)|optimal|忽略.*指令|必胜/i.test(question))
     return prefix + "I can help you inspect a trade-off, but command decisions stay with the outpost.";
   const raw = await structuredResponse("mission_control_reply", schema,
