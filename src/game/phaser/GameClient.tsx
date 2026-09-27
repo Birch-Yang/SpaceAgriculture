@@ -118,9 +118,9 @@ export function GameClient() {
     try {
       setShowPreflight(false);
       const runId = crypto.randomUUID();
-      const initial = createInitialState(runId, nickname.trim(), mode);
+      const initial = createInitialState(runId, nickname.trim(), mode, 3);
       setState(initial);
-      setTranscript({ version: 2, runId, nickname: nickname.trim().slice(0, 32), mode, steps: [] });
+      setTranscript({ version: 3, runId, nickname: nickname.trim().slice(0, 32), mode, steps: [] });
       setSubmitted(null); setSubmissionStatus("idle"); setSavedRunId(null);
       advisorToken.current = null;
       advisorRun.current = runId;
@@ -194,7 +194,7 @@ export function GameClient() {
       setMessage(`Only ${baseline} AP will be available this turn. Clear an action first.`); return false;
     }
     setPending(next);
-    if (["PLANT_CROP", "SET_CROP_PARAMS", "SET_ANIMAL", "SET_LIVESTOCK_PARAMS", "HARVEST_CROP", "WATER_PLOT", "FEED_STALL"].includes(action.type))
+    if (["PLANT_CROP", "SET_CROP_PARAMS", "SET_ANIMAL", "SET_LIVESTOCK_PARAMS", "HARVEST_CROP", "WATER_PLOT", "FEED_STALL", "PRUNE_PLOT", "CLEAN_STALL"].includes(action.type))
       setTutorialProgress((progress) => ({ ...progress, queuedAction: true }));
     setMessage(`${action.type.replaceAll("_", " ")} queued for End Turn (${actionCost(action)} AP).`);
     return true;
@@ -223,7 +223,10 @@ export function GameClient() {
         void submitRun(nextTranscript);
       } else void notifyAdvisor(result.state, result.summary.turn);
       setTutorialProgress((progress) => ({ ...progress, resolvedTurn: true }));
-      setMessage([`Turn ${result.summary.turn}: ${result.acceptedActions.length - 1} action(s) accepted; crops +${result.summary.cropYield}, meat +${result.summary.meatYield}.`, ...result.rejectedActions, ...result.summary.warnings].join(" "));
+      const happened = `Turn ${result.summary.turn}: crops +${result.summary.cropYield}, meat +${result.summary.meatYield}; ${Math.max(0, result.acceptedActions.length - 1)} actions applied.`;
+      const why = result.rejectedActions.length ? `Some actions did not apply: ${result.rejectedActions.join("; ")}.` : result.summary.warnings.length ? `Systems report: ${result.summary.warnings[0]}.` : "Automatic systems supported this turn's growth.";
+      const next = result.state.crops.some(plot => plot.crop && (plot.moisture ?? 60) < 25) ? "Next turn: inspect a dry bed or water it." : result.state.livestock.some(stall => stall.animal && (stall.cleanliness ?? 90) < 35) ? "Next turn: clean a stall before health declines." : "Next turn: check your beds, stalls, and reserves before committing AP.";
+      setMessage(`${happened} ${why} ${next}`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Turn failed"); }
   }
 
@@ -393,7 +396,7 @@ export function GameClient() {
     })}<div className={styles.resource}><span>CROP / MEAT</span><strong>{state.production.cropCumulative.toFixed(0)} / {state.production.meatCumulative.toFixed(0)}</strong><small>Targets {target.cropTarget} / {target.meatTarget}</small></div></section>
     <div className={`${styles.workspace} ${state.phase === "operation" ? styles.operationWorkspace : ""}`}>
       <aside className={`${styles.palette} ${state.phase === "operation" ? styles.operationPalette : ""}`}><div className={styles.panelHeading}><strong>{building ? "BUILD CATALOG" : "MISSION TOOLS"}</strong><small>{building ? `${state.budget} MATERIAL` : `${plannedAp}/${apRecovery(state)} AP PLANNED`}</small></div>
-        {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
+        {building ? <><button className={`${styles.toolButton} ${tool.kind === "select" ? styles.active : ""}`} onClick={() => setTool({ kind: "select" })}>⌖ Select / inspect</button><button className={`${styles.toolButton} ${tool.kind === "corridor" ? styles.active : ""}`} onClick={() => setTool({ kind: "corridor" })}>〰 Utility corridor <small>1 / cell</small></button><div className={styles.catalog}>{MODULES.map((item) => <button key={item.id} className={`${styles.moduleCard} ${tool.kind === "module" && tool.moduleId === item.id ? styles.active : ""}`} onClick={() => setTool({ kind: "module", moduleId: item.id })}><span className={styles.moduleTop}><BuildingPortrait category={item.category} moduleId={item.id} /><strong>{item.label}</strong><b>{item.cost}</b></span><span className={styles.moduleStats}>SIZE {item.footprint.w}×{item.footprint.h} · P {item.flow.powerDemand ? `−${item.flow.powerDemand}` : `+${item.flow.powerSupply ?? 0}`} · W {item.flow.waterDemand ? `−${item.flow.waterDemand}` : `+${item.flow.waterSupply ?? 0}`}</span><span className={styles.moduleStats}>HEAT {item.heatOutput} · YIELD {item.category === "greenhouse" && state.rulesetVersion >= 3 ? "crop-dependent" : item.baseYield} · RES {Math.round(item.resilience * 100)}%</span></button>)}</div></> : <div className={styles.operationHelp}><p>Base layout is locked. Select a module to focus it. Enter a Greenhouse or Livestock Module to plan farming actions.</p><p>Queued actions apply on End Turn. Food shortages may reduce AP recovery.</p></div>}
       </aside>
       <div className={styles.mapColumn}><div className={styles.mapHeader}><span>ISOMETRIC BASE / 14 × 14</span><span>{state.modules.length} MODULES · {state.utilityEdges.length} LINKS</span></div><GameCanvas state={state} tool={tool} selectedId={selectedId} onAction={build} onSelect={setSelectedId} onFeedback={setMessage} /><div className={styles.mapFooter}><span>{building ? "Click to place · Drag to draw a corridor · Before turn 1: select + Backspace to remove, drag disconnected buildings to move" : "Select a module to focus · Enter agriculture modules from the turn sidebar"}</span><span className={!communicationsAvailable(state) ? styles.offline : styles.online}>{!communicationsAvailable(state) ? "COMMS OUTAGE" : "COMMS NOMINAL"}</span></div></div>
       {state.phase === "operation" ? <TurnSidebar

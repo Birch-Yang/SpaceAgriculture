@@ -9,8 +9,8 @@ import type { MinigameProof } from "../minigames/proof.ts";
 type CropSlotState = Omit<CropPlotState, "crop"> & { slotIndex?: number; crop: CropKind | null; wateredThisCycle?: boolean };
 type AnimalSlotState = Omit<LivestockState, "animal"> & { slotIndex?: number; animal: AnimalKind | null; fedThisCycle?: boolean };
 
-export type CropSlotView = { index: number; crop: CropKind | null; progress: number; ready: boolean; water: Setting; light: Setting; temperature: Setting; wateredThisCycle?: boolean; supported: boolean };
-export type AnimalSlotView = { index: number; animal: AnimalKind | null; progress: number; feed: "rationed" | "normal" | "high"; fedThisCycle?: boolean; supported: boolean };
+export type CropSlotView = { index: number; crop: CropKind | null; progress: number; ready: boolean; water: Setting; light: Setting; temperature: Setting; wateredThisCycle?: boolean; moisture?: number; health?: number; supported: boolean };
+export type AnimalSlotView = { index: number; animal: AnimalKind | null; progress: number; feed: "rationed" | "normal" | "high"; fedThisCycle?: boolean; satiety?: number; cleanliness?: number; health?: number; supported: boolean };
 
 function progressPercent(growth: number, cycle: number): number { return Math.round(Math.max(0, Math.min(100, growth / cycle * 100))); }
 
@@ -26,7 +26,7 @@ export function agricultureSlots(state: GameState, placedModuleId: string): { ki
       const plot = fullContract ? records.find((item) => item.slotIndex === index) : index === 0 ? records[0] : undefined;
       return { index, crop: plot?.crop ?? null, progress: plot?.crop ? progressPercent(plot.growth, CROPS[plot.crop].cycle) : 0, ready: plot?.ready ?? false,
         water: plot?.water ?? "medium", light: plot?.light ?? "medium", temperature: plot?.temperature ?? "medium",
-        wateredThisCycle: plot?.wateredThisCycle, supported: Boolean(plot) };
+        wateredThisCycle: plot?.wateredThisCycle, moisture: plot?.moisture, health: plot?.health, supported: Boolean(plot) };
     });
     return { kind: "greenhouse", slots, fullContract };
   }
@@ -35,7 +35,7 @@ export function agricultureSlots(state: GameState, placedModuleId: string): { ki
   const slots = Array.from({ length: capacity }, (_, index): AnimalSlotView => {
     const animal = fullContract ? records.find((item) => item.slotIndex === index) : index === 0 ? records[0] : undefined;
     return { index, animal: animal?.animal ?? null, progress: animal?.animal ? progressPercent(animal.growth, LIVESTOCK[animal.animal].cycle) : 0, feed: animal?.feed ?? "normal",
-      fedThisCycle: animal?.fedThisCycle, supported: Boolean(animal) };
+      fedThisCycle: animal?.fedThisCycle, satiety: animal?.satiety, cleanliness: animal?.cleanliness, health: animal?.health, supported: Boolean(animal) };
   });
   return { kind: "livestock", slots, fullContract };
 }

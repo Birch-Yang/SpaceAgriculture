@@ -10,7 +10,7 @@ import { ReplayBaseMap } from './ReplayBaseMap';
 import s from './archive.module.css';
 
 export function RecordExperience({ runId, nickname, mode, rulesetVersion, passed, score, frames, journal, timeline, layoutAssessment, layoutMetrics }: {
-  runId: string; nickname: string; mode: GameMode; rulesetVersion: 1 | 2; passed: boolean; score: number;
+  runId: string; nickname: string; mode: GameMode; rulesetVersion: 1 | 2 | 3; passed: boolean; score: number;
   frames: ReplayFrame[]; journal: JournalEntry[]; timeline: TimelineEntry[];
   layoutAssessment: string; layoutMetrics: Record<string, number>;
 }) {

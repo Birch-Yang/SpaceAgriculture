@@ -92,6 +92,17 @@
 .slotCard h2 { margin: 0 0 8px; font-size: 18px; }
 .slotCard p { color: #b4cbcd; font-size: 12px; }
 .slotCard button { font-size: 11px; margin: 3px 0; }
+.careTray { margin: 12px 0; padding: 12px; border: 2px solid #a37b4c; background: #2c302f; }
+.careTray p { margin: 0 0 8px; color: #e9dcba; font-size: 12px; }
+.careTray button { margin: 3px; padding: 7px 9px; background: #dfc58d; color: #283039; border: 2px solid #8f6945; cursor: grab; }
+.careTray button[aria-pressed="true"] { background: #f3e8bc; outline: 2px solid #88ca9d; }
+.careTarget { display: flex; flex-direction: column; width: 100%; min-height: 92px; align-items: center; justify-content: center; gap: 8px; border: 3px solid #855d40; background: repeating-linear-gradient(90deg, #43362d 0 14px, #4c3a2c 14px 28px); color: #f2e4bf; cursor: pointer; }
+.careTarget:hover { outline: 2px solid #a4d3a3; }
+.bedSoil { font-size: 24px; color: #94c88c; letter-spacing: 5px; }
+.barnFloor { display: block; font-size: 17px; }
+.roamingAnimal { display: inline-block; animation: stallPace 5s ease-in-out infinite alternate; }
+@keyframes stallPace { from { transform: translateX(-15px); } to { transform: translateX(15px); } }
+@media (prefers-reduced-motion: reduce) { .roamingAnimal { animation: none; } }
 :global(.minigamePanel) { color: #eaf5f0; }
 :global(.minigameHeader) { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 :global(.minigameHeader strong) { font-size: 24px; }
