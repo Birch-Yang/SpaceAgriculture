@@ -249,7 +249,7 @@ export function GameClient() {
     try {
       const response = await fetch("/api/mission-control/turn", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ runId: next.runId, token: advisorToken.current, turn: (next.level - 1) * 10 + turn,
-          publicState: toAgentPublicState(next), event: deriveAgentEvent(next), outage }), signal: AbortSignal.timeout(8000) });
+          publicState: toAgentPublicState(next), event: deriveAgentEvent(next), outage }), signal: AbortSignal.timeout(25000) });
       const data = await response.json() as { status?: string; text?: string };
       if (!response.ok || data.status === "unavailable") setAdvisorConnection("unavailable");
       else if (data.status === "offline") setAdvisorConnection("offline");

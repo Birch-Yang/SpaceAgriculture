@@ -45,7 +45,7 @@ export async function eventAdvice(event: AgentEvent): Promise<string> {
     CROP_OUTPUT_BEHIND: "Agricultural output appears behind pace. Review utility delivery and crop cycle timing.",
     PRODUCTION_TARGET_REACHED: "Production targets appear met. Preserve life-support stability through the remaining turns.",
     THERMAL_CONFIGURATION: "Thermal conditions look unsafe. Check powered regulation and nearby module placement.",
-    HAZARD_SIGNAL: "Photon relay: a disturbance reached our instruments, but the picture is incomplete. Check the local incident log and affected system readings before you act.",
+    HAZARD_SIGNAL: "Our relay caught a disturbance, but the picture is incomplete. Check the local incident log and affected system readings before you act.",
   };
   return boundedHint(text, fallback[event.type] ?? genericHint);
 }
