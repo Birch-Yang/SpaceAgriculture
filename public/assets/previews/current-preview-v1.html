@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>agronaut · Current preview baseline</title>
+  <style>
+    :root{font-family:ui-monospace,SFMono-Regular,monospace;color:#f1e2c4;background:#172430}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% -10%,#526465 0,#263541 42%,#172430 100%)}button,a{font:inherit}button{cursor:pointer}.shell{max-width:1700px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:8px 2px 18px;border-bottom:2px solid #ad9067}.brand{font:bold 22px Georgia,serif;letter-spacing:.05em}.tag{padding:8px 10px;border:1px solid #bb9b6c;color:#ebd6aa;font-size:11px}.intro{display:flex;justify-content:space-between;align-items:end;gap:24px;padding:23px 2px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;color:#c6d6b7}h1{font:700 clamp(29px,3.5vw,46px)/1.05 Georgia,serif;margin:7px 0 10px}p{margin:0;color:#d2c4ae;font-size:13px;line-height:1.5;max-width:820px}.note{max-width:290px;font-size:11px;text-align:right}.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:14px}.rail,.stage{border:3px solid #ab8d64;background:#243442;box-shadow:5px 5px 0 #101b27}.rail{padding:12px;align-self:start}.group-label{display:block;color:#debb81;font-size:10px;font-weight:800;letter-spacing:.12em;margin:5px 0 8px}.group-label:not(:first-child){border-top:1px solid #766e60;margin-top:17px;padding-top:13px}.choice{display:block;width:100%;border:2px solid #738078;background:#304653;color:#f0dfbe;text-align:left;padding:11px;margin:6px 0;font-weight:800;font-size:12px}.choice small{display:block;color:#c5c5ad;font-weight:500;margin-top:4px;font-size:10px}.choice:hover,.choice[aria-current="true"]{border-color:#f0cd8e;background:#ebd5ae;color:#22303b}.choice[aria-current="true"] small{color:#526052}.stage{min-width:0}.stage-head{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:12px 15px;background:#1d2c38;border-bottom:3px solid #ab8d64}.stage-head strong{display:block;color:#f0d49d;font:700 17px Georgia,serif}.stage-head span{font-size:10px;color:#b8c8b3}.stage-head a{display:inline-block;padding:8px 10px;border:2px solid #a87d4f;color:#26313c;background:#e8c487;text-decoration:none;font-size:11px;font-weight:800;white-space:nowrap}.stage iframe{display:block;width:100%;height:max(74vh,650px);border:0;background:#1b2934}.foot{font-size:11px;padding:15px 2px;color:#b8c3b2}@media(max-width:850px){.layout{grid-template-columns:1fr}.rail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px}.group-label{grid-column:1/-1}.group-label:not(:first-child){margin-top:8px}.choice{margin:2px 0}.intro{display:block}.note{text-align:left;margin-top:12px}.stage iframe{height:75vh}}@media(max-width:520px){.rail{grid-template-columns:1fr}.stage-head{align-items:start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="top"><span class="brand">◈ agronaut</span><span class="tag">CURRENT PREVIEW BASELINE · 26 SEP 2026</span></header>
+    <section class="intro"><div><span class="eyebrow">ONE PLACE FOR THE LATEST APPROVED VIEWS</span><h1>Review the current build.</h1><p>Choose a live product page or a current design preview. Future UI changes should start from these versions and the latest fetched team branch.</p></div><p class="note">The playable app uses real game code. The hazard-turn V6, world-camera V2, onboarding V11, and art catalogue V5 are separate previews.</p></section>
+    <div class="layout">
+      <nav class="rail" aria-label="Current preview views">
+        <span class="group-label">PLAYABLE PRODUCT</span>
+        <button class="choice" data-view="live" aria-current="true">Live game<small>Current app · title → mission</small></button>
+        <button class="choice" data-view="records" aria-current="false">Mission records<small>Current leaderboard</small></button>
+        <button class="choice" data-view="patterns" aria-current="false">Player patterns<small>Current analytics</small></button>
+        <span class="group-label">CURRENT DESIGN PREVIEWS</span>
+        <button class="choice" data-view="onboarding" aria-current="false">Onboarding V11<small>Current first three screens</small></button>
+        <button class="choice" data-view="world" aria-current="false">World camera V2<small>Bound ground · hover-only grid</small></button>
+        <button class="choice" data-view="art" aria-current="false">Pixel art V5<small>Approved element direction</small></button>
+        <button class="choice" data-view="hazard" aria-current="false">Hazard turn V6<small>Reveal → site → response → result</small></button>
+      </nav>
+      <section class="stage" aria-label="Selected preview">
+        <div class="stage-head"><div><strong id="view-title">Live game</strong><span id="view-detail">The current playable app.</span></div><a id="open-full" href="/" target="_blank" rel="noopener">Open full size ↗</a></div>
+        <iframe id="preview-frame" src="/" title="Live game preview" loading="eager"></iframe>
+      </section>
+    </div>
+    <p class="foot">Archived HTML versions remain in the repository for comparison, but are not part of this baseline. Hazard V6 is an interaction mock and does not change the live simulation.</p>
+  </div>
+  <script>
+    const views={
+      live:{title:'Live game',detail:'The current playable app.',url:'/'},
+      records:{title:'Mission records',detail:'Current leaderboard and run archive.',url:'/leaderboard'},
+      patterns:{title:'Player patterns',detail:'Current analytics; requires configured Supabase data.',url:'/analytics'},
+      onboarding:{title:'Onboarding V11',detail:'Current landing, briefing, and mission setup design.',url:'/assets/previews/ui-v11.html'},
+      world:{title:'World camera V2',detail:'Current map pan, zoom, focus, and build-hover design.',url:'/assets/previews/world-camera-v2.html'},
+      art:{title:'Pixel art V5',detail:'Current approved style and element catalogue.',url:'/assets/previews/pixel-elements-v5.html'},
+      hazard:{title:'Hazard turn V6',detail:'Current full hazard-turn interaction preview.',url:'/assets/previews/ruleset-v3-interaction-demo-v6.html'}
+    };
+    const frame=document.getElementById('preview-frame');
+    const title=document.getElementById('view-title');
+    const detail=document.getElementById('view-detail');
+    const full=document.getElementById('open-full');
+    function show(key){
+      const view=views[key]||views.live;
+      document.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-current',String(button.dataset.view===key)));
+      title.textContent=view.title;detail.textContent=view.detail;full.href=view.url;
+      frame.title=view.title+' preview';frame.src=view.url;
+      history.replaceState(null,'','#'+key);
+    }
+    document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>show(button.dataset.view)));
+    if(views[location.hash.slice(1)])show(location.hash.slice(1));
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-labelledby="title">
+  <title id="title">Micrometeoroid impact warning</title>
+  <path fill="#222c38" d="M8 4h48v4h4v48h-4v4H8v-4H4V8h4z"/>
+  <path fill="#e9c585" d="M8 8h48v4h4v44h-4v4H8v-4H4V12h4z"/>
+  <path fill="#3e4954" d="M12 12h40v4h4v36h-4v4H12v-4H8V16h4z"/>
+  <path fill="#edaa79" d="M15 15h5v5h-5zM21 20h5v5h-5zM26 25h5v5h-5zM30 28h6v6h-6z"/>
+  <path fill="#f0d5a3" d="M37 29h11v4h4v10h-4v4H37v-4h-4V33h4z"/>
+  <path fill="#9b715b" d="M41 33h7v5h-7zM36 40h8v4h-8z"/>
+  <path fill="#b8d9d2" d="M17 48h14v4H17zM13 52h38v4H13zM45 45h5v4h-5z"/>
+  <path fill="#edaa79" d="M17 37h6v4h-6zM25 43h5v5h-5zM51 23h4v6h-4z"/>
+</svg>

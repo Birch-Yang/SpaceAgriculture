@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-labelledby="title">
+  <title id="title">Power shortage warning</title>
+  <path fill="#222c38" d="M8 4h48v4h4v48h-4v4H8v-4H4V8h4z"/>
+  <path fill="#e9c585" d="M8 8h48v4h4v44h-4v4H8v-4H4V12h4z"/>
+  <path fill="#4b4552" d="M12 12h40v4h4v36h-4v4H12v-4H8V16h4z"/>
+  <path fill="#eadbb8" d="M16 21h31v4h5v19h-5v4H16v-4h-4V25h4z"/>
+  <path fill="#394350" d="M17 26h29v17H17z"/>
+  <path fill="#dc8a6f" d="M20 29h6v11h-6zM28 29h3v11h-3z"/>
+  <path fill="#f6cd79" d="M37 16h5v7h-5zM31 34h7v-5h7v8h-7v8h-7z"/>
+  <path fill="#394350" d="M34 36h5v6h-5z"/>
+</svg>

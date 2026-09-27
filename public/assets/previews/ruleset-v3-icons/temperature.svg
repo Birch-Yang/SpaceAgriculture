@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-labelledby="title">
+  <title id="title">Thermal volatility warning</title>
+  <path fill="#222c38" d="M8 4h48v4h4v48h-4v4H8v-4H4V8h4z"/>
+  <path fill="#e9c585" d="M8 8h48v4h4v44h-4v4H8v-4H4V12h4z"/>
+  <path fill="#7d4f43" d="M12 12h40v4h4v36h-4v4H12v-4H8V16h4z"/>
+  <path fill="#d7ebdf" d="M26 16h12v4h4v24H22V20h4z"/>
+  <path fill="#334a59" d="M30 20h4v22h-4z"/>
+  <path fill="#f5ad78" d="M30 29h4v17h-4zM22 43h20v4h4v5h-4v4H22v-4h-4v-5h4z"/>
+  <path fill="#d7ebdf" d="M12 22h8v4h-8zM14 18h4v12h-4zM44 21h8v4h-8zM46 17h4v12h-4z"/>
+</svg>
