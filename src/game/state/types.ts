@@ -64,6 +64,9 @@ export type CropPlotState = {
   growth: number;
   ready: boolean;
   wateredThisCycle: boolean;
+  moisture?: number;
+  health?: number;
+  wetTurns?: number;
   water: Setting;
   light: Setting;
   temperature: Setting;
@@ -76,6 +79,9 @@ export type LivestockState = {
   feed: "rationed" | "normal" | "high";
   fedThisCycle: boolean;
   feedMinigameModifier: number;
+  satiety?: number;
+  cleanliness?: number;
+  health?: number;
 };
 export type HazardType = "temperature" | "radiation" | "micrometeoroid" | "communications" | "power";
 export type HazardInstance = { id: string; type: HazardType; severity: number; turn: number };
@@ -105,14 +111,14 @@ export type GameState = {
   runId: string;
   nickname: string;
   mode: GameMode;
-  rulesetVersion: 1 | 2;
+  rulesetVersion: 1 | 2 | 3;
   phase: GamePhase;
   level: 1 | 2 | 3;
   turn: number;
   budget: number;
   ap: number;
   resources: ResourceState;
-  production: { cropCumulative: number; meatCumulative: number; researchCumulative?: number };
+  production: { cropCumulative: number; meatCumulative: number; researchCumulative?: number; researchAvailable?: number; cropResidue?: number; feedReserve?: number; nutrients?: number };
   modules: PlacedModule[];
   utilityEdges: UtilityEdge[];
   crops: CropPlotState[];
@@ -143,6 +149,10 @@ export type PlayerAction =
   | { type: "SET_ANIMAL"; moduleId: string; slotIndex?: number; animal: AnimalKind }
   | { type: "WATER_PLOT"; moduleId: string; slotIndex: number }
   | { type: "FEED_STALL"; moduleId: string; slotIndex: number; minigameModifier?: number; minigameProof?: MinigameProof }
+  | { type: "PRUNE_PLOT"; moduleId: string; slotIndex: number }
+  | { type: "CLEAN_STALL"; moduleId: string; slotIndex: number }
+  | { type: "ALLOCATE_RESIDUE"; destination: "feed" | "nutrients" }
+  | { type: "USE_RESEARCH"; purpose: "diagnostic" | "forecast" }
   | { type: "END_TURN" };
 
 export type TurnResult = { state: GameState; summary: TurnSummary; acceptedActions: PlayerAction[]; rejectedActions: string[] };

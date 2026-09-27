@@ -7,14 +7,14 @@ import type { Cell, GameMode, GameState, PlacedModule, PlayerAction } from "./ty
 export const MAP_SIZE = { width: 14, height: 14 } as const;
 const corridorCellCost = 1;
 
-export function createInitialState(runId: string, nickname: string, mode: GameMode, rulesetVersion: 1 | 2 = 2): GameState {
+export function createInitialState(runId: string, nickname: string, mode: GameMode, rulesetVersion: 1 | 2 | 3 = 2): GameState {
   if (!runId.trim() || !nickname.trim()) throw new Error("Run ID and nickname are required");
   const difficulty = DIFFICULTY[mode][0];
   return {
     runId, nickname: nickname.trim().slice(0, 32), mode, rulesetVersion, phase: "design", level: 1, turn: 1,
     budget: rulesetVersion === 1 ? LEGACY_INITIAL_BUDGET[mode] : difficulty.budget,
     ap: 0, resources: { ...difficulty.starting },
-    production: { cropCumulative: 0, meatCumulative: 0 }, modules: [], utilityEdges: [],
+    production: { cropCumulative: 0, meatCumulative: 0, researchAvailable: 0, cropResidue: 0, feedReserve: 0, nutrients: 0 }, modules: [], utilityEdges: [],
     crops: [], livestock: [],
     forecast: forecastForTurn({ runId, mode, level: 1, turn: 1 }),
     history: [], turnRecords: [], nextId: 1,
@@ -69,8 +69,8 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
     return { state: {
       ...state, budget: state.budget - def.cost, nextId: state.nextId + 1,
       modules: [...state.modules, candidate],
-      crops: def.category === "greenhouse" ? [...state.crops, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, crop: slotIndex === 0 ? "lettuce" as const : null, growth: 0, ready: false, wateredThisCycle: false, water: "medium" as const, light: "medium" as const, temperature: "medium" as const }))] : state.crops,
-      livestock: def.category === "livestock" ? [...state.livestock, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, animal: slotIndex === 0 ? "chicken" as const : null, growth: 0, feed: "normal" as const, fedThisCycle: false, feedMinigameModifier: 0 }))] : state.livestock,
+      crops: def.category === "greenhouse" ? [...state.crops, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, crop: slotIndex === 0 ? "lettuce" as const : null, growth: 0, ready: false, wateredThisCycle: false, water: "medium" as const, light: "medium" as const, temperature: "medium" as const, ...(state.rulesetVersion >= 3 ? { moisture: 60, health: 100, wetTurns: 0 } : {}) }))] : state.crops,
+      livestock: def.category === "livestock" ? [...state.livestock, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, animal: slotIndex === 0 ? "chicken" as const : null, growth: 0, feed: "normal" as const, fedThisCycle: false, feedMinigameModifier: 0, ...(state.rulesetVersion >= 3 ? { satiety: 70, cleanliness: 90, health: 100 } : {}) }))] : state.livestock,
     } };
   }
   if (action.type === "REMOVE_MODULE") {

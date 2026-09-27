@@ -57,6 +57,7 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
   const cost = actionCost(action);
   if (cost > state.ap) return "Insufficient action points";
   if (action.type === "END_TURN") return undefined;
+  if (state.rulesetVersion < 3 && ["PRUNE_PLOT", "CLEAN_STALL", "ALLOCATE_RESIDUE", "USE_RESEARCH"].includes(action.type)) return "Action requires agriculture ruleset 3";
   if (action.type === "SET_CROP_PARAMS") {
     const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!plot) return "Crop plot not found";
@@ -82,6 +83,7 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
     const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!plot) return "Crop plot not found";
     plot.crop = action.crop; plot.growth = 0; plot.ready = false; plot.wateredThisCycle = false;
+    if (state.rulesetVersion >= 3) { plot.moisture = Math.max(plot.moisture ?? 60, 45); plot.health = 100; plot.wetTurns = 0; }
   } else if (action.type === "HARVEST_CROP") {
     const plot = cropSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!plot) return "Crop plot not found";
@@ -89,18 +91,21 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
     if (invalidModifier(action.minigameModifier)) return "Invalid minigame modifier";
     pendingHarvests.push({ plot: { ...plot }, modifier: boundedModifier(action.minigameModifier) });
     plot.growth = 0; plot.ready = false; plot.wateredThisCycle = false;
+    if (state.rulesetVersion >= 3 && !["lettuce", "chili-pepper"].includes(plot.crop)) plot.crop = null;
   } else if (action.type === "SET_ANIMAL") {
     const animal = livestockSlot(state, action.moduleId, action.slotIndex ?? 0);
     if (!animal) return "Livestock module not found";
     animal.animal = action.animal; animal.growth = 0; animal.fedThisCycle = false; animal.feedMinigameModifier = 0;
+    if (state.rulesetVersion >= 3) { animal.satiety = 70; animal.cleanliness = 90; animal.health = 100; }
   } else if (action.type === "WATER_PLOT") {
     const plot = cropSlot(state, action.moduleId, action.slotIndex);
     if (!plot) return "Crop plot not found";
     if (!plot.crop) return "Crop plot is empty";
-    if (plot.wateredThisCycle) return "Crop plot was already watered this cycle";
+    if (state.rulesetVersion < 3 && plot.wateredThisCycle) return "Crop plot was already watered this cycle";
     if (state.resources.water < AGRICULTURE.waterActionCost) return "Insufficient water";
     state.resources.water -= AGRICULTURE.waterActionCost;
     plot.wateredThisCycle = true;
+    if (state.rulesetVersion >= 3) plot.moisture = Math.min(100, (plot.moisture ?? 60) + 35);
   } else if (action.type === "FEED_STALL") {
     const animal = livestockSlot(state, action.moduleId, action.slotIndex);
     if (!animal) return "Livestock module not found";
@@ -111,6 +116,24 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
     state.resources.food -= AGRICULTURE.feedActionCost;
     animal.fedThisCycle = true;
     animal.feedMinigameModifier = boundedModifier(action.minigameModifier);
+    if (state.rulesetVersion >= 3) animal.satiety = Math.min(100, (animal.satiety ?? 70) + 30);
+  } else if (action.type === "PRUNE_PLOT") {
+    const plot = cropSlot(state, action.moduleId, action.slotIndex);
+    if (!plot?.crop) return "Crop plot is empty";
+    plot.health = Math.min(100, (plot.health ?? 100) + 20);
+  } else if (action.type === "CLEAN_STALL") {
+    const animal = livestockSlot(state, action.moduleId, action.slotIndex);
+    if (!animal?.animal) return "Livestock stall is empty";
+    animal.cleanliness = Math.min(100, (animal.cleanliness ?? 90) + 35);
+  } else if (action.type === "ALLOCATE_RESIDUE") {
+    if ((state.production.cropResidue ?? 0) < 1) return "No crop residue available";
+    state.production.cropResidue = (state.production.cropResidue ?? 0) - 1;
+    if (action.destination === "feed") state.production.feedReserve = (state.production.feedReserve ?? 0) + 1;
+    else state.production.nutrients = (state.production.nutrients ?? 0) + 1;
+  } else if (action.type === "USE_RESEARCH") {
+    if ((state.production.researchAvailable ?? 0) < 1) return "No research sample available";
+    state.production.researchAvailable = (state.production.researchAvailable ?? 0) - 1;
+    state.history.push({ turn: state.turn, type: "RESEARCH_USED", message: action.purpose === "forecast" ? `Refined forecast: ${JSON.stringify(state.forecast)}` : `Diagnostic: ${state.modules.filter(m => m.integrity < 0.8).length} damaged modules` });
   } else {
     return "Base layout is locked during operation";
   }
@@ -171,7 +194,9 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
     const harvest = harvestCrop(next, pending.plot, network, pending.modifier);
     cropYield += harvest.yield;
     cropFood += harvest.food;
+    if (next.rulesetVersion >= 3 && pending.plot.crop === "soybean" && harvest.yield > 0) next.production.cropResidue = (next.production.cropResidue ?? 0) + 1;
     next.production.researchCumulative = (next.production.researchCumulative ?? 0) + harvest.research;
+    if (next.rulesetVersion >= 3) next.production.researchAvailable = (next.production.researchAvailable ?? 0) + harvest.research;
     if (harvest.research) next.history.push({ turn, type: "RESEARCH", message: `Collected ${harvest.research} research sample(s)`, amount: harvest.research });
     cropOutputs.push({ moduleId: pending.plot.moduleId, slotIndex: pending.plot.slotIndex, yield: harvest.yield });
   }
@@ -187,7 +212,15 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   next.resources.power = Math.max(0, next.resources.power + network.net.power - baseline.power - crops.powerUsed);
   next.resources.water = Math.max(0, next.resources.water + network.net.water - baseline.water - crops.waterUsed - livestock.waterUsed);
   next.resources.oxygen = Math.max(0, next.resources.oxygen + network.net.oxygen - baseline.oxygen);
-  next.resources.food = Math.max(0, next.resources.food + cropFood + livestock.meatYield - baseline.food - livestock.feedUsed);
+  const reserveUsed = next.rulesetVersion >= 3 ? Math.min(next.production.feedReserve ?? 0, livestock.feedUsed) : 0;
+  next.resources.food = Math.max(0, next.resources.food + cropFood + livestock.meatYield - baseline.food - livestock.feedUsed + reserveUsed);
+  if (next.rulesetVersion >= 3) {
+    next.production.feedReserve = (next.production.feedReserve ?? 0) - reserveUsed;
+    if ((next.production.nutrients ?? 0) > 0) {
+      const needy = next.crops.find(plot => plot.crop && (plot.health ?? 100) < 90);
+      if (needy) { needy.health = Math.min(100, (needy.health ?? 100) + 12); next.production.nutrients = (next.production.nutrients ?? 0) - 1; }
+    }
+  }
   applyHazard(next, warnings);
   for (const key of ["power", "water", "oxygen", "food"] as const)
     next.resources[key] = Math.round(Math.min(next.resources[key], resourceCapacity(next, key)) * 10) / 10;

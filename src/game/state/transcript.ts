@@ -11,7 +11,7 @@ export type RunStep =
   | { kind: "start" }
   | { kind: "turn"; actions: PlayerAction[] }
   | { kind: "advance" };
-export type RunTranscript = { version: 1 | 2; runId: string; nickname: string; mode: GameMode; steps: RunStep[] };
+export type RunTranscript = { version: 1 | 2 | 3; runId: string; nickname: string; mode: GameMode; steps: RunStep[] };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const settings = new Set(["low", "medium", "high"]);
@@ -32,7 +32,7 @@ function verifiedModifier(value: Record<string, unknown>, kind: MinigameProof["k
     && Math.abs(computed - value.minigameModifier) < 1e-9;
 }
 
-function validAction(value: unknown, build: boolean): value is PlayerAction {
+function validAction(value: unknown, build: boolean, version: number): value is PlayerAction {
   if (!record(value) || typeof value.type !== "string") return false;
   if (build) {
     if (value.type === "PLACE_MODULE") return string(value.moduleId) && MODULE_BY_ID.has(value.moduleId)
@@ -48,6 +48,8 @@ function validAction(value: unknown, build: boolean): value is PlayerAction {
     return false;
   }
   if (value.type === "END_TURN") return true;
+  if (version >= 3 && value.type === "ALLOCATE_RESIDUE") return value.destination === "feed" || value.destination === "nutrients";
+  if (version >= 3 && value.type === "USE_RESEARCH") return value.purpose === "diagnostic" || value.purpose === "forecast";
   if (value.type === "REPAIR") return string(value.targetId) && verifiedModifier(value, "repair");
   if (value.type === "REALLOCATE_UTILITY") {
     if (!string(value.moduleId) || !record(value.allocation)) return false;
@@ -63,19 +65,20 @@ function validAction(value: unknown, build: boolean): value is PlayerAction {
   if (value.type === "SET_ANIMAL") return oneOf(animals, value.animal);
   if (value.type === "WATER_PLOT") return Number.isInteger(value.slotIndex);
   if (value.type === "FEED_STALL") return Number.isInteger(value.slotIndex) && verifiedModifier(value, "match3");
+  if (version >= 3 && (value.type === "PRUNE_PLOT" || value.type === "CLEAN_STALL")) return Number.isInteger(value.slotIndex);
   return false;
 }
 
 export function parseTranscript(value: unknown): RunTranscript {
-  if (!record(value) || (value.version !== 1 && value.version !== 2) || !string(value.runId, 36) || !uuid.test(value.runId)
+  if (!record(value) || (value.version !== 1 && value.version !== 2 && value.version !== 3) || !string(value.runId, 36) || !uuid.test(value.runId)
     || !string(value.nickname, 32) || !value.nickname.trim() || !["challenge", "progressive"].includes(String(value.mode))
     || !Array.isArray(value.steps) || value.steps.length < 2 || value.steps.length > 500) throw new Error("Invalid run transcript");
   for (const step of value.steps) {
     if (!record(step)) throw new Error("Invalid run step");
-    if (step.kind === "build" && validAction(step.action, true)) continue;
+    if (step.kind === "build" && validAction(step.action, true, Number(value.version))) continue;
     if (step.kind === "start" || step.kind === "advance") continue;
     if (step.kind === "turn" && Array.isArray(step.actions) && step.actions.length <= 20
-      && step.actions.every((action) => validAction(action, false))
+      && step.actions.every((action) => validAction(action, false, Number(value.version)))
       && !step.actions.slice(0, -1).some((action) => action.type === "END_TURN")) continue;
     throw new Error("Invalid run step");
   }

@@ -10,8 +10,8 @@ function build(action: PlayerAction, state: GameState): GameState {
   return result.state;
 }
 
-function sampleBase(): GameState {
-  let state = createInitialState("11111111-1111-4111-8111-111111111111", "Tester", "challenge");
+function sampleBase(version: 1 | 2 | 3 = 2): GameState {
+  let state = createInitialState("11111111-1111-4111-8111-111111111111", "Tester", "challenge", version);
   for (const [moduleId, x, y] of [
     ["habitat-core", 0, 0], ["solar-array", 3, 0], ["oxygen-generator", 3, 3],
     ["water-recycler", 0, 4], ["greenhouse-standard", 6, 0], ["livestock-compact", 6, 3],
@@ -22,6 +22,39 @@ function sampleBase(): GameState {
   ]) state = build({ type: "PLACE_CORRIDOR", cells }, state);
   return state;
 }
+
+test("agriculture v3 keeps independent care states and spends water/AP on manual care", () => {
+  const state = startOperation(sampleBase(3));
+  state.resources.food = 60;
+  const greenhouse = state.modules.find(module => module.moduleId === "greenhouse-standard")!.id;
+  const stall = state.modules.find(module => module.moduleId === "livestock-compact")!.id;
+  const result = resolveTurn(state, [
+    { type: "PLANT_CROP", moduleId: greenhouse, slotIndex: 1, crop: "radish" },
+    { type: "WATER_PLOT", moduleId: greenhouse, slotIndex: 1 },
+    { type: "PRUNE_PLOT", moduleId: greenhouse, slotIndex: 1 },
+    { type: "CLEAN_STALL", moduleId: stall, slotIndex: 0 },
+  ], "care-seed");
+  assert.equal(result.rejectedActions.length, 0);
+  assert.equal(result.state.ap, 0);
+  assert.ok(result.state.crops.find(plot => plot.moduleId === greenhouse && plot.slotIndex === 1)!.moisture! >
+    result.state.crops.find(plot => plot.moduleId === greenhouse && plot.slotIndex === 0)!.moisture!);
+  assert.ok(result.state.livestock[0].cleanliness! > 85);
+  assert.equal(state.crops.find(plot => plot.slotIndex === 1)!.crop, null);
+});
+
+test("agriculture v3 single-harvest crops require replanting while lettuce regrows", () => {
+  const state = startOperation(sampleBase(3));
+  const greenhouse = state.modules.find(module => module.moduleId === "greenhouse-standard")!.id;
+  state.crops[0].growth = 2; state.crops[0].ready = true;
+  state.crops[1].crop = "radish"; state.crops[1].growth = 2; state.crops[1].ready = true;
+  const result = resolveTurn(state, [
+    { type: "HARVEST_CROP", moduleId: greenhouse, slotIndex: 0 },
+    { type: "HARVEST_CROP", moduleId: greenhouse, slotIndex: 1 },
+  ], "harvest-seed");
+  assert.equal(result.state.crops[0].crop, "lettuce");
+  assert.equal(result.state.crops[1].crop, null);
+  assert.ok(result.summary.cropYield >= 0);
+});
 
 test("same state, actions, and seed resolve identically and leave input unchanged", () => {
   const state = startOperation(sampleBase());

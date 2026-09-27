@@ -29,6 +29,10 @@ export function describePlayerAction(action: PlayerAction, before: ReplayFrame):
     case "SET_ANIMAL": return `Assigned ${action.animal} to livestock ${slotName(action)}`;
     case "WATER_PLOT": return `Watered crop ${slotName(action)}`;
     case "FEED_STALL": return `Fed livestock ${slotName(action)}`;
+    case "PRUNE_PLOT": return `Inspected and pruned crop ${slotName(action)}`;
+    case "CLEAN_STALL": return `Cleaned livestock ${slotName(action)}`;
+    case "ALLOCATE_RESIDUE": return `Allocated crop residue to ${action.destination}`;
+    case "USE_RESEARCH": return `Used research sample for ${action.purpose}`;
     case "END_TURN": return "Ended turn";
   }
 }

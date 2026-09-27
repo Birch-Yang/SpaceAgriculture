@@ -21,12 +21,20 @@ export function growCrops(state: GameState, network: NetworkResult): { crops: Cr
     const power = network.delivery[module.id]?.power ?? 0;
     const setting = settingFactor[plot.water] * settingFactor[plot.light];
     const thermal = Math.max(0.35, 1 - Math.abs(state.resources.temperature - temperatureSetpoint[plot.temperature]) / 24);
-    const progress = Math.min(1.2, water * power * setting * thermal * module.integrity);
+    const care = state.rulesetVersion >= 3;
+    const irrigation = water > 0 && state.resources.water > 0 ? 14 * water : 0;
+    const moisture = care ? Math.max(0, Math.min(100, (plot.moisture ?? 60) + irrigation - 12 * settingFactor[plot.water])) : 60;
+    const wetTurns = care ? (moisture > 85 ? (plot.wetTurns ?? 0) + 1 : 0) : 0;
+    const stress = moisture < 25 ? 7 : 0;
+    const heatStress = thermal < 0.65 ? 5 : 0;
+    const hazardStress = state.activeHazard?.type === "radiation" ? 5 * state.activeHazard.severity : state.activeHazard?.type === "temperature" ? 4 * state.activeHazard.severity : 0;
+    const health = care ? Math.max(0, Math.min(100, (plot.health ?? 100) - stress - heatStress - hazardStress - (wetTurns >= 2 ? 5 : 0) + (stress + heatStress + hazardStress === 0 && wetTurns < 2 ? 2 : 0))) : 100;
+    const progress = Math.min(1.2, water * power * setting * thermal * module.integrity * (care ? (moisture < 25 ? 0.45 : 1) * (0.5 + health / 200) : 1));
     waterUsed += (def.flow.waterDemand ?? 0) * settingFactor[plot.water] * AGRICULTURE.cropWaterDemandFraction / def.capacity
       * (greenhouseWaterBonus(state, module) ? SYSTEMS.greenhouseWaterUseFactor : 1);
     powerUsed += (def.flow.powerDemand ?? 0) * settingFactor[plot.light] * CROPS[plot.crop].lightNeed * AGRICULTURE.cropPowerDemandFraction / def.capacity;
     const growth = plot.growth + progress;
-    return { ...plot, growth, ready: growth >= CROPS[plot.crop].cycle };
+    return { ...plot, growth, ready: growth >= CROPS[plot.crop].cycle, ...(care ? { moisture, health, wetTurns } : {}) };
   });
   return { crops, waterUsed, powerUsed };
 }
@@ -42,10 +50,11 @@ export function harvestCrop(state: GameState, plotOrId: CropPlotState | string, 
   if (CROP_CATALOG[plot.crop].role === 'research') return { yield: 0, food: 0, research: water > 0 && power > 0 && module.integrity > 0 ? CROP_CATALOG[plot.crop].researchYield : 0 };
   const temperature = Math.max(0.4, 1 - Math.abs(state.resources.temperature - temperatureSetpoint[plot.temperature]) / 30);
   const hazard = state.activeHazard?.type === "radiation" ? Math.max(0.5, 1 - state.activeHazard.severity * 0.3) : 1;
-  const baseYield = slotBaseYield(def.baseYield, def.capacity, plot.slotIndex);
+  const baseYield = state.rulesetVersion >= 3 ? CROP_CATALOG[plot.crop].yield : slotBaseYield(def.baseYield, def.capacity, plot.slotIndex);
   const care = plot.wateredThisCycle ? AGRICULTURE.careYieldMultiplier : 1;
   const layout = greenhouseWaterBonus(state, module) ? SYSTEMS.greenhouseWaterYieldFactor : 1;
   const recycling = greenhouseRecyclingBonus(state, module) ? SYSTEMS.greenhouseRecycleYieldFactor : 1;
-  const yieldAmount = Math.max(0, Math.round(baseYield * settingFactor[plot.water] * settingFactor[plot.light] * temperature * Math.min(water, power) * module.integrity * hazard * care * layout * recycling * (1 + minigameModifier)));
+  const health = state.rulesetVersion >= 3 ? 0.5 + (plot.health ?? 100) / 200 : 1;
+  const yieldAmount = Math.max(0, Math.round(baseYield * settingFactor[plot.water] * settingFactor[plot.light] * temperature * Math.min(water, power) * module.integrity * hazard * care * layout * recycling * health * (1 + minigameModifier)));
   return { yield: yieldAmount, food: Math.round(yieldAmount * CROPS[plot.crop].foodValue), research: 0 };
 }
