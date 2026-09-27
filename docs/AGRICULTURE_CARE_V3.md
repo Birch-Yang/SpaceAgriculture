@@ -2,7 +2,7 @@
 
 Branch: `balance/agriculture-care-v1-2026-09-26`. New browser runs create transcript version 3. Archived version 1 and 2 transcripts continue to replay with their previous agriculture rules. This branch is not merged into `dev`.
 
-Each greenhouse keeps its existing 1, 2, or 3 independent plots. A seed pack can be clicked or dragged onto a bed. The bed shows sprouting, seedling, maturing, and harvest-ready states. A watering can or pruning tool can be clicked or dragged onto one bed. Each action is queued and resolves on End Turn; the displayed moisture and health come from the resolver, not from UI calculations. Automatic irrigation supports baseline growth.
+Each greenhouse keeps its existing 1, 2, or 3 independent plots. All plots start empty in a new v3 mission, so the player chooses the first crop. A seed pack can be clicked or dragged onto a bed. The bed shows sprouting, seedling, maturing, and harvest-ready states. A watering can or pruning tool can be clicked or dragged onto one bed. Each action is queued and resolves on End Turn; the displayed moisture and health come from the resolver, not from UI calculations. Automatic irrigation supports baseline growth.
 
 Each livestock slot keeps its existing cycle. Its animal moves visually inside the stall; movement does not affect production or replay. Feed and cleaning tools target a specific stall. Automatic feeding remains the baseline.
 

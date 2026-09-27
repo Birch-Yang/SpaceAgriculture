@@ -45,7 +45,7 @@ test("agriculture v3 keeps independent care states and spends water/AP on manual
 test("agriculture v3 single-harvest crops require replanting while lettuce regrows", () => {
   const state = startOperation(sampleBase(3));
   const greenhouse = state.modules.find(module => module.moduleId === "greenhouse-standard")!.id;
-  state.crops[0].growth = 2; state.crops[0].ready = true;
+  state.crops[0].crop = "lettuce"; state.crops[0].growth = 2; state.crops[0].ready = true;
   state.crops[1].crop = "radish"; state.crops[1].growth = 2; state.crops[1].ready = true;
   const result = resolveTurn(state, [
     { type: "HARVEST_CROP", moduleId: greenhouse, slotIndex: 0 },
@@ -105,6 +105,17 @@ test("agriculture modules create their exact independent capacity and remove eve
     assert.ok(slots.slice(1).every((slot) => ("crop" in slot ? slot.crop : slot.animal) === null));
     state = build({ type: "REMOVE_MODULE", placedModuleId: moduleIdPlaced }, placed);
     assert.equal(state[collection].length, 0);
+  }
+});
+
+test("new v3 missions start every greenhouse plot empty, including the first slot", () => {
+  for (const [moduleId, capacity] of [
+    ["greenhouse-compact", 1], ["greenhouse-standard", 2], ["greenhouse-industrial", 3],
+  ] as const) {
+    const initial = createInitialState("11111111-1111-4111-8111-111111111111", "Tester", "challenge", 3);
+    const placed = build({ type: "PLACE_MODULE", moduleId, x: 0, y: 0, rotation: 0 }, initial);
+    assert.equal(placed.crops.length, capacity);
+    assert.ok(placed.crops.every(plot => plot.crop === null && plot.growth === 0 && !plot.ready));
   }
 });
 
