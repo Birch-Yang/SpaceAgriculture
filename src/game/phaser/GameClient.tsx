@@ -306,7 +306,7 @@ export function GameClient() {
   if (!state) return <Onboarding form={<form onSubmit={launch} className="mission-form">
     <label>Mission callsign<input required pattern={String.raw`.*\S.*`} maxLength={32} value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="Your nickname" aria-describedby="nickname-help" /></label>
     <p id="nickname-help" className="help">Choose a nickname for public mission records. No account needed.</p>
-    <label>iMessage phone number (optional)<input inputMode="tel" autoComplete="tel" maxLength={32} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="(314) 555-0123 or +15551234567" /></label><p className="help">Photon sends an opening message when you launch. The number must have iMessage enabled; SMS and Google Messages are not supported. Two questions per mission turn.</p>
+    <label>iMessage phone number (optional)<input inputMode="tel" autoComplete="tel" maxLength={32} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="(314) 555-0123 or +15551234567" /></label><p className="help">Photon sends an opening message when you launch. The number must have iMessage enabled; SMS and Google Messages are not supported. Two questions per mission turn. Your questions and coarse base status are processed by OpenAI to prepare hints.</p>
     <div className="modes"><button type="submit" onClick={() => setMode("challenge")}>Challenge Mode<small>10 turns · high pressure</small></button><button type="submit" onClick={() => setMode("progressive")}>Progressive Mode<small>3 levels · learn as you grow</small></button></div>
     <p role="status" className="help">{message}</p>
   </form>} />;
