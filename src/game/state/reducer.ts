@@ -1,5 +1,6 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
+import { corridorCellId } from "../simulation/corridorTopology.ts";
 import { SYSTEMS } from "../../data/systems.ts";
 import type { Cell, GameMode, GameState, PlacedModule, PlayerAction } from "./types.ts";
 
@@ -99,14 +100,22 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
     if (new Set(cells.map((cell) => `${cell.x},${cell.y}`)).size !== cells.length) return { state, error: "Corridor cannot repeat a cell" };
     if (cells.some((cell, i) => i > 0 && Math.abs(cell.x - cells[i - 1].x) + Math.abs(cell.y - cells[i - 1].y) !== 1)) return { state, error: "Corridor cells must form a continuous path" };
     const blocked = new Set(state.modules.flatMap(occupiedCells).map(({ x, y }) => `${x},${y}`));
-    for (const edge of state.utilityEdges) for (const cell of edge.cells) blocked.add(`${cell.x},${cell.y}`);
-    if (cells.some(({ x, y }) => blocked.has(`${x},${y}`))) return { state, error: "Corridor overlaps another object" };
-    const from = state.modules.find((module) => touches(module, cells[0]));
-    const to = state.modules.find((module) => module.id !== from?.id && touches(module, cells[cells.length - 1]));
-    if (!from || !to) return { state, error: "Corridor endpoints must touch two different modules" };
-    if (state.budget < cells.length * corridorCellCost) return { state, error: "Insufficient construction budget" };
-    return { state: { ...state, budget: state.budget - cells.length * corridorCellCost, nextId: state.nextId + 1,
-      utilityEdges: [...state.utilityEdges, { id: `edge-${state.nextId}`, from: from.id, to: to.id, cells: cells.map((cell) => ({ ...cell })), length: cells.length, capacity: 20, integrity: 1 }] } };
+    if (cells.some(({ x, y }) => blocked.has(`${x},${y}`))) return { state, error: "Corridor overlaps a module" };
+    const existing = new Map(state.utilityEdges.flatMap(edge => edge.cells).map(cell => [corridorCellId(cell), cell]));
+    const attachments = (cell: Cell): string[] => [
+      ...state.modules.filter(module => touches(module, cell)).map(module => module.id),
+      ...[...existing.values()].filter(other => Math.abs(other.x - cell.x) + Math.abs(other.y - cell.y) <= 1).map(corridorCellId),
+    ];
+    const starts = attachments(cells[0]);
+    const ends = attachments(cells[cells.length - 1]);
+    const from = starts.find(id => ends.some(other => other !== id));
+    const to = ends.find(id => id !== from);
+    if (!from || !to) return { state, error: "Corridor endpoints must touch different modules or existing corridor cells" };
+    const newCells = cells.filter(cell => !existing.has(corridorCellId(cell)));
+    if (!newCells.length) return { state, error: "Corridor already exists" };
+    if (state.budget < newCells.length * corridorCellCost) return { state, error: "Insufficient construction budget" };
+    return { state: { ...state, budget: state.budget - newCells.length * corridorCellCost, nextId: state.nextId + 1,
+      utilityEdges: [...state.utilityEdges, { id: `edge-${state.nextId}`, from, to, cells: cells.map((cell) => ({ ...cell })), length: cells.length, capacity: 20, integrity: 1 }] } };
   }
   return { state, error: "Action is not available during construction" };
 }

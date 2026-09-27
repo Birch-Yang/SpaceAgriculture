@@ -1,3 +1,4 @@
+import { reachableCorridorNodes } from "../game/simulation/corridorTopology.ts";
 import { MODULE_BY_ID } from "./modules.ts";
 import type { GameState, PlacedModule, ResourceKey } from "../game/state/types.ts";
 
@@ -31,18 +32,7 @@ export function moduleDistance(a: PlacedModule, b: PlacedModule): number {
 }
 
 export function connectedToHabitat(state: GameState, moduleId: string): boolean {
-  const cores = state.modules.filter((module) => MODULE_BY_ID.get(module.moduleId)?.category === "habitat").map((module) => module.id);
-  const seen = new Set(cores); const pending = [...cores];
-  while (pending.length) {
-    const current = pending.pop()!;
-    if (current === moduleId) return true;
-    for (const edge of state.utilityEdges) {
-      if (edge.integrity <= 0.15) continue;
-      const next = edge.from === current ? edge.to : edge.to === current ? edge.from : undefined;
-      if (next && !seen.has(next)) { seen.add(next); pending.push(next); }
-    }
-  }
-  return false;
+  return reachableCorridorNodes(state).has(moduleId);
 }
 
 export function shelterProtection(state: GameState): number {

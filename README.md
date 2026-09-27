@@ -7,7 +7,7 @@ agronaut is a lunar agriculture design-space explorer. Players build an outpost,
 - **Challenge:** build from an empty map and survive ten turns under high hazard pressure.
 - **Progressive:** operate one inherited base through three ten-turn levels, with construction intermissions between levels.
 - Agriculture has independent crop plots and livestock stalls. Parameters, care actions, and the two minigames affect production. A connected water recycler near a greenhouse improves water efficiency; nearby active livestock provides a small gameified recycling bonus.
-- Integrated utility corridors carry power, water, and oxygen. Route length, integrity, capacity, demand, storage, thermal distance, shelters, multifunction utility allocations, and communication-tower backup affect survival.
+- Integrated utility corridors carry power, water, and oxygen. Corridors can cross, share cells, and form T-junctions with existing paths; orthogonally touching corridor cells connect, while diagonal contact does not. Construction charges only newly occupied cells, and shared cells share flow capacity. Route length, integrity, capacity, demand, storage, thermal distance, shelters, multifunction utility allocations, and communication-tower backup affect survival.
 - Modules retain the shared `rotation` field but have a fixed orientation in play. In a build phase, players can drag a disconnected module to move it, remove corridors, and reroute them. Operation locks the layout.
 - Completed runs use a 70-point rules score plus a 30-point structured AI evaluation when available. A template report and normalized rules score keep results available when AI fails.
 

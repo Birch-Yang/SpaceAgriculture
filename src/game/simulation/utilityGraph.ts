@@ -1,6 +1,7 @@
+import { corridorTopology, type CorridorNode, type CorridorTopology } from "./corridorTopology.ts";
 import { MODULE_BY_ID } from "../../data/modules.ts";
 import { SYSTEMS } from "../../data/systems.ts";
-import type { GameState, ResourceKey, UtilityEdge } from "../state/types.ts";
+import type { GameState, ResourceKey } from "../state/types.ts";
 
 export type NetworkResult = {
   delivery: Record<string, Partial<Record<ResourceKey, number>>>;
@@ -15,9 +16,9 @@ const resources: Array<[ResourceKey, FlowField, FlowField]> = [
   ["oxygen", "oxygenSupply", "oxygenDemand"],
 ];
 
-function bestPath(state: GameState, from: string, to: string, capacity: Map<string, number>): UtilityEdge[] | undefined {
+function bestPath(topology: CorridorTopology, from: string, to: string, capacity: Map<string, number>): CorridorNode[] | undefined {
   if (from === to) return [];
-  const pending: Array<{ id: string; cost: number; path: UtilityEdge[] }> = [{ id: from, cost: 0, path: [] }];
+  const pending: Array<{ id: string; cost: number; path: CorridorNode[] }> = [{ id: from, cost: 0, path: [] }];
   const visited = new Set<string>();
   while (pending.length) {
     pending.sort((a, b) => a.cost - b.cost || a.id.localeCompare(b.id));
@@ -25,26 +26,27 @@ function bestPath(state: GameState, from: string, to: string, capacity: Map<stri
     if (current.id === to) return current.path;
     if (visited.has(current.id)) continue;
     visited.add(current.id);
-    for (const edge of state.utilityEdges) {
-      if (edge.integrity <= 0.15 || (capacity.get(edge.id) ?? 0) <= 0) continue;
-      const next = edge.from === current.id ? edge.to : edge.to === current.id ? edge.from : undefined;
-      if (next && !visited.has(next)) pending.push({ id: next, cost: current.cost + edge.length / edge.integrity, path: [...current.path, edge] });
+    for (const id of topology.neighbors.get(current.id) ?? []) {
+      const node = topology.nodes.get(id)!;
+      if (visited.has(id) || node.integrity <= 0.15 || (capacity.get(id) ?? 0) <= 0) continue;
+      pending.push({ id, cost: current.cost + node.length / node.integrity,
+        path: node.length > 0 ? [...current.path, node] : current.path });
     }
   }
   return undefined;
 }
 
-function pathEfficiency(path: UtilityEdge[]): number {
+function pathEfficiency(path: CorridorNode[]): number {
   const distance = path.reduce((sum, edge) => sum + edge.length, 0);
-  const damage = path.reduce((sum, edge) => sum + 1 - edge.integrity, 0);
+  const damage = path.reduce((sum, edge) => sum + edge.damage, 0);
   return Math.max(0.55, 1 - distance * 0.015 - damage * 0.1);
 }
 
-function pathCapacity(path: UtilityEdge[], capacity: Map<string, number>): number {
+function pathCapacity(path: CorridorNode[], capacity: Map<string, number>): number {
   return path.length ? Math.min(...path.map((edge) => capacity.get(edge.id) ?? 0)) : Infinity;
 }
 
-function useCapacity(path: UtilityEdge[], capacity: Map<string, number>, amount: number): void {
+function useCapacity(path: CorridorNode[], capacity: Map<string, number>, amount: number): void {
   for (const edge of path) capacity.set(edge.id, Math.max(0, (capacity.get(edge.id) ?? 0) - amount));
 }
 
@@ -55,8 +57,9 @@ export function resolveUtilityGraph(state: GameState): NetworkResult {
   const cores = state.modules.filter((module) => MODULE_BY_ID.get(module.moduleId)?.category === "habitat").map((module) => module.id);
   if (!cores.length) return { delivery, net, bottlenecks: ["No habitat core"] };
 
+  const topology = corridorTopology(state);
   for (const [resource, supplyField, demandField] of resources) {
-    const collectionCapacity = new Map(state.utilityEdges.map((edge) => [edge.id, edge.capacity * edge.integrity]));
+    const collectionCapacity = new Map([...topology.nodes.values()].map(node => [node.id, node.capacity]));
     const deliveryCapacity = new Map(collectionCapacity);
     let collected = 0;
     for (const module of state.modules) {
@@ -67,7 +70,7 @@ export function resolveUtilityGraph(state: GameState): NetworkResult {
         ? (module.allocation?.backupPower ?? 0) * SYSTEMS.backupPowerPerUtility : 0;
       let remaining = ((def.flow[supplyField] ?? 0) + backup) * module.integrity * powered;
       while (remaining > 0.0001) {
-        const routes = cores.map((core) => bestPath(state, module.id, core, collectionCapacity)).filter((path): path is UtilityEdge[] => path !== undefined);
+        const routes = cores.map((core) => bestPath(topology, module.id, core, collectionCapacity)).filter((path): path is CorridorNode[] => path !== undefined);
         routes.sort((a, b) => a.reduce((n, edge) => n + edge.length, 0) - b.reduce((n, edge) => n + edge.length, 0));
         const path = routes[0];
         if (!path) break;
@@ -88,7 +91,7 @@ export function resolveUtilityGraph(state: GameState): NetworkResult {
       const demand = (MODULE_BY_ID.get(module.moduleId)!.flow[demandField] ?? 0) * module.integrity;
       let received = 0;
       while (received < demand - 0.0001 && available > 0.0001) {
-        const routes = cores.map((core) => bestPath(state, core, module.id, deliveryCapacity)).filter((path): path is UtilityEdge[] => path !== undefined);
+        const routes = cores.map((core) => bestPath(topology, core, module.id, deliveryCapacity)).filter((path): path is CorridorNode[] => path !== undefined);
         routes.sort((a, b) => a.reduce((n, edge) => n + edge.length, 0) - b.reduce((n, edge) => n + edge.length, 0));
         const path = routes[0];
         if (!path) break;

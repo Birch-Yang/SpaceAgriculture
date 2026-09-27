@@ -1,3 +1,7 @@
+import { connectedToHabitat } from "../src/data/systems.ts";
+import { resolveUtilityGraph } from "../src/game/simulation/utilityGraph.ts";
+import { renderUtilityNetwork } from "../src/game/phaser/adapters.ts";
+import { replayTranscript, type RunTranscript } from "../src/game/state/transcript.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { applyBuildAction, createInitialState, startOperation } from "../src/game/state/reducer.ts";
@@ -147,4 +151,103 @@ test("a connected sample base can finish ten challenge turns with active farming
   assert.ok(state.production.meatCumulative > 0);
   assert.equal(state.lastTurn?.turn, 10);
   assert.equal(state.passed, true, `Production: ${JSON.stringify(state.production)}; failure: ${state.failureReason}`);
+});
+
+function junctionBase(): GameState {
+  let state = createInitialState("11111111-1111-4111-8111-111111111111", "Junction tester", "challenge");
+  for (const [moduleId, x, y] of [
+    ["habitat-core", 0, 4], ["solar-array", 8, 4],
+    ["water-recycler", 4, 0], ["greenhouse-compact", 4, 7],
+    ["oxygen-generator", 11, 4],
+  ] as const) state = build({ type: "PLACE_MODULE", moduleId, x, y, rotation: 0 }, state);
+  state = build({ type: "PLACE_CORRIDOR", cells: Array.from({ length: 6 }, (_, i) => ({ x: i + 2, y: 4 })) }, state);
+  return build({ type: "PLACE_CORRIDOR", cells: [{ x: 10, y: 4 }] }, state);
+}
+
+const crossing = { type: "PLACE_CORRIDOR", cells: Array.from({ length: 6 }, (_, i) => ({ x: 4, y: i + 1 })) } as const;
+
+test("crossings join real resource delivery, charge only new cells, and reject duplicate strokes", () => {
+  const before = junctionBase();
+  const state = build(crossing, before);
+  assert.equal(before.budget - state.budget, 5);
+  assert.equal(before.utilityEdges.length, 2);
+  for (const module of state.modules) assert.equal(connectedToHabitat(state, module.id), true);
+  const graph = resolveUtilityGraph(state);
+  assert.equal(graph.delivery["module-4"].power, 1);
+  assert.equal(graph.delivery["module-4"].water, 1);
+  assert.equal(graph.delivery["module-1"].oxygen, 1);
+  assert.ok(graph.net.oxygen > 0);
+  assert.ok(renderUtilityNetwork(startOperation(state)).every(edge => edge.status === "connected"));
+  const duplicate = applyBuildAction(state, crossing);
+  assert.match(duplicate.error!, /already exists/);
+  assert.equal(duplicate.state, state);
+  const overlap = applyBuildAction(state, { type: "PLACE_CORRIDOR", cells: [{ x: 4, y: 0 }, { x: 4, y: 1 }] });
+  assert.match(overlap.error!, /overlaps a module/);
+});
+
+test("T junction endpoints can overlap or abut existing corridors, in either drawing direction", () => {
+  for (const overlap of [false, true]) for (const reverse of [false, true]) {
+    const before = junctionBase();
+    let cells = Array.from({ length: overlap ? 4 : 3 }, (_, i) => ({ x: 4, y: i + 1 }));
+    if (reverse) cells = cells.reverse();
+    const state = build({ type: "PLACE_CORRIDOR", cells }, before);
+    assert.equal(before.budget - state.budget, 3);
+    assert.equal(connectedToHabitat(state, "module-3"), true);
+    assert.ok(resolveUtilityGraph(state).delivery["module-3"].power! > 0.999);
+  }
+});
+
+test("junctions disconnect after removal or damage without retaining phantom links", () => {
+  const crossed = build(crossing, junctionBase());
+  const trunkId = crossed.utilityEdges[0].id;
+  const removed = build({ type: "REMOVE_CORRIDOR", edgeId: trunkId }, crossed);
+  assert.equal(connectedToHabitat(removed, "module-3"), false);
+  assert.equal(resolveUtilityGraph(removed).delivery["module-4"].power, 0);
+  const broken = structuredClone(crossed);
+  broken.utilityEdges[0].integrity = 0.15;
+  assert.equal(connectedToHabitat(broken, "module-3"), false);
+  assert.equal(resolveUtilityGraph(broken).delivery["module-4"].power, 0);
+  const restored = structuredClone(broken);
+  restored.utilityEdges[0].integrity = 1;
+  assert.equal(connectedToHabitat(restored, "module-3"), true);
+  const branchRemoved = build({ type: "REMOVE_CORRIDOR", edgeId: crossed.utilityEdges.at(-1)!.id }, crossed);
+  assert.equal(connectedToHabitat(branchRemoved, "module-2"), true);
+  assert.equal(connectedToHabitat(branchRemoved, "module-3"), false);
+  const moduleRemoved = build({ type: "REMOVE_MODULE", placedModuleId: "module-3" }, crossed);
+  assert.equal(connectedToHabitat(moduleRemoved, "module-4"), false);
+});
+
+test("overlapping corridors share bottleneck capacity instead of adding parallel supply", () => {
+  const state = build(crossing, junctionBase());
+  state.resources.power = 0;
+  state.utilityEdges[0].capacity = 4;
+  const graph = resolveUtilityGraph(state);
+  assert.ok(graph.delivery["module-3"].power! < 1);
+  assert.ok(graph.delivery["module-4"].power! < 1);
+  assert.ok(graph.bottlenecks.length > 0);
+});
+
+test("diagonal corridor proximity and unanchored endpoints do not connect", () => {
+  const isolated = createInitialState("isolation", "Tester", "challenge");
+  isolated.utilityEdges = [{ id: "edge-1", from: "missing-a", to: "missing-b", cells: [{ x: 5, y: 5 }], length: 1, capacity: 20, integrity: 1 }];
+  const diagonal = applyBuildAction(isolated, { type: "PLACE_CORRIDOR", cells: [{ x: 4, y: 4 }] });
+  assert.ok(diagonal.error);
+  assert.equal(diagonal.state, isolated);
+});
+
+test("junction builds and resource turns replay deterministically from their action transcript", () => {
+  let state = createInitialState("11111111-1111-4111-8111-111111111111", "Replay junction", "challenge");
+  const steps: RunTranscript["steps"] = [];
+  const layout = junctionBase();
+  const actions: PlayerAction[] = [
+    ...layout.modules.map(module => ({ type: "PLACE_MODULE" as const, moduleId: module.moduleId, x: module.x, y: module.y, rotation: module.rotation })),
+    ...layout.utilityEdges.map(edge => ({ type: "PLACE_CORRIDOR" as const, cells: edge.cells })), crossing,
+  ];
+  for (const action of actions) { state = build(action, state); steps.push({ kind: "build", action }); }
+  state = startOperation(state); steps.push({ kind: "start" });
+  while (state.phase === "operation") {
+    const result = resolveTurn(state, [], `${state.runId}:${state.level}`);
+    state = result.state; steps.push({ kind: "turn", actions: result.acceptedActions });
+  }
+  assert.deepEqual(replayTranscript({ version: 1, runId: state.runId, nickname: state.nickname, mode: state.mode, steps }), state);
 });
