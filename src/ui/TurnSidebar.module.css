@@ -20,6 +20,8 @@
 .rowState { color: #706453; font: 800 10px ui-monospace, monospace; }
 .rail .row button, .rail .queue button { padding: 6px 7px; border: 2px solid #a17b50; border-radius: 0; background: #e7bf80 !important; color: #25323d !important; font: 800 10px ui-monospace, monospace; }
 .rail .row button:hover, .rail .queue button:hover { background: #f2d29b !important; color: #25323d !important; }
+.rail button.review { padding: 8px 10px; border: 2px solid #a17b50; border-radius: 0; background: #e7bf80 !important; color: #25323d !important; font: 800 10px ui-monospace, monospace; }
+.rail button.review:hover { background: #f2d29b !important; }
 .outlook { border-color: #7d9b77; background: #e1e8d6; }
 .warning { border-color: #a96855; background: #efd1bb; }
 .message { border-color: #87a481; background: #e0e9de; }

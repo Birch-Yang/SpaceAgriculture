@@ -17,6 +17,7 @@ type Props = {
   onSelectSystem: (moduleId: string) => void;
   onRemoveAction: (index: number) => void;
   onEndTurn: () => void;
+  onReviewHazard: () => void;
   children: ReactNode;
   className?: string;
 };
@@ -25,7 +26,7 @@ function actionLabel(action: PlayerAction): string {
   return action.type.replaceAll("_", " ").toLowerCase();
 }
 
-export function TurnSidebar({ state, apAvailable, apPlanned, pending, connection, latestAdvice, greenhouseId, livestockId, systemsId, onOpenAgriculture, onSelectSystem, onRemoveAction, onEndTurn, children, className }: Props) {
+export function TurnSidebar({ state, apAvailable, apPlanned, pending, connection, latestAdvice, greenhouseId, livestockId, systemsId, onOpenAgriculture, onSelectSystem, onRemoveAction, onEndTurn, onReviewHazard, children, className }: Props) {
   const greenhouse = greenhouseId ? state.modules.find((module) => module.id === greenhouseId) : undefined;
   const livestock = livestockId ? state.modules.find((module) => module.id === livestockId) : undefined;
   const systems = systemsId ? state.modules.find((module) => module.id === systemsId) : undefined;
@@ -68,6 +69,7 @@ export function TurnSidebar({ state, apAvailable, apPlanned, pending, connection
       <h2>{latestHazard ? latestHazard.type.replaceAll("_", " ") : "No major hazard"}</h2>
       <p>Crops +{state.lastTurn.cropYield} · Meat +{state.lastTurn.meatYield}</p>
       {state.lastTurn.warnings.length > 0 && <p>{state.lastTurn.warnings.join(" ")}</p>}
+      {latestHazard && <button className={styles.review} onClick={onReviewHazard}>Review hazard options →</button>}
     </section>}
 
     <section className={styles.card} aria-label="Selected structure">

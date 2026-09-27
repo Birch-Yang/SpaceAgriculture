@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-labelledby="title">
+  <title id="title">Communication outage warning</title>
+  <path fill="#222c38" d="M8 4h48v4h4v48h-4v4H8v-4H4V8h4z"/>
+  <path fill="#e9c585" d="M8 8h48v4h4v44h-4v4H8v-4H4V12h4z"/>
+  <path fill="#35505b" d="M12 12h40v4h4v36h-4v4H12v-4H8V16h4z"/>
+  <path fill="#d5e4ce" d="M15 20h5v14h4v5h9v4h-9v-4h-5v-5h-4zM30 41h4v11h-4zM23 52h18v4H23z"/>
+  <path fill="#94c6bd" d="M33 16h5v5h-5zM39 22h5v5h-5zM45 28h5v5h-5z"/>
+  <path fill="#f0aa87" d="M29 26h5v5h-5zM35 31h5v5h-5zM41 36h5v5h-5zM38 26h5v5h-5zM32 37h5v5h-5z"/>
+</svg>

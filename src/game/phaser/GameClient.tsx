@@ -8,7 +8,7 @@ import { advanceLevel, applyBuildAction, createInitialState, startOperation, get
 import { apRecovery, resolveTurn } from "../simulation/resolveTurn.ts";
 import { selectBuildReadinessWarnings, selectTurnLabel } from "../state/selectors.ts";
 import { seedForLevel } from "../simulation/hazards.ts";
-import type { GameMode, GameState, PlayerAction } from "../state/types.ts";
+import type { GameMode, GameState, HazardInstance, PlayerAction } from "../state/types.ts";
 import type { RunTranscript } from "../state/transcript.ts";
 import type { MissionReport as MissionReportData } from "../../ai/report.ts";
 import { fallbackReport } from "../../ai/report.ts";
@@ -31,6 +31,7 @@ import styles from "./game.module.css";
 import { Onboarding } from "../../ui/integration/Onboarding";
 import { BuildingPortrait } from "../../ui/BuildingPortrait";
 import { TurnSidebar } from "../../ui/TurnSidebar";
+import { HazardTurnDialog, type HazardChoice } from "../../ui/HazardTurnDialog";
 
 const resourceKeys = ["power", "water", "oxygen", "food", "temperature"] as const;
 const Match3 = lazy(() => import("../minigames/match3/Match3.tsx").then((module) => ({ default: module.Match3 })));
@@ -38,6 +39,7 @@ const RepairSnake = lazy(() => import("../minigames/repairSnake/RepairSnake.tsx"
 const tutorialKey = "agronaut:tutorial:v1";
 const emptyProgress: TutorialProgress = { enteredGreenhouse: false, enteredLivestock: false, queuedAction: false, resolvedTurn: false };
 type SubmittedResult = { runId: string; score: { rules: number; llm: number; total: number; usedFallback: boolean }; report: MissionReportData; saved: boolean; reason?: string; retryable?: boolean };
+type HazardNotice = { hazard: HazardInstance; affectedId?: string };
 
 export function GameClient() {
   const router = useRouter();
@@ -65,6 +67,8 @@ export function GameClient() {
   const [mini, setMini] = useState<"match3" | "snake" | null>(null);
   const [miniTarget, setMiniTarget] = useState<MiniTarget | null>(null);
   const [miniResult, setMiniResult] = useState<MinigameResult | null>(null);
+  const [hazardNotice, setHazardNotice] = useState<HazardNotice | null>(null);
+  const [hazardOpen, setHazardOpen] = useState(false);
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -91,6 +95,7 @@ export function GameClient() {
       setAdvisorConnection("unavailable"); setAdvisorMessages([]);
       if (imessageAddress.trim()) advisorEnrollment.current = enrollAdvisor(runId, imessageAddress.trim(), initial);
       setTool({ kind: "select" }); setSelectedId(null); setInteriorId(null); setPending([]); setTutorialProgress(emptyProgress);
+      setHazardNotice(null); setHazardOpen(false);
       setTutorialVisible(window.localStorage.getItem(tutorialKey) !== "seen");
       setMessage("Build a compact outpost. A Habitat Core is required to begin.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to create mission"); }
@@ -170,6 +175,11 @@ export function GameClient() {
       const nextTranscript = transcript ? { ...transcript, steps: [...transcript.steps, { kind: "turn" as const, actions: result.acceptedActions }, ...(betweenLevels ? [{ kind: "advance" as const }] : [])] } : null;
       if (nextTranscript) setTranscript(nextTranscript);
       setState(betweenLevels ? advanceLevel(result.state) : result.state); setPending([]); setMiniResult(null);
+      const affectedId = result.summary.hazard?.type === "micrometeoroid"
+        ? result.state.modules.find((module) => module.integrity < (state.modules.find((before) => before.id === module.id)?.integrity ?? 1))?.id
+        : undefined;
+      setHazardNotice(result.summary.hazard ? { hazard: result.summary.hazard, affectedId } : null);
+      setHazardOpen(!!result.summary.hazard);
       if (result.state.phase === "complete" && nextTranscript) {
         const rules = scoreRules(result.state);
         writeReportSnapshot({ version: 1, runId: result.state.runId, nickname: result.state.nickname,
@@ -298,6 +308,45 @@ export function GameClient() {
             {selectedModule.integrity < 1 && <button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedModule.id, slotIndex: 0 })}>Repair minigame</button>}</>}
         </div> : selectedEdge ? <div className={styles.section}><p className={styles.label}>UTILITY CORRIDOR</p><h2>{selectedEdge.id}</h2><p>Length {selectedEdge.length} · Integrity {Math.round(selectedEdge.integrity * 100)}%</p>{initialBuild && <button onClick={() => build({ type: "REMOVE_CORRIDOR", edgeId: selectedEdge.id })}>Remove corridor · refund {getBuildRemovalRefund(state, selectedEdge.id)}</button>}{state.phase === "operation" && selectedEdge.integrity < 1 && <><button onClick={() => queue({ type: "REPAIR", targetId: selectedEdge.id })}>Repair · 2 AP</button><button disabled={!modifierAvailable} title={!modifierAvailable ? "Minigame bonuses need the updated turn resolver." : undefined} onClick={() => openMini({ kind: "repair", moduleId: selectedEdge.id, slotIndex: 0 })}>Repair minigame</button></>}</div> : <div className={styles.section}><p className={styles.label}>INSPECT</p><p>Select a structure on the map to see its condition and actions.</p></div>;
 
+  const utilityId = state.modules.find((module) => MODULE_BY_ID.get(module.moduleId)?.category === "utility")?.id;
+  const powerId = state.modules.find((module) => ["battery", "solar"].includes(MODULE_BY_ID.get(module.moduleId)?.category ?? ""))?.id;
+  const shelterId = state.modules.find((module) => MODULE_BY_ID.get(module.moduleId)?.category === "shelter")?.id;
+  const communicationsId = state.modules.find((module) => MODULE_BY_ID.get(module.moduleId)?.category === "communications")?.id;
+  const fallbackId = state.modules[0]?.id;
+  const affectedModule = state.modules.find((module) => module.id === hazardNotice?.affectedId);
+  const hazardLocation = affectedModule
+    ? `${MODULE_BY_ID.get(affectedModule.moduleId)?.label ?? "Module"} · Grid ${affectedModule.x},${affectedModule.y}`
+    : hazardNotice?.hazard.type === "power" ? "Base power reserve"
+      : hazardNotice?.hazard.type === "temperature" ? "Base thermal system"
+        : hazardNotice?.hazard.type === "communications" ? "Mission Control link"
+          : hazardNotice?.hazard.type === "radiation" ? "Base-wide exposure"
+            : "Affected structure not identified";
+  const apLeft = apRecovery(state) - plannedAp;
+  const inspectFromHazard = (moduleId?: string) => {
+    if (moduleId) setSelectedId(moduleId);
+    setHazardOpen(false);
+  };
+  const queueFromHazard = (action: PlayerAction) => {
+    if (queue(action)) setHazardOpen(false);
+  };
+  const hazardChoices: HazardChoice[] = [];
+  if (hazardNotice?.hazard.type === "power") {
+    hazardChoices.push({ label: "Queue backup allocation", detail: utilityId ? "Use the existing utility action next turn · 1 AP" : "Requires a Utility / Thermal Module", available: !!utilityId && state.phase === "operation" && apLeft >= 1, onChoose: () => utilityId && queueFromHazard({ type: "REALLOCATE_UTILITY", moduleId: utilityId, allocation: { thermal: 0.2, backupPower: 0.6, commsBackup: 0.2 } }) });
+    hazardChoices.push({ label: powerId ? "Inspect power supply" : "Inspect base", detail: powerId ? "Focus the battery or solar array on the map" : "No power module is installed; focus the base", available: !!(powerId ?? fallbackId), onChoose: () => inspectFromHazard(powerId ?? fallbackId) });
+  } else if (hazardNotice?.hazard.type === "temperature") {
+    hazardChoices.push({ label: "Queue thermal boost", detail: utilityId ? "Use the existing utility action next turn · 1 AP" : "Requires a Utility / Thermal Module", available: !!utilityId && state.phase === "operation" && apLeft >= 1, onChoose: () => utilityId && queueFromHazard({ type: "REALLOCATE_UTILITY", moduleId: utilityId, allocation: { thermal: 0.6, backupPower: 0.2, commsBackup: 0.2 } }) });
+    hazardChoices.push({ label: greenhouseId ? "Inspect greenhouse" : "Inspect base", detail: greenhouseId ? "Review crop temperature settings" : "No greenhouse is installed; focus the base", available: !!(greenhouseId ?? fallbackId), onChoose: () => inspectFromHazard(greenhouseId ?? fallbackId) });
+  } else if (hazardNotice?.hazard.type === "micrometeoroid") {
+    hazardChoices.push({ label: "Queue repair", detail: affectedModule ? "Repair the damaged module next turn · 2 AP" : "No damaged target identified", available: !!affectedModule && state.phase === "operation" && apLeft >= 2, onChoose: () => affectedModule && queueFromHazard({ type: "REPAIR", targetId: affectedModule.id }) });
+    hazardChoices.push({ label: affectedModule ? "Inspect impact damage" : "Inspect base", detail: affectedModule ? "Focus the affected structure on the map" : "No damaged target was identified; focus the base", available: !!(affectedModule ?? fallbackId), onChoose: () => inspectFromHazard(affectedModule?.id ?? fallbackId) });
+  } else if (hazardNotice?.hazard.type === "communications") {
+    hazardChoices.push({ label: "Queue comms backup", detail: utilityId ? "Use the existing utility action next turn · 1 AP" : "Requires a Utility / Thermal Module", available: !!utilityId && state.phase === "operation" && apLeft >= 1, onChoose: () => utilityId && queueFromHazard({ type: "REALLOCATE_UTILITY", moduleId: utilityId, allocation: { thermal: 0.2, backupPower: 0.2, commsBackup: 0.6 } }) });
+    hazardChoices.push({ label: communicationsId || utilityId ? "Inspect communications" : "Inspect base", detail: communicationsId || utilityId ? "Focus the communication tower or utility module" : "No communication module is installed; focus the base", available: !!(communicationsId ?? utilityId ?? fallbackId), onChoose: () => inspectFromHazard(communicationsId ?? utilityId ?? fallbackId) });
+  } else if (hazardNotice?.hazard.type === "radiation") {
+    hazardChoices.push({ label: shelterId ? "Inspect shelter" : "Inspect base", detail: shelterId ? "Review the base's passive protection" : "No shelter is installed; focus the base", available: !!(shelterId ?? fallbackId), onChoose: () => inspectFromHazard(shelterId ?? fallbackId) });
+    hazardChoices.push({ label: "Review greenhouse care", detail: greenhouseId ? "Open existing crop controls" : "Requires a greenhouse", available: !!greenhouseId && state.phase === "operation", onChoose: () => { if (greenhouseId) openInterior(greenhouseId); setHazardOpen(false); } });
+  }
+
   return <main className={styles.shell}>
     <header className={styles.header}><div><p className={styles.kicker}>AGRONaut / LUNAR AGRICULTURE</p><h1>South Pole Outpost</h1><p className={styles.meta}>{state.nickname} · {state.mode.toUpperCase()} · LEVEL {state.level} · {selectTurnLabel(state)}</p></div><div className={styles.headerActions}><span className={`${styles.phase} ${state.crisis ? styles.crisis : ""}`}>{state.crisis ? "CRISIS" : state.phase.toUpperCase()}</span><button onClick={() => setTutorialVisible(true)}>Tutorial</button>{state.phase !== "complete" && <button onClick={() => setState(null)}>New run</button>}</div></header>
     {tutorialVisible && <TutorialGuide state={state} progress={tutorialProgress} onDismiss={dismissTutorial} />}
@@ -326,6 +375,12 @@ export function GameClient() {
         onSelectSystem={setSelectedId}
         onRemoveAction={(index) => setPending((current) => current.filter((_, actionIndex) => actionIndex !== index))}
         onEndTurn={endTurn}
+        onReviewHazard={() => {
+          if (state.lastTurn?.hazard) {
+            if (hazardNotice?.hazard.id !== state.lastTurn.hazard.id) setHazardNotice({ hazard: state.lastTurn.hazard });
+            setHazardOpen(true);
+          }
+        }}
         className={styles.turnRail}
       >{selectionDetails}</TurnSidebar> : <aside className={styles.details}><div className={styles.panelHeading}><strong>MISSION STATUS</strong><small>{state.phase === "complete" ? "FINAL" : "LIVE"}</small></div><div className={styles.section}><p className={styles.label}>HAZARD FORECAST</p><p>{state.forecast.window}: Solar {state.forecast.solar} · Thermal {state.forecast.thermal} · Impact {state.forecast.impact} · Systems {state.forecast.systems}</p></div>
         {selectionDetails}
@@ -347,5 +402,6 @@ export function GameClient() {
     </section>}
     {mini && <div className={styles.modalBackdrop}><div className={styles.modal}><MinigameBoundary key={`${mini}-${miniTarget?.moduleId}`} onFallback={() => completeMini({ completed: false, modifier: 0 })}><Suspense fallback={<p role="status">Loading minigame…</p>}>{mini === "match3" ? <Match3 onComplete={completeMini} onCancel={() => setMini(null)} /> : <RepairSnake onComplete={completeMini} onCancel={() => setMini(null)} />}</Suspense></MinigameBoundary></div></div>}
     {interiorId && <AgricultureInterior key={interiorId} state={state} moduleId={interiorId} pending={pending} feedback={message} onQueue={queue} onMini={openMini} onClose={() => setInteriorId(null)} />}
+    {hazardOpen && hazardNotice && <HazardTurnDialog key={hazardNotice.hazard.id} hazard={hazardNotice.hazard} affectedLocation={hazardLocation} choices={hazardChoices} onClose={() => setHazardOpen(false)} />}
   </main>;
 }
