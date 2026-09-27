@@ -12,6 +12,7 @@ import { resolveUtilityGraph } from "./utilityGraph.ts";
 import { isCropId } from '../../data/cropCatalog.ts';
 
 export function maxActionPoints(state: GameState): number {
+  if (state.rulesetVersion >= 3) return 4;
   const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
   const recreation = state.resources.power > 0 && state.modules.some((module) => MODULE_BY_ID.get(module.moduleId)?.category === "recreation"
     && module.integrity > 0.5 && connectedToHabitat(state, module.id));
@@ -19,6 +20,7 @@ export function maxActionPoints(state: GameState): number {
 }
 
 export function apRecovery(state: GameState): number {
+  if (state.rulesetVersion >= 3) return 4;
   const baseline = DIFFICULTY[state.mode][state.level - 1].ap;
   const reserve = state.resources.food / 60;
   const factor = reserve > 0.7 ? 1 : reserve > 0.4 ? 0.9 : reserve > 0.2 ? 0.75 : 0.6;

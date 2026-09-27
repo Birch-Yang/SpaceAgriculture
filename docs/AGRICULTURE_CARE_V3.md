@@ -4,7 +4,9 @@ Branch: `balance/agriculture-care-v1-2026-09-26`. New browser runs create transc
 
 Each greenhouse keeps its existing 1, 2, or 3 independent plots. All plots start empty in a new v3 mission, so the player chooses the first crop. A seed pack can be clicked or dragged onto a bed. The bed shows sprouting, seedling, maturing, and harvest-ready states. A watering can or pruning tool can be clicked or dragged onto one bed. Each action is queued and resolves on End Turn; the displayed moisture and health come from the resolver, not from UI calculations. Automatic irrigation supports baseline growth.
 
-Each livestock slot keeps its existing cycle. Its animal moves visually inside the stall; movement does not affect production or replay. Feed and cleaning tools target a specific stall. Automatic feeding remains the baseline.
+Each livestock slot keeps its existing cycle. All stalls start empty in a new v3 mission. Its animal moves visually inside the stall; movement does not affect production or replay. Feed and cleaning tools target a specific stall. Automatic feeding remains the baseline.
+
+Every v3 turn has exactly 4 AP in Challenge and all Progressive levels. Food shortages and Recreation do not change AP in v3; their other resource and scoring consequences remain. Archived v1/v2 runs retain their original AP recovery rules.
 
 ## Changed values and behavior
 
@@ -19,6 +21,8 @@ Each livestock slot keeps its existing cycle. Its animal moves visually inside t
 | Livestock care | Feed bonus once per cycle | Satiety starts at 70, cleanliness at 90, health at 100; automatic feed maintains baseline; manual feed adds 30 satiety for 1 Food and 1 AP; cleaning adds 35 cleanliness for 1 AP |
 | Soybean residue | None | A successful soybean harvest yields one residue unit, allocatable to feed reserve or greenhouse nutrients |
 | Research sample | Stored only | One sample can be spent on a diagnostic or a refined forecast note |
+| Turn AP | Challenge 4 base, Progressive level 1 5 base; food shortages could reduce recovery and Recreation could add 1 | Exactly 4 each turn for both modes and every level |
+| New livestock slot | First slot starts with a chicken | Every stall starts empty |
 
 These are game balance parameters, not lunar field measurements. Version 3 score distributions need separate evaluation before any leaderboard comparison with archived rulesets. The existing leaderboard has no ruleset filter; do not interpret mixed-version ranks as directly comparable.
 

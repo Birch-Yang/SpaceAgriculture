@@ -70,7 +70,7 @@ export function applyBuildAction(state: GameState, action: PlayerAction): { stat
       ...state, budget: state.budget - def.cost, nextId: state.nextId + 1,
       modules: [...state.modules, candidate],
       crops: def.category === "greenhouse" ? [...state.crops, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, crop: state.rulesetVersion >= 3 ? null : slotIndex === 0 ? "lettuce" as const : null, growth: 0, ready: false, wateredThisCycle: false, water: "medium" as const, light: "medium" as const, temperature: "medium" as const, ...(state.rulesetVersion >= 3 ? { moisture: 60, health: 100, wetTurns: 0 } : {}) }))] : state.crops,
-      livestock: def.category === "livestock" ? [...state.livestock, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, animal: slotIndex === 0 ? "chicken" as const : null, growth: 0, feed: "normal" as const, fedThisCycle: false, feedMinigameModifier: 0, ...(state.rulesetVersion >= 3 ? { satiety: 70, cleanliness: 90, health: 100 } : {}) }))] : state.livestock,
+      livestock: def.category === "livestock" ? [...state.livestock, ...Array.from({ length: def.capacity }, (_, slotIndex) => ({ moduleId: candidate.id, slotIndex, animal: state.rulesetVersion >= 3 ? null : slotIndex === 0 ? "chicken" as const : null, growth: 0, feed: "normal" as const, fedThisCycle: false, feedMinigameModifier: 0, ...(state.rulesetVersion >= 3 ? { satiety: 70, cleanliness: 90, health: 100 } : {}) }))] : state.livestock,
     } };
   }
   if (action.type === "REMOVE_MODULE") {

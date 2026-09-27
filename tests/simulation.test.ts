@@ -26,6 +26,7 @@ function sampleBase(version: 1 | 2 | 3 = 2): GameState {
 test("agriculture v3 keeps independent care states and spends water/AP on manual care", () => {
   const state = startOperation(sampleBase(3));
   state.resources.food = 60;
+  state.livestock[0].animal = "chicken";
   const greenhouse = state.modules.find(module => module.moduleId === "greenhouse-standard")!.id;
   const stall = state.modules.find(module => module.moduleId === "livestock-compact")!.id;
   const result = resolveTurn(state, [
@@ -116,6 +117,33 @@ test("new v3 missions start every greenhouse plot empty, including the first slo
     const placed = build({ type: "PLACE_MODULE", moduleId, x: 0, y: 0, rotation: 0 }, initial);
     assert.equal(placed.crops.length, capacity);
     assert.ok(placed.crops.every(plot => plot.crop === null && plot.growth === 0 && !plot.ready));
+  }
+});
+
+test("new v3 missions start every livestock stall empty", () => {
+  for (const [moduleId, capacity] of [
+    ["livestock-compact", 1], ["livestock-standard", 2], ["livestock-industrial", 3],
+  ] as const) {
+    const initial = createInitialState("11111111-1111-4111-8111-111111111111", "Tester", "challenge", 3);
+    const placed = build({ type: "PLACE_MODULE", moduleId, x: 0, y: 0, rotation: 0 }, initial);
+    assert.equal(placed.livestock.length, capacity);
+    assert.ok(placed.livestock.every(stall => stall.animal === null && stall.growth === 0));
+  }
+});
+
+test("v3 has exactly four AP every turn regardless of food and recreation", () => {
+  for (const mode of ["challenge", "progressive"] as const) {
+    const state = createInitialState("11111111-1111-4111-8111-111111111111", "Tester", mode, 3);
+    state.phase = "operation";
+    state.modules.push({ id: "module-recreation", moduleId: "recreation", x: 0, y: 0, rotation: 0, integrity: 1 });
+    for (const food of [0, 26, 60]) {
+      state.resources.food = food;
+      for (const level of [1, 2, 3] as const) {
+        state.level = level;
+        assert.equal(apRecovery(state), 4);
+        assert.equal(resolveTurn(state, [], "four-ap-seed").state.ap, 4);
+      }
+    }
   }
 });
 
