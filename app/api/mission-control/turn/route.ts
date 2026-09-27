@@ -8,8 +8,7 @@ import { validMissionRunId } from "../../../../src/ai/photonValidation.ts";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 const allowedEvents = new Set(["WATER_CRISIS", "CRISIS_RECOVERY", "CROP_YIELD_MILESTONE", "MEAT_YIELD_MILESTONE",
-  "POWER_INSTABILITY", "CROP_OUTPUT_BEHIND", "PRODUCTION_TARGET_REACHED", "THERMAL_CONFIGURATION",
-  "HAZARD_TEMPERATURE", "HAZARD_RADIATION", "HAZARD_MICROMETEOROID", "HAZARD_COMMUNICATIONS", "HAZARD_POWER"]);
+  "POWER_INSTABILITY", "CROP_OUTPUT_BEHIND", "PRODUCTION_TARGET_REACHED", "THERMAL_CONFIGURATION"]);
 
 export async function POST(request: Request) {
   let body: { runId?: unknown; token?: unknown; turn?: unknown; publicState?: unknown; outage?: unknown; event?: unknown };

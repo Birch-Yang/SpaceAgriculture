@@ -28,7 +28,8 @@ export async function POST(request: Request) {
   if (!validIMessageAddress(address))
     return NextResponse.json({ error: "Enter an iMessage phone number starting with + and the country code, or an Apple ID email." }, { status: 400 });
   try {
-    if (!await claimMissionEnrollment(body.runId, requesterHash(request)))
+    // Permit repeated local relaunches while testing Photon; deployed builds keep the limit.
+    if (process.env.NODE_ENV !== "development" && !await claimMissionEnrollment(body.runId, requesterHash(request)))
       return NextResponse.json({ status: "unavailable", text: "Mission Control enrollment limit reached or already requested" }, { status: 429 });
     const token = randomBytes(32).toString("base64url");
     const space = await startIMessage(address);
