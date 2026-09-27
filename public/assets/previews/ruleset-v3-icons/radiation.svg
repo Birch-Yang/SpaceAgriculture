@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-labelledby="title">
+  <title id="title">Solar particle warning</title>
+  <path fill="#222c38" d="M8 4h48v4h4v48h-4v4H8v-4H4V8h4z"/>
+  <path fill="#e9c585" d="M8 8h48v4h4v44h-4v4H8v-4H4V12h4z"/>
+  <path fill="#554755" d="M12 12h40v4h4v36h-4v4H12v-4H8V16h4z"/>
+  <path fill="#f2cc7c" d="M18 18h10v4h3v5h-5v4h-6v-3h-5v-6h3zM36 18h10v4h3v6h-5v3h-6v-4h-5v-5h3zM28 38h8v4h4v7h4v4H20v-4h4v-7h4zM29 29h6v6h-6z"/>
+  <path fill="#554755" d="M22 22h4v4h-4zM38 22h4v4h-4zM30 44h4v4h-4z"/>
+  <path fill="#e99572" d="M30 13h4v3h-4zM11 40h5v4h-5zM48 40h5v4h-5z"/>
+</svg>
