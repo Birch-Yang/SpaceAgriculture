@@ -224,7 +224,8 @@ export function GameClient() {
       } else void notifyAdvisor(result.state, result.summary.turn);
       setTutorialProgress((progress) => ({ ...progress, resolvedTurn: true }));
       const happened = `Turn ${result.summary.turn}: crops +${result.summary.cropYield}, meat +${result.summary.meatYield}; ${Math.max(0, result.acceptedActions.length - 1)} actions applied.`;
-      const why = result.rejectedActions.length ? `Some actions did not apply: ${result.rejectedActions.join("; ")}.` : result.summary.warnings.length ? `Systems report: ${result.summary.warnings[0]}.` : "Automatic systems supported this turn's growth.";
+      const researchNote = result.state.history.filter(event => event.turn === result.summary.turn && event.type === "RESEARCH_USED").at(-1)?.message;
+      const why = result.rejectedActions.length ? `Some actions did not apply: ${result.rejectedActions.join("; ")}.` : researchNote ?? (result.summary.warnings.length ? `Systems report: ${result.summary.warnings[0]}.` : "Automatic systems supported this turn's growth.");
       const next = result.state.crops.some(plot => plot.crop && (plot.moisture ?? 60) < 25) ? "Next turn: inspect a dry bed or water it." : result.state.livestock.some(stall => stall.animal && (stall.cleanliness ?? 90) < 35) ? "Next turn: clean a stall before health declines." : "Next turn: check your beds, stalls, and reserves before committing AP.";
       setMessage(`${happened} ${why} ${next}`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Turn failed"); }

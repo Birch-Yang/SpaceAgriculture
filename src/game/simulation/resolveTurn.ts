@@ -5,7 +5,7 @@ import { communicationsAvailable, connectedToHabitat, resourceCapacity, shelterP
 import type { CropPlotState, GameEvent, GameState, LivestockState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
 import { criticalCondition } from "./crisis.ts";
 import { growCrops, harvestCrop } from "./crops.ts";
-import { forecastForTurn, hazardForTurn } from "./hazards.ts";
+import { forecastForTurn, hazardForTurn, hazardSchedule, seedForLevel } from "./hazards.ts";
 import { growLivestock } from "./livestock.ts";
 import { resolveTemperature } from "./temperature.ts";
 import { resolveUtilityGraph } from "./utilityGraph.ts";
@@ -133,7 +133,18 @@ function applyOperationAction(state: GameState, action: PlayerAction, pendingHar
   } else if (action.type === "USE_RESEARCH") {
     if ((state.production.researchAvailable ?? 0) < 1) return "No research sample available";
     state.production.researchAvailable = (state.production.researchAvailable ?? 0) - 1;
-    state.history.push({ turn: state.turn, type: "RESEARCH_USED", message: action.purpose === "forecast" ? `Refined forecast: ${JSON.stringify(state.forecast)}` : `Diagnostic: ${state.modules.filter(m => m.integrity < 0.8).length} damaged modules` });
+    let message: string;
+    if (action.purpose === "diagnostic") {
+      const damaged = state.modules.filter(module => module.integrity < 0.8).map(module => module.id);
+      const network = resolveUtilityGraph(state);
+      message = `Diagnostic: ${damaged.length ? `damaged ${damaged.join(", ")}` : "no damaged modules"}; ${network.bottlenecks.length ? network.bottlenecks.slice(0, 2).join("; ") : "no reported utility bottleneck"}.`;
+    } else {
+      const window = `${state.turn + 1}–${Math.min(10, state.turn + 2)}`;
+      const upcoming = hazardSchedule(state, seedForLevel(state)).filter(hazard => hazard.turn > state.turn && hazard.turn <= state.turn + 2);
+      const band = (types: string[]) => upcoming.some(hazard => types.includes(hazard.type)) ? "Elevated" : "Low";
+      message = `Refined outlook for turns ${window}: solar ${band(["radiation"])}, thermal ${band(["temperature"])}, impact ${band(["micrometeoroid"])}, systems ${band(["power", "communications"])}. Exact events remain uncertain.`;
+    }
+    state.history.push({ turn: state.turn, type: "RESEARCH_USED", message });
   } else {
     return "Base layout is locked during operation";
   }

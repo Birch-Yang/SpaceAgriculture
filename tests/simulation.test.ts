@@ -56,6 +56,18 @@ test("agriculture v3 single-harvest crops require replanting while lettuce regro
   assert.ok(result.summary.cropYield >= 0);
 });
 
+test("agriculture v3 research spends available samples without changing cumulative production", () => {
+  const state = startOperation(sampleBase(3));
+  state.production.researchAvailable = 1;
+  state.production.researchCumulative = 2;
+  state.modules[0].integrity = 0.5;
+  const result = resolveTurn(state, [{ type: "USE_RESEARCH", purpose: "diagnostic" }], "diagnostic-seed");
+  assert.equal(result.rejectedActions.length, 0);
+  assert.equal(result.state.production.researchAvailable, 0);
+  assert.equal(result.state.production.researchCumulative, 2);
+  assert.match(result.state.history.find(event => event.type === "RESEARCH_USED")!.message, /module-1/);
+});
+
 test("same state, actions, and seed resolve identically and leave input unchanged", () => {
   const state = startOperation(sampleBase());
   const before = structuredClone(state);
