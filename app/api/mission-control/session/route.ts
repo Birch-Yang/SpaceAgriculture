@@ -9,7 +9,7 @@ import { serverSupabase } from "../../../../src/backend/supabase.ts";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   if (!photonConfigured() || !process.env.SPECTRUM_WEBHOOK_SECRET || !process.env.MISSION_SESSION_SECRET || !serverSupabase())

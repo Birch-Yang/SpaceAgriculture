@@ -7,7 +7,7 @@ import { appendMissionAdvice, claimMissionMessageSlot, missionSessionByRun, rele
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const allowedEvents = new Set(["WATER_CRISIS", "CRISIS_RECOVERY", "CROP_YIELD_MILESTONE", "MEAT_YIELD_MILESTONE",
   "POWER_INSTABILITY", "CROP_OUTPUT_BEHIND", "PRODUCTION_TARGET_REACHED", "THERMAL_CONFIGURATION", "HAZARD_SIGNAL"]);
 
