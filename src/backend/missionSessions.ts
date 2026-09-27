@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, 
 import type { AgentPublicState } from "../ai/publicState.ts";
 import { serverSupabase } from "./supabase.ts";
 
-export type MissionSession = { runId: string; spaceId: string; phone?: string; tokenHash: string; publicState: AgentPublicState; outage: boolean; adviceHistory: string[]; lastTurn: number; messageCount: number };
+export type MissionSession = { runId: string; spaceId: string; phone?: string; tokenHash: string; publicState: AgentPublicState; outage: boolean; adviceHistory: string[]; lastTurn: number; messageCount: number; questionCount: number };
 const sessionHours = 2;
 
 function secret(): string {
@@ -42,6 +42,7 @@ function asSession(row: Record<string, unknown>): MissionSession {
     runId: String(row.run_id), ...space, tokenHash: String(row.session_token_hash), publicState: row.public_state as AgentPublicState, outage: !!row.outage,
     adviceHistory: Array.isArray(row.advice_history) ? row.advice_history.filter((item): item is string => typeof item === "string") : [],
     lastTurn: Number(row.last_turn) || 0, messageCount: Number(row.message_count) || 0,
+    questionCount: Number(row.question_count) || 0,
   };
 }
 
@@ -70,7 +71,7 @@ export async function registerMissionSession(runId: string, spaceId: string, pho
   await client.from("mission_control_sessions").delete().eq("space_hash", hash);
   const { error } = await client.from("mission_control_sessions").upsert({
     run_id: runId, space_hash: hash, space_cipher: encrypt({ spaceId, phone }), session_token_hash: tokenHash, public_state: publicState, outage: false,
-    advice_history: [], last_turn: 0, message_count: 0,
+    advice_history: [], last_turn: 0, message_count: 0, question_count: 0, limit_notice_sent: false,
     expires_at: new Date(Date.now() + sessionHours * 3600_000).toISOString(),
   }, { onConflict: "run_id" });
   return !error;
@@ -98,7 +99,9 @@ export async function updateMissionSession(runId: string, publicState: AgentPubl
   const client = serverSupabase();
   const session = await missionSessionByRun(runId);
   if (!client || !session || turn <= session.lastTurn) return false;
-  const { data, error } = await client.from("mission_control_sessions").update({ public_state: publicState, outage, last_turn: turn })
+  const { data, error } = await client.from("mission_control_sessions").update({
+    public_state: publicState, outage, last_turn: turn, question_count: 0, limit_notice_sent: false,
+  })
     .eq("run_id", runId).eq("last_turn", session.lastTurn).select("run_id").maybeSingle();
   if (error) throw new Error("Mission Control session update unavailable");
   return !!data;
@@ -115,6 +118,19 @@ export async function claimMissionMessageSlot(runId: string): Promise<boolean> {
   const { data, error } = await client.rpc("claim_mission_message", { p_run_id: runId });
   if (error) throw new Error("Mission Control message gate unavailable");
   return data === true;
+}
+
+export async function releaseMissionMessageSlot(runId: string): Promise<void> {
+  const client = serverSupabase();
+  if (client) await client.rpc("release_mission_message", { p_run_id: runId });
+}
+
+export async function claimMissionQuestion(runId: string): Promise<number> {
+  const client = serverSupabase();
+  if (!client) throw new Error("Mission Control question gate unavailable");
+  const { data, error } = await client.rpc("claim_mission_question", { p_run_id: runId });
+  if (error || typeof data !== "number") throw new Error("Mission Control question gate unavailable");
+  return data;
 }
 
 export async function missionAdviceHistory(runId: string): Promise<string[]> {

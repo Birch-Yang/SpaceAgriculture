@@ -1,37 +1,42 @@
 import { NextResponse } from "next/server";
 import { replyAdvice } from "../../../../src/ai/advisor.ts";
+import { parseInboundQuestion, questionLimitMessage } from "../../../../src/ai/missionProtocol.ts";
 import { sendIMessage } from "../../../../src/ai/spectrum.ts";
 import { verifySpectrumWebhook } from "../../../../src/ai/webhookSignature.ts";
-import { appendMissionAdvice, claimMissionMessageSlot, claimWebhookMessage, missionSessionBySpace, releaseWebhookMessage } from "../../../../src/backend/missionSessions.ts";
+import { appendMissionAdvice, claimMissionMessageSlot, claimMissionQuestion, claimWebhookMessage, missionSessionBySpace, releaseMissionMessageSlot } from "../../../../src/backend/missionSessions.ts";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-type Inbound = { event?: unknown; space?: { id?: unknown }; message?: { id?: unknown; direction?: unknown; content?: { type?: unknown; text?: unknown } } };
-
 export async function POST(request: Request) {
   const secret = process.env.SPECTRUM_WEBHOOK_SECRET;
   if (!secret) return NextResponse.json({ error: "Webhook is not configured" }, { status: 503 });
   const raw = await request.text();
   if (raw.length > 64_000) return NextResponse.json({ error: "Payload too large" }, { status: 413 });
   if (!verifySpectrumWebhook(raw, request.headers, secret)) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  let payload: Inbound;
+  let payload: unknown;
   try { payload = JSON.parse(raw); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-  if (payload.event !== "messages" || payload.message?.direction !== "inbound" || payload.message.content?.type !== "text"
-    || typeof payload.message.content.text !== "string" || !payload.message.content.text.trim()
-    || typeof payload.message.id !== "string" || typeof payload.space?.id !== "string") return NextResponse.json({ ok: true });
-  if (payload.message.content.text.length > 500) return NextResponse.json({ ok: true });
+  const inbound = parseInboundQuestion(payload);
+  if (!inbound) return NextResponse.json({ ok: true });
   try {
-    const session = await missionSessionBySpace(payload.space.id);
-    if (!session || session.outage || session.messageCount >= 25) return NextResponse.json({ ok: true });
-    if (!await claimWebhookMessage(payload.message.id)) return NextResponse.json({ ok: true });
+    const session = await missionSessionBySpace(inbound.spaceId);
+    if (!session || session.outage) return NextResponse.json({ ok: true });
+    if (!await claimWebhookMessage(inbound.messageId)) return NextResponse.json({ ok: true });
     try {
       if (!await claimMissionMessageSlot(session.runId)) return NextResponse.json({ ok: true });
-      const advice = await replyAdvice(payload.message.content.text, session.publicState);
+      let questionClaim: number;
+      try { questionClaim = await claimMissionQuestion(session.runId); }
+      catch (error) { await releaseMissionMessageSlot(session.runId); throw error; }
+      if (questionClaim < 0) {
+        await releaseMissionMessageSlot(session.runId);
+        return NextResponse.json({ ok: true });
+      }
+      const advice = questionClaim === 0 ? questionLimitMessage : await replyAdvice(inbound.text, session.publicState);
       await sendIMessage(session.spaceId, advice, session.phone);
-      await appendMissionAdvice(session.runId, advice);
+      if (questionClaim > 0) await appendMissionAdvice(session.runId, advice);
       return NextResponse.json({ ok: true });
     } catch {
-      await releaseWebhookMessage(payload.message.id);
+      // Keep both the webhook ID and any reserved question slot: provider retries
+      // must never turn an uncertain send into duplicate advice or extra hints.
       return NextResponse.json({ error: "Mission Control reply unavailable" }, { status: 503 });
     }
   } catch {

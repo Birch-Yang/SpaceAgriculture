@@ -21,6 +21,8 @@ async function app(): Promise<SpectrumApp> {
 export async function startIMessage(address: string): Promise<{ spaceId: string; phone?: string }> {
   const provider = imessage(await app());
   const user = await provider.user(address);
+  // Spectrum 12.10 resolves newly entered users by ID only; service is usually absent.
+  if (user.service === "SMS" || user.service === "RCS") throw new Error("This address is not reachable through iMessage");
   const space = await provider.space.create(user);
   return { spaceId: space.id, phone: space.phone };
 }

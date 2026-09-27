@@ -19,6 +19,7 @@ import { writeLastSavedRun } from "../state/lastRun.ts";
 import { curatedSources } from "../../content/sources";
 import { communicationsAvailable } from "../../data/systems.ts";
 import { deriveAgentEvent, toAgentPublicState } from "../../ai/publicState.ts";
+import { normalizeIMessagePhone } from "../../ai/missionProtocol.ts";
 import { MissionControlPanel, type MessageView } from "../../ui/MissionControlPanel";
 import type { MinigameResult } from "../minigames/match3/Match3.tsx";
 import { MinigameBoundary } from "../minigames/MinigameBoundary.tsx";
@@ -51,8 +52,10 @@ export function GameClient() {
   const [submitted, setSubmitted] = useState<SubmittedResult | null>(null);
   const [submissionStatus, setSubmissionStatus] = useState<"idle" | "submitting" | "failed" | "done">("idle");
   const [savedRunId, setSavedRunId] = useState<string | null>(null);
-  const [advisorConnection, setAdvisorConnection] = useState<"online" | "offline" | "unavailable">("unavailable");
+  const [advisorConnection, setAdvisorConnection] = useState<"connecting" | "online" | "offline" | "unavailable">("unavailable");
+  const [advisorNotice, setAdvisorNotice] = useState("");
   const [advisorMessages, setAdvisorMessages] = useState<MessageView[]>([]);
+  const [advisorUsed, setAdvisorUsed] = useState(0);
   const [tool, setTool] = useState<BuildTool>({ kind: "select" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [interiorId, setInteriorId] = useState<string | null>(null);
@@ -75,8 +78,38 @@ export function GameClient() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [mini, interiorId]);
 
+  useEffect(() => {
+    const runId = state?.runId;
+    if (!runId || !imessageAddress.trim()) return;
+    const controller = new AbortController();
+    let busy = false;
+    const refresh = async () => {
+      const token = advisorToken.current;
+      if (!token || busy || advisorRun.current !== runId) return;
+      busy = true;
+      try {
+        const response = await fetch("/api/mission-control/status", { method: "POST",
+          headers: { "Content-Type": "application/json" }, body: JSON.stringify({ runId, token }),
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]) });
+        if (!response.ok) return;
+        const data = await response.json() as { history?: unknown; used?: unknown; outage?: unknown };
+        if (controller.signal.aborted || advisorRun.current !== runId || !Array.isArray(data.history)) return;
+        const history = data.history.filter((item): item is string => typeof item === "string");
+        setAdvisorMessages((current) => [...current.filter((item) => item.id === "opening"),
+          ...history.map((text, index) => ({ id: `history-${index}`, sender: "control" as const, text }))]);
+        if (typeof data.used === "number") setAdvisorUsed(Math.max(0, Math.min(2, data.used)));
+        if (data.outage === true) setAdvisorConnection("offline");
+      } catch { /* A missed poll should not interrupt the mission. */ }
+      finally { busy = false; }
+    };
+    const timer = setInterval(() => { void refresh(); }, 5000);
+    return () => { controller.abort(); clearInterval(timer); };
+  }, [state?.runId, imessageAddress]);
+
   function launch(event: FormEvent) {
     event.preventDefault();
+    const phone = imessageAddress.trim() ? normalizeIMessagePhone(imessageAddress) : undefined;
+    if (imessageAddress.trim() && !phone) { setMessage("Enter a valid iMessage phone number, such as (314) 555-0123 or +15551234567."); return; }
     try {
       setShowPreflight(false);
       const runId = crypto.randomUUID();
@@ -87,8 +120,8 @@ export function GameClient() {
       advisorToken.current = null;
       advisorRun.current = runId;
       advisorEnrollment.current = null;
-      setAdvisorConnection("unavailable"); setAdvisorMessages([]);
-      if (imessageAddress.trim()) advisorEnrollment.current = enrollAdvisor(runId, imessageAddress.trim(), initial);
+      setAdvisorConnection(imessageAddress.trim() ? "connecting" : "unavailable"); setAdvisorMessages([]); setAdvisorNotice(""); setAdvisorUsed(0);
+      if (phone) advisorEnrollment.current = enrollAdvisor(runId, phone, initial);
       setTool({ kind: "select" }); setSelectedId(null); setInteriorId(null); setPending([]); setTutorialProgress(emptyProgress);
       setTutorialVisible(window.localStorage.getItem(tutorialKey) !== "seen");
       setMessage("Build a compact outpost. A Habitat Core is required to begin.");
@@ -186,12 +219,14 @@ export function GameClient() {
   async function enrollAdvisor(runId: string, address: string, initial: GameState) {
     try {
       const response = await fetch("/api/mission-control/session", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runId, address, publicState: toAgentPublicState(initial) }), signal: AbortSignal.timeout(8000) });
-      const result = await response.json() as { token?: string };
+        body: JSON.stringify({ runId, address, publicState: toAgentPublicState(initial) }), signal: AbortSignal.timeout(35000) });
+      const result = await response.json() as { token?: string; opening?: string; text?: string };
       if (advisorRun.current !== runId) return;
       advisorToken.current = response.ok && result.token ? result.token : null;
       setAdvisorConnection(advisorToken.current ? "online" : "unavailable");
-    } catch { if (advisorRun.current === runId) setAdvisorConnection("unavailable"); }
+      setAdvisorNotice(advisorToken.current ? "" : (result.text || "Photon could not establish this iMessage link."));
+      if (advisorToken.current && result.opening) setAdvisorMessages([{ id: "opening", sender: "control", text: result.opening, timeLabel: "Mission start" }]);
+    } catch { if (advisorRun.current === runId) { setAdvisorConnection("unavailable"); setAdvisorNotice("Photon could not establish the relay. Check your iMessage number and try a new mission."); } }
   }
 
   async function notifyAdvisor(next: GameState, turn: number) {
@@ -271,7 +306,7 @@ export function GameClient() {
   if (!state) return <Onboarding form={<form onSubmit={launch} className="mission-form">
     <label>Mission callsign<input required pattern={String.raw`.*\S.*`} maxLength={32} value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="Your nickname" aria-describedby="nickname-help" /></label>
     <p id="nickname-help" className="help">Choose a nickname for public mission records. No account needed.</p>
-    <details><summary>Mission Control via iMessage (optional)</summary><label>iMessage address<input maxLength={254} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="+15551234567 or Apple ID email" /></label><p className="help">Sends Mission Control advice to this address when you launch.</p></details>
+    <label>iMessage phone number (optional)<input inputMode="tel" autoComplete="tel" maxLength={32} value={imessageAddress} onChange={(event) => setImessageAddress(event.target.value)} placeholder="(314) 555-0123 or +15551234567" /></label><p className="help">Photon sends an opening message when you launch. The number must have iMessage enabled; SMS and Google Messages are not supported. Two questions per mission turn.</p>
     <div className="modes"><button type="submit" onClick={() => setMode("challenge")}>Challenge Mode<small>10 turns · high pressure</small></button><button type="submit" onClick={() => setMode("progressive")}>Progressive Mode<small>3 levels · learn as you grow</small></button></div>
     <p role="status" className="help">{message}</p>
   </form>} />;
@@ -317,7 +352,7 @@ export function GameClient() {
       <button onClick={() => setShowPreflight(false)}>Keep building</button>{" "}<button onClick={() => begin(true)}>Start anyway</button></div>
     </section>}
     <footer className={styles.command}><p role="status">{message}</p>{building ? <button className={styles.primary} onClick={() => begin()}>{state.phase === "intermission" ? "BEGIN NEXT LEVEL →" : "BEGIN MISSION →"}</button> : state.phase === "operation" ? <button className={styles.primary} onClick={endTurn}>END TURN →</button> : <button className={styles.primary} onClick={() => router.push(`/report/${state.runId}`)}>VIEW REPORT →</button>}</footer>
-    {imessageAddress.trim() && <MissionControlPanel connection={advisorConnection} messages={advisorMessages} />}
+    {imessageAddress.trim() && <MissionControlPanel connection={advisorConnection} messages={advisorMessages} notice={advisorNotice} used={advisorUsed} />}
     {state.phase === "complete" && <section aria-label="Mission result">
       {submissionStatus === "submitting" && <p role="status">Calculating and saving the mission result…</p>}
       {(submissionStatus === "failed" || (submitted && !submitted.saved && submitted.retryable !== false)) && <button onClick={() => transcript && void submitRun(transcript)}>Retry saving result</button>}

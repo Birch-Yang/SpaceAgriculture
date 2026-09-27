@@ -22,13 +22,22 @@ export function toAgentPublicState(state: GameState): AgentPublicState {
     oxygen: level(state.resources.oxygen),
     temperature: temperature < 5 || temperature > 35 ? "critical" : temperature < 16 ? "below-target" : temperature > 26 ? "above-target" : "nominal",
     agriculture: state.production.cropCumulative + state.production.meatCumulative > state.turn * 3 ? "ahead" : state.production.cropCumulative + state.production.meatCumulative > state.turn ? "on-track" : "behind",
-    ...(state.lastTurn?.hazard ? { latestMajorEvent: state.lastTurn.hazard.type } : {}),
   };
 }
 
 export function deriveAgentEvent(state: GameState): AgentEvent | undefined {
   if (!communicationsAvailable(state)) return undefined;
   const publicState = toAgentPublicState(state);
+  if (state.lastTurn?.hazard) {
+    const hint = {
+      temperature: "Environmental telemetry fluctuated during the last shift",
+      radiation: "Shielding monitors registered an unusual excursion",
+      micrometeoroid: "A brief structural disturbance reached the relay",
+      communications: "The relay was interrupted during the last shift",
+      power: "Power telemetry flickered during the last shift",
+    }[state.lastTurn.hazard.type];
+    return { type: "HAZARD_SIGNAL", publicState, context: [hint] };
+  }
   if (state.crisis?.trigger.includes("water")) return { type: "WATER_CRISIS", publicState, context: ["Water reserve is critical"] };
   if (state.lastTurn?.warnings.includes("Crisis recovered")) return { type: "CRISIS_RECOVERY", publicState, context: ["Critical systems recovered"] };
   if (state.history.some((event) => event.type === "CROP_YIELD") && state.history.filter((event) => event.type === "CROP_YIELD").length === 1 && state.lastTurn?.cropYield) return { type: "CROP_YIELD_MILESTONE", publicState, context: ["First harvest recorded"] };
