@@ -313,7 +313,6 @@ export class GameScene extends Phaser.Scene {
 
     if (this.corridorPath.length) {
       const blocked = occupiedModuleCells(state);
-      for (const edge of state.utilityEdges) for (const cell of edge.cells) blocked.add(`${cell.x},${cell.y}`);
       for (const cell of this.corridorPath) this.diamond(cell.x, cell.y, blocked.has(`${cell.x},${cell.y}`) ? 0xe4645e : 0x77e1db, 0.75, 0xffffff);
     } else if (this.hover && this.tool.kind === "module" && this.buildEnabled()) {
       const definition = MODULE_BY_ID.get(this.tool.moduleId);

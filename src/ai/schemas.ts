@@ -66,7 +66,7 @@ export function buildRunSummary(state: GameState, transcript?: RunTranscript): R
   return {
     mode: state.mode,
     finalScoreInputs: { production: rules.production, stability: rules.stability, efficiency: rules.efficiency, resilience: rules.resilience, budget: rules.budget },
-    layoutMetrics: { moduleCount: state.modules.length, corridorLength: state.utilityEdges.reduce((sum, edge) => sum + edge.length, 0), greenhouseCount: greenhouses.length, livestockModuleCount: livestock.length, waterModuleCount: water.length, utilityModuleCount: utilities.length, remainingBudget: state.budget,
+    layoutMetrics: { moduleCount: state.modules.length, corridorLength: new Set(state.utilityEdges.flatMap(edge => edge.cells.map(cell => `${cell.x},${cell.y}`))).size, greenhouseCount: greenhouses.length, livestockModuleCount: livestock.length, waterModuleCount: water.length, utilityModuleCount: utilities.length, remainingBudget: state.budget,
       averageGreenhouseWaterDistance: distanceTo(water), averageGreenhouseUtilityDistance: distanceTo(utilities),
       connectedModuleShare: state.modules.length ? Math.round(state.modules.filter((module) => connectedToHabitat(state, module.id)).length / state.modules.length * 100) / 100 : 0,
       resilienceBudgetShare: totalCost ? Math.round(resilienceCost / totalCost * 100) / 100 : 0,
