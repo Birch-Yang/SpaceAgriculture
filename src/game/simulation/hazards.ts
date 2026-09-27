@@ -1,6 +1,8 @@
 import { DIFFICULTY } from "../../data/difficulty.ts";
 import { HAZARDS } from "../../data/hazards.ts";
-import { communicationsAvailable } from "../../data/systems.ts";
+import { HAZARD_AVOIDANCE } from "../../data/hazardAvoidance.ts";
+import { MODULE_BY_ID } from "../../data/modules.ts";
+import { communicationsAvailable, connectedToHabitat } from "../../data/systems.ts";
 import type { ForecastState, GameState, HazardInstance, HazardType } from "../state/types.ts";
 
 function hash(input: string): number {
@@ -26,6 +28,39 @@ export function hazardSchedule(state: Pick<GameState, "mode" | "level">, rngSeed
 
 export function hazardForTurn(state: GameState, rngSeed: string): HazardInstance | undefined {
   return hazardSchedule(state, rngSeed).find((event) => event.turn === state.turn);
+}
+
+/** Hidden defenses are evaluated from the state entering the turn, before any queued actions. */
+export function preemptivelyAvoided(state: GameState, hazard: HazardInstance): boolean {
+  const connectedIntact = (category: string, integrity: number) => state.modules.some((module) =>
+    MODULE_BY_ID.get(module.moduleId)?.category === category
+    && module.integrity >= integrity && connectedToHabitat(state, module.id));
+  const preparedShelter = connectedIntact("shelter", HAZARD_AVOIDANCE.shelterIntegrity);
+
+  if (hazard.type === "temperature") {
+    const previous = [...state.turnRecords].reverse().find((record) => record.level === state.level && record.turn === hazard.turn - 1);
+    return !!previous
+      && previous.resources.temperature >= HAZARD_AVOIDANCE.stableTemperatureMin
+      && previous.resources.temperature <= HAZARD_AVOIDANCE.stableTemperatureMax
+      && state.resources.power >= HAZARD_AVOIDANCE.temperaturePowerReserve
+      && state.modules.some((module) => MODULE_BY_ID.get(module.moduleId)?.category === "utility"
+        && module.integrity >= HAZARD_AVOIDANCE.minimumIntegrity
+        && (module.allocation?.thermal ?? 0) >= HAZARD_AVOIDANCE.thermalAllocation
+        && connectedToHabitat(state, module.id));
+  }
+  if (hazard.type === "radiation")
+    return preparedShelter && state.resources.oxygen >= HAZARD_AVOIDANCE.radiationOxygenReserve;
+  if (hazard.type === "micrometeoroid")
+    return preparedShelter && state.modules.every((module) => module.integrity >= HAZARD_AVOIDANCE.impactBaseIntegrity);
+  if (hazard.type === "communications")
+    return state.resources.power >= HAZARD_AVOIDANCE.communicationsPowerReserve
+      && connectedIntact("communications", HAZARD_AVOIDANCE.minimumIntegrity)
+      && state.modules.some((module) => MODULE_BY_ID.get(module.moduleId)?.category === "utility"
+        && module.integrity >= HAZARD_AVOIDANCE.minimumIntegrity
+        && (module.allocation?.commsBackup ?? 0) >= HAZARD_AVOIDANCE.communicationsBackupAllocation
+        && connectedToHabitat(state, module.id));
+  return state.resources.power >= HAZARD_AVOIDANCE.powerReserve
+    && connectedIntact("battery", HAZARD_AVOIDANCE.minimumIntegrity);
 }
 
 export function isCommunicationsOutage(state: GameState): boolean {

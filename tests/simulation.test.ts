@@ -365,9 +365,79 @@ test("server transcript replay validates emergency actions and reproduces client
   assert.throws(() => replayTranscript(duplicate), /Only one emergency supply/);
 });
 
-import { hazardForTurn } from "../src/game/simulation/hazards.ts";
+import { hazardForTurn, preemptivelyAvoided } from "../src/game/simulation/hazards.ts";
 import { hazardMitigationCondition, previewHazardResponse } from "../src/game/simulation/resolveTurn.ts";
 import { EMERGENCY } from "../src/data/emergency.ts";
+import { HAZARD_AVOIDANCE } from "../src/data/hazardAvoidance.ts";
+import { communicationsAvailable } from "../src/data/systems.ts";
+
+function connectedModule(state: GameState, moduleId: string) {
+  const module = { id: `prepared-${moduleId}`, moduleId, x: 10, y: 10, rotation: 0 as const, integrity: 1,
+    ...(moduleId === "utility-thermal" ? { allocation: { thermal: 0.5, backupPower: 0.3, commsBackup: 0.2 } } : {}) };
+  state.modules.push(module);
+  state.utilityEdges.push({ id: `edge-${moduleId}`, from: state.modules[0].id, to: module.id, length: 1, capacity: 20, integrity: 1, cells: [] });
+  return module;
+}
+
+function preparedState(type: NonNullable<GameState["activeHazard"]>["type"]): GameState {
+  const state = startOperation(sampleBase());
+  state.turn = 2;
+  for (let i = 1; i < 2000; i++) {
+    state.runId = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+    state.activeHazard = hazardForTurn(state, seedForLevel(state));
+    if (state.activeHazard?.type === type) break;
+  }
+  assert.equal(state.activeHazard?.type, type);
+  state.resources.power = 30;
+  state.resources.oxygen = 35;
+  if (type === "temperature") {
+    connectedModule(state, "utility-thermal");
+    state.turnRecords.push({ level: state.level, turn: 1, resources: { ...state.resources, temperature: 20 },
+      resourceDelta: { power: 0, water: 0, oxygen: 0, food: 0, temperature: 0 }, cropYield: 0, meatYield: 0, crisis: false });
+  }
+  if (type === "radiation" || type === "micrometeoroid") connectedModule(state, "shelter");
+  if (type === "communications") { connectedModule(state, "communication-tower"); connectedModule(state, "utility-thermal"); }
+  if (type === "power") connectedModule(state, "battery");
+  return state;
+}
+
+test("each hidden defense avoids only a prepared pre-turn hazard and records the avoided event", () => {
+  for (const type of ["temperature", "radiation", "micrometeoroid", "communications", "power"] as const) {
+    const state = preparedState(type);
+    const hazard = state.activeHazard!;
+    assert.ok(hazard.severity > 0);
+    assert.equal(preemptivelyAvoided(state, hazard), true, type);
+    const settled = resolveTurn(state, [{ type: "END_TURN" }], seedForLevel(state));
+    assert.equal(settled.summary.hazard?.severity, 0, type);
+    assert.ok(settled.summary.warnings.includes(`Advance preparation prevented ${type} consequences`));
+    assert.equal(settled.state.turnRecords.at(-1)?.hazard?.severity, 0);
+    assert.equal(settled.state.history.at(-1)?.type, "HAZARD");
+    if (type === "communications") assert.equal(communicationsAvailable({ ...state, activeHazard: settled.summary.hazard }), true);
+  }
+});
+
+test("hidden defenses require prior preparation; same-turn emergency response remains available", () => {
+  const power = preparedState("power");
+  power.resources.power = HAZARD_AVOIDANCE.powerReserve - 8;
+  assert.equal(preemptivelyAvoided(power, power.activeHazard!), false);
+  const supply = { type: "USE_EMERGENCY_SUPPLY", resource: "power" } as const;
+  const settled = resolveTurn(power, [supply, { type: "END_TURN" }], seedForLevel(power));
+  assert.ok((settled.summary.hazard?.severity ?? 0) > 0);
+  assert.equal(settled.summary.hazard?.severity,
+    Math.round(power.activeHazard!.severity * EMERGENCY.mitigatedSeverityFraction * 100) / 100);
+
+  const cases = [
+    { type: "temperature", invalidate: (state: GameState) => { state.turnRecords = []; } },
+    { type: "radiation", invalidate: (state: GameState) => { state.resources.oxygen = HAZARD_AVOIDANCE.radiationOxygenReserve - 1; } },
+    { type: "micrometeoroid", invalidate: (state: GameState) => { state.modules[0].integrity = HAZARD_AVOIDANCE.impactBaseIntegrity - 0.01; } },
+    { type: "communications", invalidate: (state: GameState) => { state.modules.find(m => m.moduleId === "communication-tower")!.integrity = HAZARD_AVOIDANCE.minimumIntegrity - 0.01; } },
+  ] as const;
+  for (const { type, invalidate } of cases) {
+    const state = preparedState(type);
+    invalidate(state);
+    assert.equal(preemptivelyAvoided(state, state.activeHazard!), false, type);
+  }
+});
 
 test("current hazard is shown before actions and next hazard is not shown on the prior turn", () => {
   const state = startOperation(sampleBase());

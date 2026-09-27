@@ -73,7 +73,7 @@ export function greenhouseRecyclingBonus(state: GameState, greenhouse: PlacedMod
 }
 
 export function communicationsAvailable(state: GameState): boolean {
-  if (state.activeHazard?.type !== "communications") return true;
+  if (state.activeHazard?.type !== "communications" || state.activeHazard.severity === 0) return true;
   const tower = state.modules.some((module) => MODULE_BY_ID.get(module.moduleId)?.category === "communications"
     && module.integrity > 0.5 && connectedToHabitat(state, module.id));
   return state.resources.power > 0 && state.modules.some((module) =>

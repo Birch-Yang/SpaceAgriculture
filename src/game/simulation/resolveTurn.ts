@@ -7,7 +7,7 @@ import { communicationsAvailable, connectedToHabitat, resourceCapacity, shelterP
 import type { CropPlotState, GameEvent, GameState, LivestockState, PlayerAction, ResourceState, TurnResult } from "../state/types.ts";
 import { criticalCondition } from "./crisis.ts";
 import { growCrops, harvestCrop } from "./crops.ts";
-import { forecastForTurn, hazardForTurn } from "./hazards.ts";
+import { forecastForTurn, hazardForTurn, preemptivelyAvoided } from "./hazards.ts";
 import { growLivestock } from "./livestock.ts";
 import { resolveTemperature } from "./temperature.ts";
 import { resolveUtilityGraph } from "./utilityGraph.ts";
@@ -201,13 +201,16 @@ export function resolveTurn(state: GameState, actions: PlayerAction[], rngSeed: 
   const turn = next.turn;
 
   // Current hazard is visible before actions; recompute from the authoritative seed for replay.
-  next.activeHazard = hazardForTurn(next, rngSeed);
+  const scheduledHazard = hazardForTurn(state, rngSeed);
+  const avoided = scheduledHazard && preemptivelyAvoided(state, scheduledHazard);
+  next.activeHazard = avoided ? { ...scheduledHazard, severity: 0 } : scheduledHazard;
+  if (avoided) warnings.push(`Advance preparation prevented ${scheduledHazard.type} consequences`);
 
   // 4. Network; then evaluate defenses after the player's current-turn actions.
 
   const network = resolveUtilityGraph(next);
   warnings.push(...network.bottlenecks);
-  if (next.activeHazard && hazardMitigationCondition(next, network.delivery)) {
+  if (next.activeHazard && !avoided && hazardMitigationCondition(next, network.delivery)) {
     next.activeHazard = { ...next.activeHazard, severity: Math.round(next.activeHazard.severity * EMERGENCY.mitigatedSeverityFraction * 100) / 100 };
     warnings.push(`Prepared response reduced ${next.activeHazard.type} severity by 70%`);
   }
